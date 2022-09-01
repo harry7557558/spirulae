@@ -2,6 +2,9 @@
 #define PI 3.1415926536
 #endif
 
+
+// Functions
+
 #define mf_x() (x)
 #define mf_y() (y)
 #define mf_z() (z)
@@ -17,6 +20,11 @@ float mf_pow5(float a) { return a*a*a*a*a; }
 float mf_pow6(float a) { return a*a*a*a*a*a; }
 float mf_pow7(float a) { return a*a*a*a*a*a*a; }
 float mf_pow8(float a) { return a*a*a*a*a*a*a*a; }
+float mf_pow9(float a) { return a*a*a*a*a*a*a*a*a; }
+float mf_pow10(float a) { return a*a*a*a*a*a*a*a*a*a; }
+float mf_pow11(float a) { return a*a*a*a*a*a*a*a*a*a*a; }
+float mf_pow12(float a) { return a*a*a*a*a*a*a*a*a*a*a*a; }
+float mf_powint(float a, float b) { float k=round(b); return (mod(k,2.)==0.?1.:sign(a))*pow(abs(a),k); }
 
 float mf_if(float a1, float a2, float a3) { return a1 > 0. ? a2 : a3; }
 float mf_mod(float a1, float a2) { return mod(a1, a2); }
@@ -58,6 +66,8 @@ float mf_arccosh(float a) { return acosh(a); }
 float mf_arctanh(float a) { return atanh(a); }
 float mf_arccoth(float a) { return atanh(1./a); }
 
+
+// Functions with gradient
 // xyz: gradient; w: value
 
 #define mfg_x() vec4(1,0,0,x)
@@ -75,6 +85,11 @@ vec4 mfg_pow5(vec4 a) { return vec4(5.*a.xyz,a.w)*a.w*a.w*a.w*a.w; }
 vec4 mfg_pow6(vec4 a) { return vec4(6.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w; }
 vec4 mfg_pow7(vec4 a) { return vec4(7.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w; }
 vec4 mfg_pow8(vec4 a) { return vec4(8.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w*a.w; }
+vec4 mfg_pow9(vec4 a) { return vec4(9.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w; }
+vec4 mfg_pow10(vec4 a) { return vec4(10.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w; }
+vec4 mfg_pow11(vec4 a) { return vec4(11.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w; }
+vec4 mfg_pow12(vec4 a) { return vec4(12.*a.xyz,a.w)*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w*a.w; }
+vec4 mfg_powint(vec4 a, vec4 b) { float k=round(b.w)-1.; return vec4(k*a.xyz,a.w)*(mod(k,2.)==0.?1.:sign(a.w))*pow(abs(a.w),k); }
 
 vec4 mfg_if(vec4 a1, vec4 a2, vec4 a3) { return a1.w > 0. ? a2 : a3; }
 vec4 mfg_mod(vec4 a1, vec4 a2) { return a1; }

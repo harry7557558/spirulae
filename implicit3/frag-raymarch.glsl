@@ -118,6 +118,8 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.1);
     vec3 col = amb + dif + spc;
 #endif // {%COLOR%} == 0
+    if (isnan(dot(col, vec3(1))))
+        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0), fade(t)), 1.0);
     return vec4(
         mix(BACKGROUND_COLOR, col, fade(t)),
         1.0-pow(1.0-OPACITY,abs(1.0/dot(rd,n)))

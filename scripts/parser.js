@@ -88,10 +88,10 @@ function MathFunction(
             const eps = 1e-8;
             if (args[0].range.x0 < this.domain.x0 - eps || args[0].range.x1 > this.domain.x1 + eps)
                 result.isCompatible = false;
-            if (this.monotonicFun != null &&
-                args[0].range.x0 >= this.domain.x0 && args[0].range.x1 <= this.range.x1)
-                result.range = new Interval(
-                    this.monotonicFun(args[0].range.x0), this.monotonicFun(args[0].range.x1))
+            if (args[0].range.x0 >= this.domain.x0 && args[0].range.x1 <= this.range.x1) {
+                if (this.monotonicFun != null) result.range = new Interval(
+                    this.monotonicFun(args[0].range.x0), this.monotonicFun(args[0].range.x1));
+            }
             else result.range = new Interval(this.range.x0, this.range.x1);
         }
         return result;
@@ -639,7 +639,7 @@ function parseInput(input) {
                             'resolving': false
                         };
                     }
-                    for (var j = 0; j < equ[i].numArgs; j++)
+                    for (var j = 0; j < fun.numArgs; j++)
                         stack.pop();
                     var res = dfs(fun.postfix, variables1)[0];
                     stack.push(res);
@@ -800,22 +800,28 @@ function powEvalObjects(a, b) {
             b.isCompatible
         )
     }
-    var n = Number(b.glsl.replace(/^mf_const\(/, '').replace(/\)$/, ''));
-    if (n == 0) return new EvalObject(
-        [new Token("number", '1.')], "mf_const(1.)",
-        true, new Interval(1, 1), a.isCompatible
-    );
-    if (n == 1) return a;
-    if (n == 2 || n == 3 || n == 4 || n == 5 || n == 6 || n == 7 || n == 8) {
+    var n = b.range.x0 == b.range.x1 ? b.range.x0 : NaN;
+    if (n >= -64 && n <= 65536 && n == Math.round(n)) {
+        if (n == 0) return new EvalObject(
+            [new Token("number", '1.')], "mf_const(1.)",
+            true, new Interval(1, 1), a.isCompatible
+        );
+        if (n == 1) return a;
+        var interval = new Interval(
+            n % 2 == 0 && a.range.containsZero() ? 0.0 :
+                Math.min(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n)),
+            Math.max(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n)));
+        if (n >= 2 && n <= 12)
+            return new EvalObject(
+                a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
+                "mf_pow" + n + "(" + a.glsl + ")",
+                a.isNumeric, interval, a.isCompatible
+            )
         return new EvalObject(
             a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
-            "mf_pow" + n + "(" + a.glsl + ")",
-            a.isNumeric,
-            new Interval(
-                n % 2 == 0 && a.range.containsZero() ? 0.0 :
-                    Math.min(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n)),
-                Math.max(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n))),
-            a.isCompatible
+            "mf_powint(" + a.glsl + "," + b.glsl + ")",
+            a.isNumeric, interval,
+            a.range.containsZero() && n < -4 ? false : a.isCompatible
         )
     }
     var interval = new Interval();
