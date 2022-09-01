@@ -474,8 +474,8 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%COLOR%}", "" + params.sColor);
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", params.bYup ? "1" : "0");
         shaderSource = shaderSource.replaceAll("{%GRID%}", params.bGrid ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%ANALYTICAL_GRADIENT%}", params.bAnalyGrad ? "1" : "0");
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", params.bDiscontinuity ? "1" : "0");
+        shaderSource = shaderSource.replaceAll("{%BACKGROUND_COLOR%}", params.bLight ? "vec3(0.9)" : "vec3(.02,.022,.025)");
         return shaderSource;
     }
     console.time("compile shader");

@@ -16,11 +16,13 @@
 }
 
 #fps {
-    margin: 0;
-    font-family: Consolas;
+    margin: -2px 0 0 -6px;
+    padding: 2px 6px;
+    font-family: 'Consolas', monospace;
     font-size: 20px;
     color: white;
     user-select: none;
+    background-color: rgba(0, 0, 0, 0.3);
 }
 
 #axes {
@@ -41,8 +43,8 @@
     background-color: rgba(14, 14, 101, 0.5);
     padding: 15px 20px;
     color: white;
-    font-size: 1em;
-    font-family: 'Times New Roman';
+    font-size: 0.95em;
+    font-family: 'Arial';
     white-space: nowrap;
 }
 
@@ -58,8 +60,8 @@
     min-width: 240px;
     min-height: 80px;
     resize: both;
-    font-family: Consolas;
-    font-size: 0.9em;
+    font-family: 'Consolas', monospace;
+    font-size: 1.0em;
     margin: 0.2em 0 0;
 }
 
@@ -81,7 +83,8 @@ input, select, button {
     max-height: 800px;
     background-color: rgba(64, 32, 64, 0.9);
     padding: 20px 32px 40px 40px;
-    font-family: 'Times New Roman';
+    font-family: 'Arial';
+    font-size: 0.95em;
     line-height: 1.2em;
     color: white;
     overflow-y: scroll;
@@ -145,6 +148,6 @@ a {
     display: inline-block;
     margin: 0.3em;
     padding: 0em 0.3em;
-    background-color: rgba(0, 0, 0, 0.5);
-    box-shadow: 0 0 0.35em 0.35em rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 0.35em 0.35em rgba(0, 0, 0, 0.55);
 }

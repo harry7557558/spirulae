@@ -8,7 +8,7 @@ const builtinFunctions = [
     ["A4 Goursat", "2(x^4+y^4+z^4)-3(x^2+y^2+z^2)+2"],
     ["A4 Genus 3", "(x^2-1)^2+(y^2-1)^2+(z^2-1)^2+4(x^2y^2+x^2z^2+y^2z^2)+8xyz-2(x^2+y^2+z^2)"],
     ["A6 Spiky 1", "(x^2+y^2+z^2-2)^3+2000(x^2y^2+x^2z^2+y^2z^2)=10"],
-    ["A6 Spiky 2", "z^6-5(x^2+y^2)z^4+5(x^2+y^2)^2z^2-2(x^4-10x^2y^2+5y^4)xz-1.002(x^2+y^2+z^2)^3+0.2"],
+    ["A6 Spiky 2", "z^6-5(x^2+y^2)z^4+5(x^2+y^2)^2z^2+2(5x^4-10x^2y^2+y^4)yz-1.002(x^2+y^2+z^2)^3+0.2"],
     ["A6 Barth", "4(x^2-y^2)(y^2-z^2)(z^2-x^2)-3(x^2+y^2+z^2-1)^2"],
     ["A3 Ding-Dong", "x^2+y^2=(1-z)z^2"],
     ['A3 Bridge', "x^2+y^2z+z^2=0.01"],
@@ -103,10 +103,10 @@ function updateLatex(latexList, color) {
 document.body.onload = function (event) {
     console.log("onload");
     var glsl = {};
+    let checkboxLight = document.querySelector("#checkbox-light");
     let checkboxYup = document.querySelector("#checkbox-yup");
     let checkboxGrid = document.querySelector("#checkbox-grid");
     let checkboxTransparency = document.querySelector("#checkbox-transparency");
-    let checkboxAnalyGrad = document.querySelector("#checkbox-analygrad");
     let checkboxDiscontinuity = document.querySelector("#checkbox-discontinuity");
     let selectStep = document.querySelector("#select-step");
     let selectColor = document.querySelector("#select-color");
@@ -117,10 +117,10 @@ document.body.onload = function (event) {
         return {
             sStep: selectStep.value,
             sColor: selectColor.selectedIndex,
+            bLight: checkboxLight.checked,
             bYup: checkboxYup.checked,
             bGrid: checkboxGrid.checked,
             bTransparency: checkboxTransparency.checked,
-            bAnalyGrad: checkboxAnalyGrad.checked,
             bDiscontinuity: checkboxDiscontinuity.checked,
             cLatex: checkboxLatex.checked,
             cAutoCompile: checkboxAutoCompile.checked,
@@ -129,10 +129,10 @@ document.body.onload = function (event) {
     function setParams(params) {
         selectStep.value = params.sStep;
         selectColor.selectedIndex = params.sColor;
+        checkboxLight.checked = params.bLight;
         checkboxYup.checked = params.bYup;
         checkboxGrid.checked = params.bGrid;
         checkboxTransparency.checked = params.bTransparency;
-        checkboxAnalyGrad.checked = params.bAnalyGrad;
         checkboxDiscontinuity.checked = params.bDiscontinuity;
         checkboxLatex.checked = params.cLatex;
         checkboxAutoCompile.checked = params.cAutoCompile;
@@ -140,10 +140,10 @@ document.body.onload = function (event) {
 
     // init parameters
     try {
-        var params = JSON.parse(localStorage.getItem("ri_Params"));
+        var params = JSON.parse(localStorage.getItem("spirula.implicit3.params"));
         if (params != null) setParams(params);
     }
-    catch (e) { }
+    catch (e) { console.error(e); }
 
     // init functions
     let select = document.querySelector("#builtin-functions");
@@ -155,7 +155,7 @@ document.body.onload = function (event) {
     }
     var initialExpr = "";
     try {
-        initialExpr = localStorage.getItem("ri_Input");
+        initialExpr = localStorage.getItem("spirula.implicit3.input");
         if (initialExpr == null) throw initialExpr;
         select.childNodes[0].setAttribute("value", initialExpr);
         var selectId = 0;
@@ -177,9 +177,9 @@ document.body.onload = function (event) {
         if (!checkboxLatex.checked) texContainer.innerHTML = "";
         var expr = input.value;
         try {
-            localStorage.setItem("ri_Input", expr);
-            localStorage.setItem("ri_Params", JSON.stringify(getParams()));
-        } catch (e) { }
+            localStorage.setItem("spirula.implicit3.input", expr);
+            localStorage.setItem("spirula.implicit3.params", JSON.stringify(getParams()));
+        } catch (e) { console.error(e); }
 
         // parse input
         var parsed = null;
@@ -247,12 +247,12 @@ document.body.onload = function (event) {
     }
 
     buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
+    checkboxLight.addEventListener("input", updateFunctionInput);
     checkboxLatex.addEventListener("input", updateFunctionInput);
     checkboxAutoCompile.addEventListener("input", updateFunctionInput);
     checkboxYup.addEventListener("input", updateFunctionInput);
     checkboxGrid.addEventListener("input", updateFunctionInput);
     checkboxTransparency.addEventListener("input", updateFunctionInput);
-    checkboxAnalyGrad.addEventListener("input", updateFunctionInput);
     checkboxDiscontinuity.addEventListener("input", updateFunctionInput);
     selectStep.addEventListener("input", updateFunctionInput);
     selectColor.addEventListener("input", updateFunctionInput);

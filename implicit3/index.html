@@ -38,9 +38,9 @@
         <svg id="axes" width="80" height="80">
             <g transform="translate(40,40) scale(40,-40)">
                 <circle cx="0" cy="0" r="1" stroke="none" fill="rgba(50,50,50,0.5)"></circle>
-                <line id="axis-x" x1="0" y1="0" x2="0" y2="0" stroke="red" stroke-width="0.06"></line>
-                <line id="axis-y" x1="0" y1="0" x2="0" y2="0" stroke="green" stroke-width="0.06"></line>
-                <line id="axis-z" x1="0" y1="0" x2="0" y2="0" stroke="blue" stroke-width="0.06"></line>
+                <line id="axis-x" x1="0" y1="0" x2="0" y2="0" stroke="rgb(250,50,80)" stroke-width="0.06"></line>
+                <line id="axis-y" x1="0" y1="0" x2="0" y2="0" stroke="rgb(140,220,0)" stroke-width="0.06"></line>
+                <line id="axis-z" x1="0" y1="0" x2="0" y2="0" stroke="rgb(40,140,250)" stroke-width="0.06"></line>
             </g>
         </svg>
     </div>
@@ -67,9 +67,9 @@
             </select>quality</span>&ensp;
         <span title="Use y-up coordinate system convension"><input type="checkbox"
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>
+        <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <br />
-        <span title="Color surface based on normal"><select id="select-color">
+        <span title="Surface color mode"><select id="select-color">
                 <option>default</option>
                 <option>normal</option>
                 <option selected>gradient</option>
@@ -77,10 +77,9 @@
         <span title="Display the surface as semi-transparent"><input type="checkbox"
                 id="checkbox-transparency" />transparency</span>
         <br />
-        <span title="Evaluate the exact gradient instead of a finite difference approximation"><input type="checkbox"
-                id="checkbox-analygrad" />analytical&nbsp;grad</span>&ensp;
+        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
-                id="checkbox-discontinuity" checked />discontinuity</span>
+                id="checkbox-discontinuity" checked />highlight discontinuity</span>
         <br />
         <span><i>θ<sub>light</sub></i>&nbsp;<input type="range" id="slider-theta" min="-90" max="270" value="30"
                 style="width:100px" /></span>
@@ -100,7 +99,7 @@
         <p>This tool implements the raymarching algorithm to render 3D implicit surfaces. Type equations in the input
             box, or look at some examples. Drag the canvas to rotate the surface, and scroll to zoom in/out. Drag while
             holding <code>Shift</code> to move the graph on the screen. Reset the viewport by switching to an example
-            and switching back (you may want to backup your input). Try to play with different selectors, checkboxes,
+            and switching back (you may want to back up your input). Try to play with different selectors, checkboxes,
             and sliders.</p>
         <p>You need a device/browser that supports <a href="https://webglreport.com/?v=2" target="_blank">WebGL 2</a> to
             run this tool. An FPS counter will be available if your browser supports the
@@ -138,10 +137,6 @@
             the size of the object and read the coordinates of a point.</p>
         <p><b>Transparency</b>: Check this if you want the surface to be semi-transparent so you can look through it.
             (Try the "A5 Star" example.) Warn that this may decrease the accuracy of the rendering.</p>
-        <p><b>Analytical gradient</b>: When this is checked, this tool evaluates the analytical gradient of the function
-            used in ray-surface intersection and shading. Otherwise, it approximates the line derivative from previous
-            raymarching samples, which is typically faster but less accurate. Raymarching step size is reduced to
-            balance speed and quality when this is unchecked.</p>
         <p><b>Discontinuity</b>: In this tool, the surface is defined by a set of points with changes of sign, which is
             either a zero or a discontinuity. Check this to detect and red highlight discontinuity. (Try the "Sin
             Terrace" example.)</p>
@@ -179,9 +174,8 @@
                 href="https://www.shadertoy.com/view/sllczM" target="_blank">here</a>.</p>
         <p>The input entered is parsed in JavaScript. After preprocessing (ex. adding multiplication signs), it is
             parsed to the postfix notation using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm"
-                target="_blank">shunting-yard algorithm</a>. When generating GLSL code, the expression is evaluated
-            while being divided into steps, and its analytical gradient expression is generated via automatic
-            differentiation. Generated GLSL code is logged to the console when the input is updated, which can be found
+                target="_blank">shunting-yard algorithm</a>. When generating GLSL code, the expression is evaluated on a
+            stack with caching of common subtrees. Generated GLSL code is logged to the console, which can be found
             under the "Console" tab of the F12 developer tool.</p>
         <p>The source code of this tool can be found on <a
                 href="https://github.com/harry7557558/harry7557558.github.io/tree/master/tools/raymarching-implicit"
