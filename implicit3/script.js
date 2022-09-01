@@ -46,59 +46,6 @@ const builtinFunctions = [
     ["Conch Shell", "p=3.1415926&#32;#&#32;pi;a_o=0.16*p&#32;#&#32;half&#32;of&#32;opening&#32;angle;b=0.6&#32;#&#32;r=e^bt;s_min(a,b,k)=-1/k*ln(e^-ka+e^-kb)&#32;#&#32;smoothed&#32;minimum;;#&#32;Cross&#32;section;C_m(u,v)=1-(1-0.01e^sin(12p(u+2v)))e^-(5v)^2&#32;&#32;#&#32;mid&#32;rod;C_s(u,v)=(sqrt((u-e^-16v)^2+(v(1-0.2exp(-4sqrt(u^2+0.1^2)))-0.5+0.5e^(-v)sin(4u)+0.2cos(2u)e^-v)^2)-0.55)tanh(5sqrt(2u^2+(v-1.2)^2))+0.01sin(40u)sin(40v)exp(-(u^2+v^2));C0(u,v)=abs(C_s(u,v))C_m(u,v)&#32;#&#32;single&#32;layer;n1(u,v)=log(sqrt(u^2+v^2))/b+2&#32;#&#32;index&#32;of&#32;layer;a1(u,v)=atan(v,u)/a_o&#32;#&#32;opening&#32;angle,&#32;0-1;d1(u,v,s_d)=0.5sqrt(u^2+v^2)*C0(if(n1(u,v),n1(u,v)-s_d,fract(n1(u,v))-s_d),a1(u,v));C(u,v)=min(d1(u,v,0.5),d1(u,v,1.5))&#32;#&#32;cross&#32;section;;#&#32;Spiral;l_p(x,y)=exp(b*atan(y,x)/(2p))&#32;#&#32;a&#32;multiplying&#32;factor;U(x,y,z)=exp(log(-z)+b*atan(y,x)/(2p))&#32;#&#32;xyz&#32;to&#32;cross&#32;section&#32;u;V(x,y,z)=sqrt(x^2+y^2)*l_p(x,y)&#32;#&#32;xyz&#32;to&#32;cross&#32;section&#32;v;S_s(x,y,z)=C(U(x,y,z),V(x,y,z))/l_p(x,y)&#32;#&#32;body;S_o(x,y,z)=sqrt((C(exp(log(-z)-b/2),-x*exp(-b/2))*exp(b/2))^2+y^2)&#32;#&#32;opening;S_t(x,y,z)=d1(-z,sqrt(x^2+y^2),0.5)&#32;#&#32;tip;S_a(x,y,z)=if(-z,min(S_s(x,y,z),S_o(x,y,z)),S_t(x,y,z))&#32;#&#32;body+tip;S0(x,y,z)=S_a(x,y,z)-0.01-0.01(x^2+y^2+z^2)^0.4-0.02sqrt(x^2+y^2)exp(cos(8atan(y,x)))-0.007*(0.5-0.5tanh(10(z+1+8sqrt(3x^2+y^2))))&#32;#&#32;subtract&#32;thickness;S(x,y,z)=-s_min(-S0(x,y,z),z+1.7,10)&#32;#&#32;clip&#32;bottom;r_a=-0.05sin(3z)tanh(2(x^2+y^2-z-1.5))&#32;#&#32;distortion;S(0.4(x-r_a*y),0.4(y+r_a*x),0.4z-0.7)=0"]
 ];
 
-function texPreviewPositionDelta(dx = 0, dy = 0) {
-    let container = document.querySelector("#mathjax-preview");
-    var left = Number(container.style.left.replace(/px$/, '')) + dx;
-    var top = Number(container.style.top.replace(/px$/, '')) + dy;
-    var minLeft = Math.min(0, window.innerWidth - container.clientWidth);
-    var maxRight = Math.max(window.innerWidth, container.clientWidth);
-    var minTop = Math.min(0, window.innerHeight - container.clientHeight);
-    var maxBottom = Math.max(window.innerHeight, container.clientHeight);
-    left = Math.max(minLeft, Math.min(left, maxRight - container.clientWidth));
-    top = Math.max(minTop, Math.min(top, maxBottom - container.clientHeight));
-    container.style.left = left + "px";
-    container.style.top = top + "px";
-}
-async function initMathjax() {
-    let container = document.querySelector("#mathjax-preview");
-    var mousePos = [-1, -1];
-    var left = 0.2 * window.innerWidth - 200;
-    var top = 0.8 * window.innerHeight - 20;
-    texPreviewPositionDelta(left, top);
-    container.addEventListener("pointerdown", function (event) {
-        container.setPointerCapture(event.pointerId);
-        mousePos = [event.clientX, event.clientY];
-    });
-    container.addEventListener("pointerup", function (event) {
-        mousePos = [-1, -1];
-    });
-    container.addEventListener("pointermove", function (event) {
-        if (mousePos[0] >= 0) {
-            texPreviewPositionDelta(event.clientX - mousePos[0], event.clientY - mousePos[1]);
-            mousePos = [event.clientX, event.clientY];
-        }
-    });
-    window.addEventListener("resize", texPreviewPositionDelta);
-}
-function updateLatex(latexList, color) {
-    let texContainer = document.getElementById("mathjax-preview");
-    texContainer.innerHTML = "";
-    texContainer.style.color = color;
-    for (var i = 0; i < latexList.length; i++) {
-        var container = document.createElement("div");
-        var line = document.createElement("span");
-        line.textContent = "$\\displaystyle{" + latexList[i] + "}$";
-        line.innerHTML += "<!--" + latexList[i] + "-->";
-        container.appendChild(line);
-        texContainer.appendChild(container);
-    }
-    try {
-        MathJax.typeset();
-        texPreviewPositionDelta(0, 0);
-    } catch (e) {
-        console.error(e);
-    }
-}
 
 document.body.onload = function (event) {
     console.log("onload");
@@ -246,6 +193,7 @@ document.body.onload = function (event) {
         }
     }
 
+    // update on parameter change
     buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
     checkboxLight.addEventListener("input", updateFunctionInput);
     checkboxLatex.addEventListener("input", updateFunctionInput);

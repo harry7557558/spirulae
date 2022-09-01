@@ -11,21 +11,6 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script>
-        window.MathJax = {
-            loader: { load: ['[tex]/color'] },
-            tex: {
-                inlineMath: [['$', '$']],
-                packages: { '[+]': ['color'] }
-            },
-            svg: {
-                fontCache: 'global'
-            }
-        };
-    </script>
-    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
-        onerror="alert('Failed to load MathJax.')"></script>
-
     <link rel="stylesheet" href="style.css" />
 
 </head>
@@ -89,7 +74,7 @@
         <p id="error-message" style="display:none"></p>
     </div>
 
-    <div id="mathjax-preview" style="left:0px;top:0px"></div>
+    <div id="mathjax-preview" style="left:0px;top:0px;display:none"></div>
 
     <div id="help-menu" style="visibility:hidden">
         <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
@@ -194,6 +179,7 @@
             loadScript("../scripts/parser.js");
             loadScript("../scripts/render-gl.js");
             loadScript("../scripts/render-raymarch.js");
+            loadScript("../scripts/latex.js");
             loadScript("script.js");
         })();
     </script>
