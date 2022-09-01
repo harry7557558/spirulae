@@ -281,13 +281,25 @@ document.body.onload = function (event) {
     input.value = select.value.replaceAll(";", "\n");
 
     // main
-    try {
-        initWebGL();
-        updateFunctionInput(true);
-        initRenderer();
-    } catch (e) {
-        console.error(e);
-        document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
-    }
+    loadShaderSources([
+        "../shaders/vert-pixel.glsl",
+        "../shaders/functions.glsl",
+        "frag-premarch.glsl",
+        "../shaders/frag-pool.glsl",
+        "frag-raymarch.glsl",
+        "../shaders/frag-imggrad.glsl",
+        "../shaders/frag-aa.glsl"
+    ], function () {
+        console.log("shaders loaded");
+        try {
+            state.name = "spirula.implicit3.state";
+            initWebGL();
+            updateFunctionInput(true);
+            initRenderer();
+        } catch (e) {
+            console.error(e);
+            document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
+        }
+    });
     initMathjax();
 };

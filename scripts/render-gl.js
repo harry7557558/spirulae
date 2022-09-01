@@ -107,23 +107,50 @@ function mat4ToFloat32Array(m) {
 
 // request shader sources
 let loadShaderSourceCache = {};
-function loadShaderSource(path) {
-    if (loadShaderSourceCache.hasOwnProperty(path))
-        return loadShaderSourceCache[path];
-    var request = new XMLHttpRequest();
-    request.open("GET", path, false);
-    request.send(null);
-    if (request.status != 200)
-        throw "Error loading shader source (" + request.status + "): " + path;
-    var source = request.responseText;
-    loadShaderSourceCache[path] = source;
-    const include_regex = /\n\#include\s+[\<\"](.*?)[\>\"]/;
-    while (include_regex.test(source)) {
-        var match = source.match(include_regex);
-        var include_source = loadShaderSource(match[1]);
-        source = source.replace(match[0], "\n" + include_source + "\n");
+function getShaderSource(path) {
+    if (!loadShaderSourceCache.hasOwnProperty(path))
+        throw new Error("Cache not found: " + path);
+    return loadShaderSourceCache[path];
+}
+function loadShaderSources(sources, callback) {
+    function onFinish() {
+        for (var i = 0; i < sources.length; i++) {
+            var source = loadShaderSourceCache[sources[i]];
+            const include_regex = /\n\#include\s+[\<\"](.*?)[\>\"]/;
+            while (include_regex.test(source)) {
+                var match = source.match(include_regex);
+                var include_source = loadShaderSourceCache[match[1]];
+                source = source.replace(match[0], "\n" + include_source + "\n");
+            }
+            loadShaderSourceCache[sources[i]] = source;
+        }
+        callback();
     }
-    return source;
+    var nocache = "?nocache=" + Math.floor(Date.now() / 3600000);
+    var promises = [];
+    for (var i = 0; i < sources.length; i++) {
+        promises.push(new Promise(
+            function (resolve, reject) {
+                var path = sources[i];
+                var req = new XMLHttpRequest();
+                req.open("GET", path + nocache);
+                req.onload = function () {
+                    // console.log(path);
+                    if (this.status != 200)
+                        reject("Error " + this.status);
+                    loadShaderSourceCache[path] = this.responseText;
+                    if (Object.keys(loadShaderSourceCache).length >= sources.length)
+                        onFinish();
+                };
+                req.send();
+            }
+        ));
+    }
+    Promise.all(promises).then(
+        function (response) { }
+    ).catch(function (error) {
+        console.error(error);
+    });
 }
 
 // compile shaders and create a shader program
@@ -199,10 +226,10 @@ function destroyRenderTarget(gl, target) {
 function createAntiAliaser(gl, width, height) {
     var renderTarget = createRenderTarget(gl, width, height);
     var imgGradProgram = createShaderProgram(gl,
-        loadShaderSource("../shaders/vert-pixel.glsl"), loadShaderSource("../shaders/frag-imggrad.glsl"));
+        getShaderSource("../shaders/vert-pixel.glsl"), getShaderSource("../shaders/frag-imggrad.glsl"));
     var imgGradTarget = createRenderTarget(gl, width, height);
     var aaProgram = createShaderProgram(gl,
-        loadShaderSource("../shaders/vert-pixel.glsl"), loadShaderSource("../shaders/frag-aa.glsl"));
+        getShaderSource("../shaders/vert-pixel.glsl"), getShaderSource("../shaders/frag-aa.glsl"));
     return {
         renderTexture: renderTarget.texture,
         renderFramebuffer: renderTarget.framebuffer,

@@ -251,6 +251,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
 // ============================ MAIN ==============================
 
 var state = {
+    name: "",
     width: window.innerWidth,
     height: window.innerHeight,
     screenCenter: [0.0, 0.0],
@@ -262,8 +263,9 @@ var state = {
     lightPhi: null,
     renderNeeded: true
 };
-function resetState(overwrite = true) {
+function resetState(loaded_state = {}, overwrite = true) {
     var state1 = {
+        name: state.name,
         width: window.innerWidth,
         height: window.innerHeight,
         screenCenter: calcScreenCenter(),
@@ -276,8 +278,9 @@ function resetState(overwrite = true) {
         renderNeeded: true
     };
     for (var key in state1) {
-        if (overwrite || state[key] == undefined)
-            state[key] = state1[key];
+        if (overwrite || loaded_state[key] == undefined)
+            loaded_state[key] = state1[key];
+        state[key] = loaded_state[key];
     }
 }
 
@@ -296,9 +299,9 @@ function initWebGL() {
     console.time("load glsl code");
     renderer.vsSource = "#version 300 es\nin vec4 vertexPosition;out vec2 vXy;" +
         "void main(){vXy=vertexPosition.xy;gl_Position=vertexPosition;}";
-    renderer.premarchSource = loadShaderSource("frag-premarch.glsl");
-    renderer.poolSource = loadShaderSource("../shaders/frag-pool.glsl");
-    renderer.raymarchSource = loadShaderSource("frag-raymarch.glsl");
+    renderer.premarchSource = getShaderSource("frag-premarch.glsl");
+    renderer.poolSource = getShaderSource("../shaders/frag-pool.glsl");
+    renderer.raymarchSource = getShaderSource("frag-raymarch.glsl");
     console.timeEnd("load glsl code");
 
     // position buffer
@@ -309,19 +312,24 @@ function initWebGL() {
 
     // timer
     renderer.timerExt = renderer.gl.getExtension('EXT_disjoint_timer_query_webgl2');
-    if (renderer.timerExt) document.querySelector("#fps").textContent = "Timer loaded.";
-    else console.warn("Timer unavailable.");
+    if (renderer.timerExt)
+        document.getElementById("fps").textContent = "Timer loaded.";
+    else {
+        document.getElementById("fps").style.display = "none";
+        console.warn("Timer unavailable.");
+    }
 
     // state
     try {
-        var initialState = localStorage.getItem("ri_State");
+        var initialState = localStorage.getItem(state.name);
         if (initialState != null) {
-            state = JSON.parse(initialState);
-            resetState(false);
+            var new_state = JSON.parse(initialState);
+            resetState(new_state, false);
         }
     }
     catch (e) {
-        try { localStorage.removeItem("ri_State"); } catch (e) { }
+        console.error(e);
+        try { localStorage.removeItem(state.name); } catch (e) { console.error(e); }
     }
 }
 
@@ -353,7 +361,6 @@ function initRenderer() {
     let gl = renderer.gl;
 
     updateBuffers();
-    //resetState();
 
     // rendering
     var oldScreenCenter = [-1, -1];
@@ -365,8 +372,8 @@ function initRenderer() {
             state.width = canvas.width = canvas.style.width = window.innerWidth;
             state.height = canvas.height = canvas.style.height = window.innerHeight;
             try {
-                localStorage.setItem("ri_State", JSON.stringify(state));
-            } catch (e) { }
+                localStorage.setItem(state.name, JSON.stringify(state));
+            } catch (e) { console.error(e); }
             var transformMatrix = calcTransformMatrix(state);
             var lightDir = calcLightDirection(transformMatrix, state.lightTheta, state.lightPhi);
             drawScene(screenCenter, transformMatrix, lightDir);
