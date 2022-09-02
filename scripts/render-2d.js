@@ -21,6 +21,7 @@ function resetState(loaded_state = {}, overwrite = true) {
         renderNeeded: true
     };
     var xym = calcXyMinMax();
+    console.log(xym);
     for (var key in xym) state1[key] = xym[key];
     for (var key in state1) {
         if (overwrite || loaded_state[key] == undefined)
@@ -83,12 +84,42 @@ function resizeState() {
     else if (width > 50 && height > 50 && state.width > 50 && state.height > 50) {
         var sc = Math.sqrt(state.width * state.height) / Math.sqrt(width * height);
         var c = calcScreenCenter();
+        var ratio = ((state.ymax - state.ymin) / state.height)
+            / ((state.xmax - state.xmin) / state.width);  // keep aspect ratio after floating point accuracy loss
         scaleState(
             { x: c.x * state.width, y: c.y * state.height },
-            { x: sc * width / state.width, y: sc * height / state.height }
+            {
+                x: sc * width / state.width * Math.sqrt(ratio),
+                y: sc * height / state.height / Math.sqrt(ratio)
+            }
         );
     }
     state.width = width, state.height = height;
+}
+
+// render legend
+function renderLegend() {
+    var scale = state.width / (state.xmax - state.xmin);
+    const targetWidth = 120;
+    var targetL = targetWidth / scale;
+    var expi = Math.floor(Math.log10(targetL));
+    var l = Math.pow(10, expi);
+    if (l / targetL < 0.2) l *= 5.0;
+    if (l / targetL < 0.5) l *= 2.0;
+    document.getElementById("legend-scale").setAttribute("width", scale * l);
+    document.getElementById("legend-text").setAttribute("x", 0.5 * scale * l);
+    function toSuperscript(num) {
+        num = "" + num;
+        var res = "";
+        for (var i = 0; i < num.length; i++) {
+            if (num[i] == "-") res += "⁻";
+            else res += "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(num[i])];
+        }
+        return res;
+    }
+    if (l >= 1e4 || l < 1e-3)
+        l = Math.round(l * Math.pow(10, -expi)) + "×10" + toSuperscript(expi);
+    document.getElementById("legend-text").textContent = l;
 }
 
 
@@ -264,8 +295,8 @@ function initWebGL() {
         if (initialState != null) {
             var new_state = JSON.parse(initialState);
             resetState(new_state, false);
-            resetState();
         }
+        else resetState();
     }
     catch (e) {
         console.error(e);
@@ -274,7 +305,6 @@ function initWebGL() {
 }
 
 function updateBuffers() {
-    resizeState();
     state.width = canvas.width = canvas.style.width = window.innerWidth;
     state.height = canvas.height = canvas.style.height = window.innerHeight;
 
@@ -306,6 +336,7 @@ function initRenderer() {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
             drawScene(state);
+            renderLegend();
             state.renderNeeded = false;
         }
         oldScreenCenter = screenCenter;
@@ -318,6 +349,7 @@ function initRenderer() {
     canvas.addEventListener("wheel", function (event) {
         if (renderer.shaderProgram == null)
             return;
+        resizeState();
         scaleState(
             { x: event.clientX, y: event.clientY },
             Math.exp(-0.0004 * event.wheelDeltaY)
@@ -339,7 +371,8 @@ function initRenderer() {
         if (renderer.shaderProgram == null)
             return;
         if (mouseDown) {
-            translateState({ x: event.movementX, y: event.movementY });
+            var v = fingerDist == -1 ? 1.0 : 0.4;
+            translateState({ x: v * event.movementX, y: v * event.movementY });
             state.renderNeeded = true;
         }
     });
@@ -357,18 +390,22 @@ function initRenderer() {
         if (renderer.shaderProgram == null)
             return;
         if (event.touches.length == 2) {
-            var fingerPos0 = [event.touches[0].pageX, event.touches[0].pageY];
-            var fingerPos1 = [event.touches[1].pageX, event.touches[1].pageY];
-            var newFingerDist = Math.hypot(fingerPos1[0] - fingerPos0[0], fingerPos1[1] - fingerPos0[1]);
+            var fingerPos0 = { x: event.touches[0].pageX, y: event.touches[0].pageY };
+            var fingerPos1 = { x: event.touches[1].pageX, y: event.touches[1].pageY };
+            var newFingerDist = Math.hypot(fingerPos1.x - fingerPos0.x, fingerPos1.y - fingerPos0.y);
             if (fingerDist > 0. && newFingerDist > 0.) {
-                var sc = newFingerDist / fingerDist;
-                state.scale *= Math.max(Math.min(sc, 2.0), 0.5);
+                var sc = fingerDist / newFingerDist;
+                scaleState({
+                    x: 0.5 * (fingerPos0.x + fingerPos1.x),
+                    y: 0.5 * (fingerPos0.y + fingerPos1.y)
+                }, sc);
             }
             fingerDist = newFingerDist;
             state.renderNeeded = true;
         }
     }, { passive: true });
     window.addEventListener("resize", function () {
+        resizeState();
         updateBuffers();
     });
 
@@ -380,13 +417,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
     function sub(shaderSource) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
-        shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
-        shaderSource = shaderSource.replaceAll("{%V_RENDER%}", params.bTransparency ? "vAlpha" : "vSolid");
-        shaderSource = shaderSource.replaceAll("{%COLOR%}", "" + params.sColor);
-        shaderSource = shaderSource.replaceAll("{%Y_UP%}", params.bYup ? "1" : "0");
         shaderSource = shaderSource.replaceAll("{%GRID%}", params.bGrid ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", params.bDiscontinuity ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%BACKGROUND_COLOR%}", params.bLight ? "vec3(0.9)" : "vec3(.02,.022,.025)");
         return shaderSource;
     }
     console.time("compile shader");

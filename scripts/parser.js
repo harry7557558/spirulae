@@ -50,6 +50,9 @@ function EvalLatexObject(postfix, latex, precedence) {
     this.precedence = precedence;
 }
 
+
+// Built-in functions
+
 function MathFunction(
     // all functions
     names, numArgs, latex, glsl,
@@ -113,6 +116,7 @@ function MathFunction(
         return latex;
     }
 }
+
 const mathFunctions = (function () {
     const funs0 = [
         new MathFunction(['if'], 3, '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}', 'mf_if(%1,%2,%3)'),
@@ -218,9 +222,15 @@ const mathFunctions = (function () {
     return funs;
 })();
 
-// test if the variable name is an independent variable
+
+// Independent variables, can be reassigned
+var independentVariables = {
+    'x': "mf_x()",
+    'y': "mf_y()",
+    'z': "mf_z()"
+};
 function isIndependentVariable(name) {
-    return name == 'x' || name == 'y' || name == 'z';
+    return independentVariables.hasOwnProperty(name);
 }
 
 
@@ -858,6 +868,7 @@ function powEvalObjects(a, b) {
     )
 }
 
+
 // Convert a post-polish math expression to GLSL code
 function postfixToGlsl(queue) {
     // subtree counter
@@ -901,9 +912,7 @@ function postfixToGlsl(queue) {
             var isNumeric = false;
             var interval = new Interval();
             if (isIndependentVariable(token.str)) {
-                if (token.str == 'x') s = "mf_x()";
-                if (token.str == 'y') s = "mf_y()";
-                if (token.str == 'z') s = "mf_z()";
+                s = independentVariables[token.str];
             }
             else if (token.str == "e") {
                 s = "mf_const(" + Math.E + ")";
@@ -969,16 +978,19 @@ function postfixToGlsl(queue) {
         glslgrad: [],
         isCompatible: stack[0].isCompatible
     };
+    var toGrad = function (glsl) {
+        return glsl.replace(/([^A-Za-z]?)mf_/g, "$1mfg_");
+    };
     for (var i = 0; i < intermediates.length; i++) {
         let intermediate = intermediates[i];
         var v = "float v" + intermediate.id + " = " + intermediate.glsl + ";";
-        var g = "vec4 v" + intermediate.id + " = " + intermediate.glsl.replace(/([^A-Za-z]?)mf_/g, "$1mfg_") + ";";
+        var g = "vec4 v" + intermediate.id + " = " + toGrad(intermediate.glsl) + ";";
         result.glsl.push(v);
         result.glslgrad.push(g);
     }
     result.glsl.push("return " + stack[0].glsl + ";");
     result.glsl = result.glsl.join('\n');
-    result.glslgrad.push("return " + stack[0].glsl + ";");
+    result.glslgrad.push("return " + toGrad(stack[0].glsl) + ";");
     result.glslgrad = result.glslgrad.join('\n');
     return result;
 }
@@ -1012,7 +1024,6 @@ function postfixToLatex(queue) {
         else if (token.type == "variable") {
             var s = varnameToLatex(token.str);
             if (s == "e") s = "\\operatorname{e}";
-            //else if (!isIndependentVariable(s)) s = "{\\color{red}{" + s + "}}";
             stack.push(new EvalLatexObject([token], s, Infinity));
         }
         // operators

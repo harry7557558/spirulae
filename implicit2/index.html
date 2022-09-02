@@ -17,6 +17,13 @@
 
     <div id="legend">
         <div id="fps"></div>
+        <svg id="axes" width="120" height="40">
+            <g transform="translate(0,5)">
+                <rect id="legend-scale" x="0" y="0" width="0" height="20" stroke="none" fill="rgba(96,96,96,0.7)" />
+                <text id="legend-text" x="0" y="15" text-anchor="middle" alignment-baseline="top" stroke="none"
+                    fill="white" font-family="monospace" font-size="1.2em"></text>
+            </g>
+        </svg>
     </div>
 
     <div id="control">
@@ -33,32 +40,7 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span><select id="select-step">
-                <option value="0.04">low</option>
-                <option value="0.01" selected>medium</option>
-                <option value="0.004">high</option>
-                <option value="0.001">ultra high</option>
-            </select>quality</span>&ensp;
-        <span title="Use y-up coordinate system convension"><input type="checkbox"
-                id="checkbox-yup" /><i>y</i>-up</span>&ensp;
-        <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
-        <br />
-        <span title="Surface color mode"><select id="select-color">
-                <option>default</option>
-                <option>normal</option>
-                <option selected>gradient</option>
-            </select>color</span>&ensp;
-        <span title="Display the surface as semi-transparent"><input type="checkbox"
-                id="checkbox-transparency" />transparency</span>
-        <br />
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
-        <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
-                id="checkbox-discontinuity" checked />highlight discontinuity</span>
-        <br />
-        <span><i>θ<sub>light</sub></i>&nbsp;<input type="range" id="slider-theta" min="-90" max="270" value="30"
-                style="width:100px" /></span>
-        <span><i>φ<sub>light</sub></i>&nbsp;<input type="range" id="slider-phi" min="0" max="180" value="30"
-                style="width:60px" /></span>
+        <span title="Show grid"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
         <br />
         <p id="error-message" style="display:none"></p>
     </div>
