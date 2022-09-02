@@ -83,15 +83,15 @@ function MathFunction(
         }
         var result = new EvalObject(
             postfix.concat([new Token('function', names[0])]),
-            glsl, isNumeric, new Interval(), isCompatible);
+            glsl, isNumeric, new Interval(this.range.x0, this.range.x1), isCompatible);
         if (args.length == 1) {
             const eps = 1e-8;
             if (args[0].range.x0 < this.domain.x0 - eps || args[0].range.x1 > this.domain.x1 + eps)
                 result.isCompatible = false;
-            if (args[0].range.x0 >= this.domain.x0 && args[0].range.x1 <= this.range.x1) {
-                if (this.monotonicFun != null) result.range = new Interval(
+            if (this.monotonicFun != null &&
+                args[0].range.x0 >= this.domain.x0 && args[0].range.x1 <= this.range.x1)
+                result.range = new Interval(
                     this.monotonicFun(args[0].range.x0), this.monotonicFun(args[0].range.x1));
-            }
             else result.range = new Interval(this.range.x0, this.range.x1);
         }
         return result;
@@ -129,6 +129,8 @@ const mathFunctions = (function () {
         new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
         new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
         new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
+        new MathFunction(['nthroot', 'root'], 2, '\\sqrt[%1]{%2}', 'mf_root(%1,%2)'),
+        new MathFunction(['hypot'], 2, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
         new MathFunction(['pow'], 2, '\\left(%1\\right)^{%2}', 'mf_pow(%1,%2)'),
         new MathFunction(['exp'], 1, '\\exp\\left(%1\\right)', 'mf_exp(%1)', new Interval(), new Interval(0, Infinity), Math.exp),
         new MathFunction(['log', 'ln'], 1, '\\ln\\left(%1\\right)', 'mf_ln(%1)', new Interval(0, Infinity), new Interval(), Math.log),
@@ -167,6 +169,20 @@ const mathFunctions = (function () {
         if (args.length != 2)
             throw "Incorrect number of arguments for function " + this.names[0];
         return powEvalObjects(args[0], args[1]);
+    };
+    funs['root']['2'].subGlsl = funs['nthroot']['2'].subGlsl = function (args) {
+        if (args.length != 2)
+            throw "Incorrect number of arguments for function " + this.names[0];
+        return new EvalObject(
+            args[0].postfix.concat(args[1].postfix).concat([new Token('function', this.names[0])]),
+            this.glsl.replaceAll("%1", args[0].glsl).replaceAll("%2", args[1].glsl),
+            args[0].isNumeric && args[1].isNumeric,
+            args[1].range.isPositive() ? new Interval(
+                Math.pow(args[1].range.x0, 1.0 / args[0].range.x1),
+                Math.pow(args[1].range.x1, 1.0 / args[0].range.x0)
+            ) : new Interval(),
+            args[0].isCompatible && args[1].isCompatible && args[1].range.isPositive()
+        );
     };
     funs['log']['2'].subGlsl = function (args) {
         if (args.length != 2)
@@ -807,10 +823,14 @@ function powEvalObjects(a, b) {
             true, new Interval(1, 1), a.isCompatible
         );
         if (n == 1) return a;
+        var spow = function (a, b) {
+            return b % 2 == 0 ? Math.pow(Math.abs(a), b) :
+                (a < 0. ? -1. : 1.) * Math.pow(Math.abs(a), b);
+        }
         var interval = new Interval(
             n % 2 == 0 && a.range.containsZero() ? 0.0 :
-                Math.min(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n)),
-            Math.max(Math.pow(a.range.x0, n), Math.pow(a.range.x1, n)));
+                Math.min(spow(a.range.x0, n), spow(a.range.x1, n)),
+            Math.max(spow(a.range.x0, n), spow(a.range.x1, n)));
         if (n >= 2 && n <= 12)
             return new EvalObject(
                 a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),

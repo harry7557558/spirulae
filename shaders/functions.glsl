@@ -41,6 +41,8 @@ float mf_lerp(float a, float b, float c) { return mix(a, b, c); }
 float mf_sqrt(float a) { return sqrt(a); }
 float mf_cbrt(float a) { return sign(a)*pow(abs(a), 1./3.); }
 float mf_pow(float a, float b) { return pow(a, b); }
+float mf_root(float a, float b) { return pow(b, 1.0/a); }
+float mf_hypot(float a, float b) { return length(vec2(a, b)); }
 float mf_exp(float a) { return exp(a); }
 float mf_ln(float a) { return log(a); }
 float mf_log(float a, float b) { return log(b) / log(a); }
@@ -106,6 +108,8 @@ vec4 mfg_lerp(vec4 a, vec4 b, vec4 c) { return vec4((1.-c.w)*a.xyz+(b.w-a.w)*c.x
 vec4 mfg_sqrt(vec4 a) { return vec4(.5*a.xyz/sqrt(a.w), sqrt(a.w)); }
 vec4 mfg_cbrt(vec4 a) { return vec4(a.xyz/(3.*pow(abs(a.w),2./3.)), sign(a.w)*pow(abs(a.w),1./3.)); }
 vec4 mfg_pow(vec4 a, vec4 b) { return vec4(a.xyz*(b.w*pow(a.w,b.w-1.))+b.xyz*(pow(a.w,b.w)*log(a.w)), pow(a.w,b.w)); }
+vec4 mfg_root(vec4 a, vec4 b) { return mfg_pow(b, mfg_div(vec4(0,0,0,1), a)); }
+vec4 mfg_hypot(vec4 a, vec4 b) { return vec4((a.xyz*a.w+b.xyz*b.w)/sqrt(a.w*a.w+b.w*b.w), sqrt(a.w*a.w+b.w*b.w)); }
 vec4 mfg_exp(vec4 a) { return vec4(a.xyz,1)*exp(a.w); }
 vec4 mfg_ln(vec4 a) { return vec4(a.xyz/a.w, log(a.w)); }
 vec4 mfg_log(vec4 a, vec4 b) { return vec4(((log(a.w)*b.xyz/b.w-log(b.w)*a.xyz/a.w)/(log(a.w)*log(a.w))), log(b.w)/log(a.w)); }
