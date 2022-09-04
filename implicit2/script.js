@@ -29,6 +29,7 @@ document.body.onload = function (event) {
     console.log("onload");
 
     // init parser
+    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsR));
     independentVariables = {
         'x': "mf_x()",
         'y': "mf_y()"

@@ -15,6 +15,8 @@ const builtinFunctions = [
     ["CM Snowflower", "sqrt(ln(z^6)^5)*(-i-1)"],
     ["Trigonometric Spam", "sin(cos(tan(csc(sec(cot(sqrt(5(x+1)"],
     ["Mandelbrot Set", "f(x)=x^2+z;f(f(f(f(f(f(f(z"],
+    ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
+    ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"]
 ];
 
 
@@ -22,10 +24,12 @@ document.body.onload = function (event) {
     console.log("onload");
 
     // init parser
+    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC));
     independentVariables = {
         'x': "mf_z()",
         'z': "mf_z()",
-        'i': "mc_i()"
+        'i': "mc_i()",
+        'j': "mc_i()"
     };
 
     // init parameters
@@ -182,6 +186,7 @@ document.body.onload = function (event) {
     // main
     loadShaderSources([
         "../shaders/vert-pixel.glsl",
+        "../shaders/complex-zeta.glsl",
         "../shaders/complex.glsl",
         "frag-shader.glsl",
         "../shaders/frag-imggrad.glsl",

@@ -49,6 +49,16 @@ const builtinFunctions = [
 
 document.body.onload = function (event) {
     console.log("onload");
+
+    // init parser
+    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsR));
+    independentVariables = {
+        'x': "mf_x()",
+        'y': "mf_y()",
+        'z': "mf_z()"
+    };
+
+    // init parameters
     var glsl = {};
     let checkboxLight = document.querySelector("#checkbox-light");
     let checkboxYup = document.querySelector("#checkbox-yup");

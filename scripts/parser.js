@@ -117,56 +117,82 @@ function MathFunction(
     }
 }
 
-const mathFunctions = (function () {
-    const funs0 = [
-        new MathFunction(['if'], 3, '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}', 'mf_if(%1,%2,%3)'),
-        new MathFunction(['mod'], 2, '\\operatorname{mod}\\left(%1,%2\\right)', 'mf_mod(%1,%2)'),
-        new MathFunction(['fract', 'frac'], 1, '\\operatorname{frac}\\left(%1\\right)', 'mf_fract(%1)', new Interval(), new Interval(0, 1)),
-        new MathFunction(['floor'], 1, '\\lfloor{%1}\\rfloor', 'mf_floor(%1)', new Interval(), new Interval(), Math.floor),
-        new MathFunction(['ceil'], 1, '\\lceil{%1}\\rceil', 'mf_ceil(%1)', new Interval(), new Interval(), Math.ceil),
-        new MathFunction(['round'], 1, '\\operatorname{round}\\left(%1\\right)', 'mf_round(%1)', new Interval(), new Interval(), Math.round),
-        new MathFunction(['abs'], 1, '\\left|%1\\right|', 'mf_abs(%1)', new Interval(), new Interval(0, Infinity)),
-        new MathFunction(['sign', 'sgn'], 1, '\\operatorname{sign}\\left(%1\\right)', 'mf_sign(%1)', new Interval(), new Interval(-1, 1), (x) => x > 0. ? 1. : x < 0. ? -1. : 0.),
-        new MathFunction(['max'], 0, '\\max\\left(%0\\right)', 'mf_max(%1,%2)'),
-        new MathFunction(['min'], 0, '\\min\\left(%0\\right)', 'mf_min(%1,%2)'),
-        new MathFunction(['clamp'], 3, '\\operatorname{clamp}\\left(%1,%2,%3\\right)', 'mf_clamp(%1,%2,%3)'),
-        new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
-        new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
-        new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
-        new MathFunction(['nthroot', 'root'], 2, '\\sqrt[%1]{%2}', 'mf_root(%1,%2)'),
-        new MathFunction(['hypot'], 2, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
-        new MathFunction(['pow'], 2, '\\left(%1\\right)^{%2}', 'mf_pow(%1,%2)'),
-        new MathFunction(['exp'], 1, '\\exp\\left(%1\\right)', 'mf_exp(%1)', new Interval(), new Interval(0, Infinity), Math.exp),
-        new MathFunction(['log', 'ln'], 1, '\\ln\\left(%1\\right)', 'mf_ln(%1)', new Interval(0, Infinity), new Interval(), Math.log),
-        new MathFunction(['log'], 2, '\\log_{%1}\\left(%2\\right)', 'mf_log(%1,%2)'),
-        new MathFunction(['sin'], 1, '\\sin\\left(%1\\right)', 'mf_sin(%1)', new Interval(), new Interval(-1, 1)),
-        new MathFunction(['cos'], 1, '\\cos\\left(%1\\right)', 'mf_cos(%1)', new Interval(), new Interval(-1, 1)),
-        new MathFunction(['tan'], 1, '\\tan\\left(%1\\right)', 'mf_tan(%1)'),
-        new MathFunction(['csc'], 1, '\\csc\\left(%1\\right)', 'mf_csc(%1)'),
-        new MathFunction(['sec'], 1, '\\sec\\left(%1\\right)', 'mf_sec(%1)'),
-        new MathFunction(['cot'], 1, '\\cot\\left(%1\\right)', 'mf_cot(%1)'),
-        new MathFunction(['sinh'], 1, '\\sinh\\left(%1\\right)', 'mf_sinh(%1)', new Interval(), new Interval(), Math.sinh),
-        new MathFunction(['cosh'], 1, '\\cosh\\left(%1\\right)', 'mf_cosh(%1)', new Interval(), new Interval(1, Infinity)),
-        new MathFunction(['tanh'], 1, '\\tanh\\left(%1\\right)', 'mf_tanh(%1)', new Interval(), new Interval(-1, 1), Math.tanh),
-        new MathFunction(['csch'], 1, '\\mathrm{csch}\\left(%1\\right)', 'mf_csch(%1)'),
-        new MathFunction(['sech'], 1, '\\mathrm{sech}\\left(%1\\right)', 'mf_sech(%1)', new Interval(), new Interval(0, 1)),
-        new MathFunction(['coth'], 1, '\\mathrm{coth}\\left(%1\\right)', 'mf_coth(%1)'),
-        new MathFunction(['arcsin', 'arsin', 'asin'], 1, '\\arcsin\\left(%1\\right)', 'mf_arcsin(%1)', new Interval(-1, 1), new Interval(-0.5 * PI, 0.5 * PI), Math.asin),
-        new MathFunction(['arccos', 'arcos', 'acos'], 1, '\\arccos\\left(%1\\right)', 'mf_arccos(%1)', new Interval(-1, 1), new Interval(0.0, PI), Math.acos),
-        new MathFunction(['arctan', 'artan', 'atan'], 1, '\\arctan\\left(%1\\right)', 'mf_arctan(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), Math.atan),
-        new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\operatorname{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)'),
-        new MathFunction(['arccot', 'arcot', 'acot'], 1, '\\mathrm{arccot}\\left(%1\\right)', 'mf_arccot(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), (x) => 0.5 * PI - Math.atan(x)),
-        new MathFunction(['arcsinh', 'arsinh', 'asinh'], 1, '\\mathrm{arcsinh}\\left(%1\\right)', 'mf_arcsinh(%1)', new Interval(), new Interval(), Math.asinh),
-        new MathFunction(['arccosh', 'arcosh', 'acosh'], 1, '\\mathrm{arccosh}\\left(%1\\right)', 'mf_arccosh(%1)', new Interval(1, Infinity), new Interval(0, Infinity), Math.acosh),
-        new MathFunction(['arctanh', 'artanh', 'atanh'], 1, '\\mathrm{arctanh}\\left(%1\\right)', 'mf_arctanh(%1)', new Interval(-1, 1), new Interval(), Math.atanh),
-        new MathFunction(['arccoth', 'arcoth', 'acoth'], 1, '\\mathrm{arccoth}\\left(%1\\right)', 'mf_arccoth(%1)'),
-    ];
+// Built-in functions for both real and complex variables
+const rawMathFunctionsShared = [
+    new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
+    new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
+    new MathFunction(['nthroot', 'root'], 2, '\\sqrt[%1]{%2}', 'mf_root(%1,%2)'),
+    new MathFunction(['pow'], 2, '\\left(%1\\right)^{%2}', 'mf_pow(%1,%2)'),
+    new MathFunction(['exp'], 1, '\\exp\\left(%1\\right)', 'mf_exp(%1)', new Interval(), new Interval(0, Infinity), Math.exp),
+    new MathFunction(['log', 'ln'], 1, '\\ln\\left(%1\\right)', 'mf_ln(%1)', new Interval(0, Infinity), new Interval(), Math.log),
+    new MathFunction(['log'], 2, '\\log_{%1}\\left(%2\\right)', 'mf_log(%1,%2)'),
+    new MathFunction(['sin'], 1, '\\sin\\left(%1\\right)', 'mf_sin(%1)', new Interval(), new Interval(-1, 1)),
+    new MathFunction(['cos'], 1, '\\cos\\left(%1\\right)', 'mf_cos(%1)', new Interval(), new Interval(-1, 1)),
+    new MathFunction(['tan'], 1, '\\tan\\left(%1\\right)', 'mf_tan(%1)'),
+    new MathFunction(['csc'], 1, '\\csc\\left(%1\\right)', 'mf_csc(%1)'),
+    new MathFunction(['sec'], 1, '\\sec\\left(%1\\right)', 'mf_sec(%1)'),
+    new MathFunction(['cot'], 1, '\\cot\\left(%1\\right)', 'mf_cot(%1)'),
+    new MathFunction(['sinh'], 1, '\\sinh\\left(%1\\right)', 'mf_sinh(%1)', new Interval(), new Interval(), Math.sinh),
+    new MathFunction(['cosh'], 1, '\\cosh\\left(%1\\right)', 'mf_cosh(%1)', new Interval(), new Interval(1, Infinity)),
+    new MathFunction(['tanh'], 1, '\\tanh\\left(%1\\right)', 'mf_tanh(%1)', new Interval(), new Interval(-1, 1), Math.tanh),
+    new MathFunction(['csch'], 1, '\\mathrm{csch}\\left(%1\\right)', 'mf_csch(%1)'),
+    new MathFunction(['sech'], 1, '\\mathrm{sech}\\left(%1\\right)', 'mf_sech(%1)', new Interval(), new Interval(0, 1)),
+    new MathFunction(['coth'], 1, '\\mathrm{coth}\\left(%1\\right)', 'mf_coth(%1)'),
+    new MathFunction(['arcsin', 'arsin', 'asin'], 1, '\\arcsin\\left(%1\\right)', 'mf_arcsin(%1)', new Interval(-1, 1), new Interval(-0.5 * PI, 0.5 * PI), Math.asin),
+    new MathFunction(['arccos', 'arcos', 'acos'], 1, '\\arccos\\left(%1\\right)', 'mf_arccos(%1)', new Interval(-1, 1), new Interval(0.0, PI), Math.acos),
+    new MathFunction(['arctan', 'artan', 'atan'], 1, '\\arctan\\left(%1\\right)', 'mf_arctan(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), Math.atan),
+    new MathFunction(['arccot', 'arcot', 'acot'], 1, '\\mathrm{arccot}\\left(%1\\right)', 'mf_arccot(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), (x) => 0.5 * PI - Math.atan(x)),
+    new MathFunction(['arcsec', 'arsec', 'asec'], 1, '\\mathrm{arcsec}\\left(%1\\right)', 'mf_arcsec(%1)', new Interval(0, 0), new Interval(0, PI)),
+    new MathFunction(['arccsc', 'arcsc', 'acsc'], 1, '\\mathrm{arccsc}\\left(%1\\right)', 'mf_arccsc(%1)', new Interval(0, 0), new Interval(-0.5 * PI, 0.5 * PI)),
+    new MathFunction(['arcsinh', 'arsinh', 'asinh'], 1, '\\mathrm{arcsinh}\\left(%1\\right)', 'mf_arcsinh(%1)', new Interval(), new Interval(), Math.asinh),
+    new MathFunction(['arccosh', 'arcosh', 'acosh'], 1, '\\mathrm{arccosh}\\left(%1\\right)', 'mf_arccosh(%1)', new Interval(1, Infinity), new Interval(0, Infinity), Math.acosh),
+    new MathFunction(['arctanh', 'artanh', 'atanh'], 1, '\\mathrm{arctanh}\\left(%1\\right)', 'mf_arctanh(%1)', new Interval(-1, 1), new Interval(), Math.atanh),
+    new MathFunction(['arccoth', 'arcoth', 'acoth'], 1, '\\mathrm{arccoth}\\left(%1\\right)', 'mf_arccoth(%1)'),
+    new MathFunction(['arcsech', 'arsech', 'asech'], 1, '\\mathrm{arcsech}\\left(%1\\right)', 'mf_arcsech(%1)', new Interval(0, 1), new Interval(0, Infinity), (x) => Math.acosh(1 / x)),
+    new MathFunction(['arccsch', 'arcsch', 'acsch'], 1, '\\mathrm{arccsch}\\left(%1\\right)', 'mf_arccsch(%1)', new Interval(), new Interval()),
+];
+// Additional built-in functions for real parameters
+const rawMathFunctionsR = [
+    new MathFunction(['abs'], 1, '\\left|%1\\right|', 'mf_abs(%1)', new Interval(), new Interval(0, Infinity)),
+    new MathFunction(['if'], 3, '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}', 'mf_if(%1,%2,%3)'),
+    new MathFunction(['mod'], 2, '\\operatorname{mod}\\left(%1,%2\\right)', 'mf_mod(%1,%2)'),
+    new MathFunction(['fract', 'frac'], 1, '\\operatorname{frac}\\left(%1\\right)', 'mf_fract(%1)', new Interval(), new Interval(0, 1)),
+    new MathFunction(['floor'], 1, '\\lfloor{%1}\\rfloor', 'mf_floor(%1)', new Interval(), new Interval(), Math.floor),
+    new MathFunction(['ceil'], 1, '\\lceil{%1}\\rceil', 'mf_ceil(%1)', new Interval(), new Interval(), Math.ceil),
+    new MathFunction(['round'], 1, '\\operatorname{round}\\left(%1\\right)', 'mf_round(%1)', new Interval(), new Interval(), Math.round),
+    new MathFunction(['sign', 'sgn'], 1, '\\operatorname{sign}\\left(%1\\right)', 'mf_sign(%1)', new Interval(), new Interval(-1, 1), (x) => x > 0. ? 1. : x < 0. ? -1. : 0.),
+    new MathFunction(['max'], 0, '\\max\\left(%0\\right)', 'mf_max(%1,%2)'),
+    new MathFunction(['min'], 0, '\\min\\left(%0\\right)', 'mf_min(%1,%2)'),
+    new MathFunction(['clamp'], 3, '\\operatorname{clamp}\\left(%1,%2,%3\\right)', 'mf_clamp(%1,%2,%3)'),
+    new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
+    new MathFunction(['hypot'], 2, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
+    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\operatorname{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)'),
+    new MathFunction(['erf'], 1, '\\mathrm{erf}\\left(%1\\right)', 'mf_erf(%1)', new Interval(), new Interval(-1, 1)),
+    new MathFunction(['erfinv'], 1, '\\mathrm{erf}^{-1}\\left(%1\\right)', 'mf_erfinv(%1)', new Interval(-1, 1), new Interval()),
+];
+// Additional built-in functions for complex parameters
+const rawMathFunctionsC = [
+    new MathFunction(['real', 're'], 1, '\\Re\\left(%1\\right)', 'mf_re(%1)'),
+    new MathFunction(['imaginary', 'imag', 'im'], 1, '\\Im\\left(%1\\right)', 'mf_im(%1)'),
+    new MathFunction(['magnitude', 'mag', 'abs'], 1, '\\mathrm{mag}\\left(%1\\right)', 'mf_mag(%1)'),
+    new MathFunction(['argument', 'arg'], 1, '\\arg\\left(%1\\right)', 'mf_arg(%1)'),
+    new MathFunction(['conjugate', 'conj'], 1, '\\overline{%1}', 'mf_conj(%1)'),
+    new MathFunction(['inverse', 'inv'], 1, '\\left(%1\\right)^{-1}', 'mf_inv(%1)'),
+    new MathFunction(['gamma'], 1, '\\Gamma\\left(%1\\right)', 'mf_gamma(%1)'),
+    new MathFunction(['loggamma', 'lngamma'], 1, '\\ln\\Gamma\\left(%1\\right)', 'mf_lngamma(%1)'),
+    new MathFunction(['zeta'], 1, '\\zeta\\left(%1\\right)', 'mf_zeta(%1)'),
+    new MathFunction(['logzeta', 'lnzeta'], 1, '\\ln\\zeta\\left(%1\\right)', 'mf_lnzeta(%1)'),
+];
+
+// Initialize math functions, pass rawMathFunctions as a parameter
+let mathFunctions = {};
+function initMathFunctions(rawMathFunctions) {
     var funs = {};
-    for (var i = 0; i < funs0.length; i++) {
-        for (var j = 0; j < funs0[i].names.length; j++) {
-            var name = funs0[i].names[j];
+    for (var i = 0; i < rawMathFunctions.length; i++) {
+        for (var j = 0; j < rawMathFunctions[i].names.length; j++) {
+            var name = rawMathFunctions[i].names[j];
             if (funs[name] == undefined) funs[name] = {};
-            funs[name]['' + funs0[i].numArgs] = funs0[i];
+            funs[name]['' + rawMathFunctions[i].numArgs] = rawMathFunctions[i];
         }
     }
     funs['pow']['2'].subGlsl = function (args) {
@@ -195,32 +221,34 @@ const mathFunctions = (function () {
             funs['ln']['1'].subGlsl([args[1]]),
             funs['ln']['1'].subGlsl([args[0]]));
     }
-    funs['max']['0'].subGlsl = funs['min']['0'].subGlsl = function (args) {
-        if (args.length < 2)
-            throw "To few argument for function " + this.names[0];
-        while (args.length >= 2) {
-            var args1 = [];
-            for (var i = 0; i + 1 < args.length; i += 2) {
-                var glsl = this.glsl.replaceAll("%1", args[i].glsl).replaceAll("%2", args[i + 1].glsl);
-                args1.push(new EvalObject(
-                    args[i].postfix.concat(args[i + 1].postfix).concat([new Token('function', this.names[0])]),
-                    glsl, args[i].isNumeric && args[i + 1].isNumeric,
-                    this.names[0] == 'max' ? new Interval(
-                        Math.max(args[i].range.x0, args[i + 1].range.x0),
-                        Math.max(args[i].range.x1, args[i + 1].range.x1),
-                    ) : new Interval(
-                        Math.min(args[i].range.x0, args[i + 1].range.x0),
-                        Math.min(args[i].range.x1, args[i + 1].range.x1),
-                    ),
-                    args[i].isCompatible && args[i + 1].isCompatible));
+    if (funs.hasOwnProperty('max') && funs.hasOwnProperty('min')) {
+        funs['max']['0'].subGlsl = funs['min']['0'].subGlsl = function (args) {
+            if (args.length < 2)
+                throw "To few argument for function " + this.names[0];
+            while (args.length >= 2) {
+                var args1 = [];
+                for (var i = 0; i + 1 < args.length; i += 2) {
+                    var glsl = this.glsl.replaceAll("%1", args[i].glsl).replaceAll("%2", args[i + 1].glsl);
+                    args1.push(new EvalObject(
+                        args[i].postfix.concat(args[i + 1].postfix).concat([new Token('function', this.names[0])]),
+                        glsl, args[i].isNumeric && args[i + 1].isNumeric,
+                        this.names[0] == 'max' ? new Interval(
+                            Math.max(args[i].range.x0, args[i + 1].range.x0),
+                            Math.max(args[i].range.x1, args[i + 1].range.x1),
+                        ) : new Interval(
+                            Math.min(args[i].range.x0, args[i + 1].range.x0),
+                            Math.min(args[i].range.x1, args[i + 1].range.x1),
+                        ),
+                        args[i].isCompatible && args[i + 1].isCompatible));
+                }
+                if (args.length % 2 == 1) args1.push(args[args.length - 1]);
+                args = args1;
             }
-            if (args.length % 2 == 1) args1.push(args[args.length - 1]);
-            args = args1;
-        }
-        return args[0];
-    };
-    return funs;
-})();
+            return args[0];
+        };
+    }
+    mathFunctions = funs;
+}
 
 
 // Independent variables, can be reassigned

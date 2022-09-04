@@ -44,6 +44,7 @@ vec2 mc_sqrt(vec2 e) {
         vec2(sqrt(0.5*(m+e.x)), -sqrt(0.5*(m-e.x)));
 }
 vec2 mc_cbrt(vec2 e) { return mc_pow(e, vec2(1./3., 0)); }
+vec2 mc_root(vec2 a, vec2 b) { return mc_pow(b, mc_inv(a)); }
 vec2 mc_exp(vec2 e) { return exp(e.x)*vec2(cos(e.y),sin(e.y)); }
 vec2 mc_ln(vec2 e) { return vec2(0.5*log(dot(e,e)), atan(e.y,e.x)); }
 vec2 mc_log(vec2 a, vec2 b) { return mc_div(mc_ln(b), mc_ln(a)); }
@@ -114,3 +115,49 @@ vec2 mc_arctanh(vec2 e) {
 vec2 mc_arccoth(vec2 e) { return mc_arctanh(mc_inv(e)); }
 vec2 mc_arccsch(vec2 e) { return mc_arcsinh(mc_inv(e)); }
 vec2 mc_arcsech(vec2 e) { return mc_arccosh(mc_inv(e)); }
+
+// Spouge's method for Gamma function
+vec2 mc_gamma(vec2 z) {
+    float N = length(z-vec2(-8.,0.))<1. ? 10. : 8.;
+    float c = sqrt(2.*PI);
+	vec2 s = vec2(c, 0);
+    float f = 1.;
+	for(float k=1.; k<N; k++) {
+		c = exp(N-k)*pow(N-k,k-.5)/f;
+        f *= -k;
+        s += mc_inv(z+vec2(k,0.))*c;
+	}
+	s = mc_mul(s,mc_mul(mc_exp(-z-vec2(N,0)),mc_pow(z+vec2(N,0),z+vec2(.5,0))));
+    return mc_div(s,z);
+}
+vec2 mc_lngamma(vec2 z) {
+    float N = length(z-vec2(-8.,0.))<1. ? 10. : 8.;
+    float c = sqrt(2.*PI);
+	vec2 s = vec2(c, 0);
+    float f = 1.;
+	for(float k=1.; k<N; k++) {
+		c = exp(N-k)*pow(N-k,k-.5)/f;
+        f *= -k;
+        s += mc_inv(z+vec2(k,0.))*c;
+	}
+    s = mc_ln(s);
+    s = s + (-z-vec2(N,0)) + mc_mul(z+vec2(.5,0), mc_ln(z+vec2(N,0)));
+    s = s - mc_ln(z);
+    s.y = mod(s.y+PI, 2.*PI)-PI;
+    return s;
+}
+
+// Riemann zeta function
+#include "../shaders/complex-zeta.glsl"
+vec2 mc_lnzeta(vec2 z) {
+    vec2 s = logzeta(z);
+    s.y = mod(s.y+PI, 2.*PI)-PI;
+    return s;
+}
+vec2 mc_zeta(vec2 z) {
+    vec2 z1 = cexp(logkhi(z)+clog(eta4(vec2(1.,0.)-z))-clog(vec2(1,0)-cpow(2.,z)));
+    vec2 z2 = cexp(clog(eta4(z))-clog(vec2(1,0)-cpow(2.,vec2(1,0)-z)));
+    if (z.x < 0.4) return z1;
+    if (z.x > 0.5) return z2;
+    return mix(z1, z2, smoothstep(0.4,0.5,z.x));
+}
