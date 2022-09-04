@@ -3,12 +3,13 @@
 // a lot of these are from the Desmos Discord server
 // https://discord.gg/hNtrWCTwwa
 const builtinFunctions = [
+    ["Sine", "sin(2z)"],
     ["Double Reciprocal", "1/z^2"],
     ["Fifth Reciprocal", "z^-5-i"],
     ["Polynomial 3", "(z^3-4)^2"],
     ["Polynomial 6²", "(z^6+z)^6+z"],
     ["Blue Flower", "10/ln(z^5)^2*(-i-1)"],
-    ["Radioactive", "sin(ln(z^2.8))"],
+    ["Radioactive", "sin(ln(z^3))"],
     ["Reciprocal Flower", "cos(7/z^1.5)"],
     ["Leaky Hyperbola", "z*atan(1-z^2)"],
     ["Yellow Orange", "(1+i)*(ln(z)^10)^0.1"],
@@ -35,18 +36,24 @@ document.body.onload = function (event) {
     // init parameters
     var glsl = {};
     let checkboxGrid = document.querySelector("#checkbox-grid");
+    let checkboxContourLinear = document.querySelector("#checkbox-contour-linear");
+    let checkboxContourLog = document.querySelector("#checkbox-contour-log");
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let buttonUpdate = document.getElementById("button-update");
     function getParams() {
         return {
             bGrid: checkboxGrid.checked,
+            bContourLinear: checkboxContourLinear.checked,
+            bContourLog: checkboxContourLog.checked,
             cLatex: checkboxLatex.checked,
             cAutoCompile: checkboxAutoCompile.checked,
         }
     }
     function setParams(params) {
         checkboxGrid.checked = params.bGrid;
+        checkboxContourLinear.checked = params.bContourLinear;
+        checkboxContourLog.checked = params.bContourLog;
         checkboxLatex.checked = params.cLatex;
         checkboxAutoCompile.checked = params.cAutoCompile;
     }
@@ -104,6 +111,8 @@ document.body.onload = function (event) {
             var extraVariables = getVariables(parsed.postfix, true);
             extraVariables.delete('e');
             if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
+            for (var i = 0; i < parsed.latex.length; i++)
+                parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
             if (errmsg != "") {
                 errorMessage.style.display = "inline-block";
                 errorMessage.style.color = "red";
@@ -159,6 +168,8 @@ document.body.onload = function (event) {
     checkboxLatex.addEventListener("input", updateFunctionInput);
     checkboxAutoCompile.addEventListener("input", updateFunctionInput);
     checkboxGrid.addEventListener("input", updateFunctionInput);
+    checkboxContourLinear.addEventListener("input", updateFunctionInput);
+    checkboxContourLog.addEventListener("input", updateFunctionInput);
     select.addEventListener("input", function (event) {
         resetState();
         input.value = select.value.replaceAll(";", "\n");

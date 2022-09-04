@@ -48,7 +48,7 @@ float grid(vec2 p) {
     vec2 q0 = es*p;
     vec2 q1 = 10.*q0;
     vec2 q2 = 10.*q1;
-    float w0 = .05*es/scale;
+    float w0 = (30./sqrt(iResolution.x*iResolution.y))*es/scale;
     float w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, w0);
     float g1 = grid1(q1, w1);

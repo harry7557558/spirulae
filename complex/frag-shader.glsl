@@ -33,7 +33,7 @@ float grid(vec2 p) {
     vec2 q0 = es*p;
     vec2 q1 = 10.*q0;
     vec2 q2 = 10.*q1;
-    float w0 = .05*es/scale;
+    float w0 = (30./sqrt(iResolution.x*iResolution.y))*es/scale;
     float w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, w0);
     float g1 = grid1(q1, w1);
@@ -70,15 +70,19 @@ void main(void) {
 
     float h = atan(fz.y, fz.x) * 0.15915494309189535;
     float s = 1.0;
-    //if (LINEAR_CONTOUR) s *= 0.5 + 0.5 * sqrt(abs(sin(3.141592653569793 * Mag(fz))));
-    //if (LOGARITHMIC_CONTOUR) s *= 0.5 + 0.5 * sqrt(abs(sin(1.3643763538418412 * logMag(fz))));
+#if {%CONTOUR_LINEAR%}
+    s = min(s, 0.5 + 0.5 * pow(abs(sin(3.141592653569793 * length(fz))), 0.3));
+#endif
+#if {%CONTOUR_LOG%}
+    s = min(s, 0.5 + 0.5 * pow(abs(sin(1.3643763538418412 * log(length(fz)))), 0.4));
+#endif
     float l = 1.0 - pow(1.0 - brightness, log(log(length(fz) + 1.0) + 1.05));
     vec3 col = hslToRgb(h, s, l);
 
     if (isnan(dot(col, vec3(1)))) col = vec3(1);
 
 #if {%GRID%}
-    col *= grid(z);
+    col = mix(vec3(0.35,0.3,0.25), col, pow(grid(z), 2.));
 #endif
 
     fragColor = vec4(clamp(col,0.,1.), 1.0);
