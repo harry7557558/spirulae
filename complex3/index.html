@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>3D Complex Function Grapher</title>
+    <meta name="description" content="Complex function graphing in 3D. (experimental)" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="../styles/style.css" />
+
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="legend">
+        <div id="fps"></div>
+        <svg id="axes" width="80" height="80">
+            <g transform="translate(40,40) scale(40,-40)">
+                <circle cx="0" cy="0" r="1" stroke="none" fill="rgba(50,50,50,0.5)"></circle>
+                <line id="axis-x" x1="0" y1="0" x2="0" y2="0" stroke="rgb(250,50,80)" stroke-width="0.06"></line>
+                <line id="axis-y" x1="0" y1="0" x2="0" y2="0" stroke="rgb(140,220,0)" stroke-width="0.06"></line>
+                <line id="axis-z" x1="0" y1="0" x2="0" y2="0" stroke="rgb(40,140,250)" stroke-width="0.06"></line>
+            </g>
+        </svg>
+    </div>
+
+    <div id="control">
+        <select id="builtin-functions"></select>
+        <span title="Update equation (Alt+Enter)"><button id="button-update">update</button></span>
+        <a href='#' style="float:right"
+            onclick='javascript:event.preventDefault();document.getElementById("help-menu").style.visibility="visible";'>help</a>
+        <br />
+        <span title="Display a preview of the input equation"><input type="checkbox" id="checkbox-latex"
+                checked />equation preview</span>&ensp;
+        <span title="Automatically update the shader on input"><input type="checkbox" id="checkbox-auto-compile"
+                checked />auto-update</span>&ensp;
+        <br />
+        <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
+            data-gramm="false"></textarea>
+        <br />
+        <span><select id="select-step">
+                <option value="0.04">low</option>
+                <option value="0.01" selected>medium</option>
+                <option value="0.004">high</option>
+                <option value="0.001">ultra high</option>
+            </select>quality</span>&ensp;
+        <span title="Use y-up coordinate system convension"><input type="checkbox"
+                id="checkbox-yup" /><i>y</i>-up</span>&ensp;
+        <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
+        <br />
+        <span title="Surface color mode"><select id="select-color">
+                <option>default</option>
+                <option>normal</option>
+                <option selected>gradient</option>
+            </select>color</span>&ensp;
+        <span title="Display the surface as semi-transparent"><input type="checkbox"
+                id="checkbox-transparency" />transparency</span>
+        <br />
+        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
+        <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
+                id="checkbox-discontinuity" checked />highlight discontinuity</span>
+        <br />
+        <span><i>θ<sub>light</sub></i>&nbsp;<input type="range" id="slider-theta" min="-90" max="270" value="30"
+                style="width:100px" /></span>
+        <span><i>φ<sub>light</sub></i>&nbsp;<input type="range" id="slider-phi" min="0" max="180" value="30"
+                style="width:60px" /></span>
+        <br />
+        <p id="error-message" style="display:none"></p>
+    </div>
+
+    <div id="mathjax-preview" style="left:0px;top:0px;display:none"></div>
+
+    <div id="help-menu" style="visibility:hidden">
+        <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
+        <h2>Raymarching Implicit Surface Grapher</h2>
+        <p>Complex function graphing in 3D. (experimental)</p>
+    </div>
+
+    <script>
+        (function () {
+            // refresh cache every one hour
+            function loadScript(src) {
+                var hour = Math.floor(Date.now() / 3600000);
+                var script = document.createElement("script");
+                script.src = src + "?nocache=" + hour;
+                document.head.appendChild(script);
+            }
+            loadScript("../scripts/parser.js");
+            loadScript("../scripts/render-gl.js");
+            loadScript("../scripts/render-raymarch.js");
+            loadScript("../scripts/latex.js");
+            loadScript("script.js");
+        })();
+    </script>
+
+</body>
+
+</html>

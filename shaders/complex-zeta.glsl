@@ -115,31 +115,31 @@ vec2 eta3(vec2 s) {
 //http://numbers.computation.free.fr/Constants/Miscellaneous/zetaevaluations.pdf
 vec2 eta4(vec2 z){
         
-    int n1=100;
-    int n2=45;
+    float n1=100.+ZERO;
+    float n2=45.-ZERO;
     
 	float a=1.;
     vec2  sum1 = vec2(0.);
-    for (int i = 1; i <= n1 ; i++) {
-        sum1 += cpow(float(i),-z)*a;
+    for (float i = 1.; i <= n1 ; i++) {
+        sum1 += cpow(i,-z)*a;
         a=-a;
         }
     
     float dni = 1.;
     float dnn = dni;
     float val = dni;
-	for(int i = 1; i<=n2 ;i++){
-		val *= 2.*float((n2+i-1)*(n2-i+1))/float((2*i-1)*i);
+	for(float i = 1.; i<=n2 ;i++){
+		val *= 2.*((n2+i-1.)*(n2-i+1.))/((2.*i-1.)*i);
 		dnn+= val;		
 	}
     dni = 1./dnn;
     val = dni;
     vec2  sum2 = vec2(0.);
-    for (int i = 1; i <= n2 ; i++) {
+    for (float i = 1.; i <= n2 ; i++) {
         float ci = 1.- dni;
-        sum2 += a*ci*cpow(float(i+n1),-z);
+        sum2 += a*ci*cpow(i+n1,-z);
         a *= -1.;
-        val *= 2.*float((n2+i-1)*(n2-i+1))/float((2*i-1)*i);
+        val *= 2.*((n2+i-1.)*(n2-i+1.))/((2.*i-1.)*i);
         dni +=val;
         }
     return sum1+sum2;
@@ -208,11 +208,11 @@ vec2 lambda(vec2 z){
 
 
 vec2 logzeta(vec2 z){
-    if(z.x<.5)return logkhi(z)+clog(eta4(vec2(1.,0.)-z))-clog(vec2(1,0)-cpow(2.,z));
+    if(z.x<.5) return logkhi(z)+clog(eta4(vec2(1.,0.)-z))-clog(vec2(1,0)-cpow(2.,z));
     return clog(eta4(z))-clog(vec2(1,0)-cpow(2.,vec2(1,0)-z));
 }
 
-vec2 zeta(vec2 z){    
+vec2 zeta(vec2 z){
     return cexp(logzeta(z));
 }
 

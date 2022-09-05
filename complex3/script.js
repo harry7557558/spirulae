@@ -1,23 +1,11 @@
-// 2D Complex Function Grapher
+// 3D Complex Function Grapher
 
 const builtinFunctions = [
-    ["Sine", "sin(2z)"],
-    ["Double Reciprocal", "1/z^2"],
-    ["Fifth Reciprocal", "z^-5-i"],
-    ["Polynomial 3", "(z^3-4)^2"],
-    ["Polynomial 6²", "(z^6+z)^6+z"],
-    ["Blue Flower", "10/ln(z^5)^2*(-i-1)"],
-    ["Radioactive", "sin(ln(z^3))"],
-    ["Reciprocal Flower", "cos(7/z^1.5)"],
-    ["Leaky Hyperbola", "z*atan(1-z^2)"],
-    ["Yellow Orange", "(1+i)*(ln(z)^10)^0.1"],
-    ["CM Snowflower", "sqrt(ln(z^6)^5)*(-i-1)"],
-    ["Trigonometric Spam", "sin(cos(tan(csc(sec(cot(sqrt(5(x+1)"],
-    ["Mandelbrot Set", "f(x)=x^2+z;f(f(f(f(f(f(f(z"],
-    ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
-    ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"],
-    ["LnGamma", "lngamma(z)"],
-    ["Zeta", "zeta(z)"],
+    ["Sine Reciprocal", "csc(4z)"],
+    ["Log Tower", "ln(z^-5)/5"],
+    ["Five Pillars", "(-i-1)/(2ln((z)^5)^2)"],
+    ["Eight Needles", "z^8+z^(1/8)"],
+    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.1/ln(g(z)+1"],
 ];
 
 
@@ -26,6 +14,8 @@ document.body.onload = function (event) {
 
     // init parser
     initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC));
+    mathFunctions['zeta'][1].glsl = "mc_zeta_fast(%1)";
+    //mathFunctions['logzeta'][1].glsl = mathFunctions['lnzeta'][1].glsl = "mc_lnzeta_fast(%1)";
     independentVariables = {
         'x': "mf_z()",
         'z': "mf_z()",
@@ -35,30 +25,44 @@ document.body.onload = function (event) {
 
     // init parameters
     var glsl = {};
+    let checkboxLight = document.querySelector("#checkbox-light");
+    let checkboxYup = document.querySelector("#checkbox-yup");
     let checkboxGrid = document.querySelector("#checkbox-grid");
-    let checkboxContourLinear = document.querySelector("#checkbox-contour-linear");
-    let checkboxContourLog = document.querySelector("#checkbox-contour-log");
+    let checkboxTransparency = document.querySelector("#checkbox-transparency");
+    let checkboxDiscontinuity = document.querySelector("#checkbox-discontinuity");
+    let selectStep = document.querySelector("#select-step");
+    let selectColor = document.querySelector("#select-color");
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let buttonUpdate = document.getElementById("button-update");
     function getParams() {
         return {
+            sStep: selectStep.value,
+            sColor: selectColor.selectedIndex,
+            bLight: checkboxLight.checked,
+            bYup: checkboxYup.checked,
             bGrid: checkboxGrid.checked,
-            bContourLinear: checkboxContourLinear.checked,
-            bContourLog: checkboxContourLog.checked,
+            bTransparency: checkboxTransparency.checked,
+            bDiscontinuity: checkboxDiscontinuity.checked,
             cLatex: checkboxLatex.checked,
             cAutoCompile: checkboxAutoCompile.checked,
         }
     }
     function setParams(params) {
+        selectStep.value = params.sStep;
+        selectColor.selectedIndex = params.sColor;
+        checkboxLight.checked = params.bLight;
+        checkboxYup.checked = params.bYup;
         checkboxGrid.checked = params.bGrid;
-        checkboxContourLinear.checked = params.bContourLinear;
-        checkboxContourLog.checked = params.bContourLog;
+        checkboxTransparency.checked = params.bTransparency;
+        checkboxDiscontinuity.checked = params.bDiscontinuity;
         checkboxLatex.checked = params.cLatex;
         checkboxAutoCompile.checked = params.cAutoCompile;
     }
+
+    // init parameters
     try {
-        var params = JSON.parse(localStorage.getItem("spirula.complex.params"));
+        var params = JSON.parse(localStorage.getItem("spirula.complex3.params"));
         if (params != null) setParams(params);
     }
     catch (e) { console.error(e); }
@@ -73,7 +77,7 @@ document.body.onload = function (event) {
     }
     var initialExpr = "";
     try {
-        initialExpr = localStorage.getItem("spirula.complex.input");
+        initialExpr = localStorage.getItem("spirula.complex3.input");
         if (initialExpr == null) throw initialExpr;
         select.childNodes[0].setAttribute("value", initialExpr);
         var selectId = 0;
@@ -95,8 +99,8 @@ document.body.onload = function (event) {
         if (!checkboxLatex.checked) texContainer.innerHTML = "";
         var expr = input.value;
         try {
-            localStorage.setItem("spirula.complex.input", expr);
-            localStorage.setItem("spirula.complex.params", JSON.stringify(getParams()));
+            localStorage.setItem("spirula.complex3.input", expr);
+            localStorage.setItem("spirula.complex3.params", JSON.stringify(getParams()));
         } catch (e) { console.error(e); }
 
         // parse input
@@ -165,11 +169,15 @@ document.body.onload = function (event) {
 
     // update on parameter change
     buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
+    checkboxLight.addEventListener("input", updateFunctionInput);
     checkboxLatex.addEventListener("input", updateFunctionInput);
     checkboxAutoCompile.addEventListener("input", updateFunctionInput);
+    checkboxYup.addEventListener("input", updateFunctionInput);
     checkboxGrid.addEventListener("input", updateFunctionInput);
-    checkboxContourLinear.addEventListener("input", updateFunctionInput);
-    checkboxContourLog.addEventListener("input", updateFunctionInput);
+    checkboxTransparency.addEventListener("input", updateFunctionInput);
+    checkboxDiscontinuity.addEventListener("input", updateFunctionInput);
+    selectStep.addEventListener("input", updateFunctionInput);
+    selectColor.addEventListener("input", updateFunctionInput);
     select.addEventListener("input", function (event) {
         resetState();
         input.value = select.value.replaceAll(";", "\n");
@@ -199,13 +207,15 @@ document.body.onload = function (event) {
         "../shaders/vert-pixel.glsl",
         "../shaders/complex-zeta.glsl",
         "../shaders/complex.glsl",
-        "frag-shader.glsl",
+        "frag-premarch.glsl",
+        "../shaders/frag-pool.glsl",
+        "frag-raymarch.glsl",
         "../shaders/frag-imggrad.glsl",
         "../shaders/frag-aa.glsl"
     ], function () {
         console.log("shaders loaded");
         try {
-            state.name = "spirula.complex.state";
+            state.name = "spirula.complex3.state";
             initWebGL();
             updateFunctionInput(true);
             initRenderer();

@@ -8,7 +8,7 @@ uniform vec2 iResolution;
 uniform vec2 xyMin;
 uniform vec2 xyMax;
 
-
+#define ZERO 0.0
 #include "../shaders/complex.glsl"
 
 // function

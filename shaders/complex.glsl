@@ -131,7 +131,7 @@ vec2 mc_gamma(vec2 z) {
     return mc_div(s,z);
 }
 vec2 mc_lngamma(vec2 z) {
-    float N = length(z-vec2(-8.,0.))<1. ? 10. : 8.;
+    float N = ZERO + length(z-vec2(-8.,0.))<1. ? 10. : 8.;
     float c = sqrt(2.*PI);
 	vec2 s = vec2(c, 0);
     float f = 1.;
@@ -160,4 +160,53 @@ vec2 mc_zeta(vec2 z) {
     if (z.x < 0.4) return z1;
     if (z.x > 0.5) return z2;
     return mix(z1, z2, smoothstep(0.4,0.5,z.x));
+}
+
+// Faster but less accurate version for 3D
+// Based on "Zeta in a box" by guil - https://www.shadertoy.com/view/7ltcW8
+#line 168
+vec2 zeta3(vec2 s) {
+    float N = 8. + ZERO;
+    vec2 sum1 = vec2(0);
+    float a = 1.0;
+    for(float i = 1.; i <= N; i++) {
+        sum1 += a*(mc_pow(vec2(i,0), -s));
+        a = -a;
+    }
+    vec2 sum2 = vec2(0);
+    a = -1.0;
+    float bk= exp2(-N);
+    float ek= bk;
+    for(float i = -ZERO; i < N; i++) {
+        sum2 += a*ek*(mc_pow(vec2(2.*N-i,0),-s));
+        bk *= (N-i)/(i+1.);
+        ek += bk;
+        a = -a;
+    }
+    return cdiv(sum1+sum2, vec2(1,0) - cpow(2., vec2(1,0) - s));
+}
+vec2 mc_zeta_fast(vec2 z) {
+    float t = smoothstep(40., 55., abs(z.y));
+    if (t >= 1. || z.x >= .5) return zeta3(z);
+    vec2 a = mc_pow(vec2(2.*PI,0),z)/PI;
+    vec2 b = mc_sin(PI*z/2.);
+    vec2 c = mc_gamma(vec2(1.,0.)-z);
+    vec2 khi = mc_mul(mc_mul(a,b),c);
+    vec2 zeta = mc_mul(khi, zeta3(vec2(1.,0.)-z));
+    if (t <= 0.) return zeta;
+    return mix(zeta, zeta3(z), t);
+}
+vec2 mc_lnzeta_fast(vec2 z) {
+    float t = smoothstep(20., 24., abs(z.y));
+    if (t >= 1. || z.x >= .5) return mc_ln(zeta3(z));
+    vec2 ln_a = mc_mul(z, mc_ln(vec2(2.*PI,0))) - mc_ln(vec2(PI,0));
+    vec2 ln_b = mc_ln( mc_sin(PI*z/2.) );
+    vec2 z1 = mc_mul(mc_i(), 0.5*PI*z);
+    ln_b = mc_ln(mc_exp(z1)-mc_exp(-z1))-mc_ln(2.*mc_i());
+    vec2 ln_c = mc_lngamma(vec2(1.,0.)-z);
+    vec2 ln_khi = ln_a + ln_b + ln_c;
+    vec2 ln_zeta = ln_khi + mc_ln(zeta3(vec2(1.,0.)-z));
+    if (t > 0.) ln_zeta = mc_ln(mix(mc_exp(ln_zeta), zeta3(z), t));
+    ln_zeta.y = mod(ln_zeta.y+PI, 2.*PI)-PI;
+    return ln_zeta;
 }
