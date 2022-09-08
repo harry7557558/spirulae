@@ -41,32 +41,30 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
+        <span><select id="select-hz">
+                <option value="z.x">Re(z)</option>
+                <option value="z.y">Im(z)</option>
+                <option value="length(z)" selected>|z|</option>
+                <option value="log(length(z))">ln(|z|)</option>
+                <option value="log(length(z))+length(z)">ln|z|+|z|</option>
+                <option value="log(length(z)+1.)">ln(|z|+1)</option>
+            </select>graph</span>&ensp;
         <span><select id="select-step">
                 <option value="0.04">low</option>
                 <option value="0.01" selected>medium</option>
                 <option value="0.004">high</option>
-                <option value="0.001">ultra high</option>
+                <option value="0.001">ex-high</option>
             </select>quality</span>&ensp;
-        <span title="Use y-up coordinate system convension"><input type="checkbox"
-                id="checkbox-yup" /><i>y</i>-up</span>&ensp;
-        <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
-        <br />
-        <span title="Surface color mode"><select id="select-color">
-                <option>default</option>
-                <option>normal</option>
-                <option selected>gradient</option>
-            </select>color</span>&ensp;
-        <span title="Display the surface as semi-transparent"><input type="checkbox"
-                id="checkbox-transparency" />transparency</span>
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
-                id="checkbox-discontinuity" checked />highlight discontinuity</span>
+                id="checkbox-discontinuity" checked />highlight discontinuity</span>&ensp;
         <br />
         <span><i>θ<sub>light</sub></i>&nbsp;<input type="range" id="slider-theta" min="-90" max="270" value="30"
-                style="width:100px" /></span>
+                style="width:60px" /></span>
         <span><i>φ<sub>light</sub></i>&nbsp;<input type="range" id="slider-phi" min="0" max="180" value="30"
                 style="width:60px" /></span>
+        <span title="Light theme"><input type="checkbox" id="checkbox-light" checked />☼</span>
         <br />
         <p id="error-message" style="display:none"></p>
     </div>

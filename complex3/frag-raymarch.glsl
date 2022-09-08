@@ -12,7 +12,11 @@ uniform float uScale;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
-#define BACKGROUND_COLOR pow({%BACKGROUND_COLOR%},vec3(1.4))
+#if {%LIGHT_THEME%}
+#define BACKGROUND_COLOR vec3(0.8)
+#else
+#define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
+#endif
 
 vec3 screenToWorld(vec3 p) {
     vec4 q = transformMatrix * vec4(p, 1);
@@ -31,7 +35,8 @@ vec2 funz(vec2 z) {  // function
 
 #line 33
 float fun(vec3 p) {
-    return p.z - length(funz(p.xy));
+    vec2 z = funz(p.xy);
+    return p.z - ({%HZ%});
 }
 
 vec3 funGrad(vec3 p) {  // numerical gradient
@@ -87,6 +92,7 @@ vec3 colorDomain(vec2 z) {
 //     s = min(s, 0.5 + 0.5 * pow(abs(sin(1.3643763538418412 * log(length(fz)))), 0.4));
 // #endif
     float l = 1.0 - pow(1.0 - brightness, log(log(length(z) + 1.0) + 1.05));
+    l = mix(l, 1.0, 0.1);
     return hslToRgb(h, s, l);
 }
 
@@ -113,7 +119,9 @@ float grid(vec3 p, vec3 n) {
 }
 float fade(float t) {
     t = smoothstep(0.7, 1., t);
-    return exp(-0.2*t/(1.-t));
+    t = t/(1.-t);
+    t = pow(0.2*t, 1.8);
+    return exp(-t);
 }
 
 vec4 calcColor(vec3 ro, vec3 rd, float t) {
@@ -123,12 +131,12 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     rd = normalize(screenToWorld(ro+rd)-screenToWorld(ro));
     n0 = dot(n0,rd)>0. ? -n0 : n0;
     vec3 n = normalize(n0);
-    float g = bool({%GRID%}) ? pow(grid(p, n), 1.8) : 1.0;
-    vec3 albedo = colorDomain(z);
-    albedo *= g;
+    float g = bool({%GRID%}) ? grid(p, n) : 1.0;
+    vec3 albedo = pow(colorDomain(z), vec3(1.8));
+    albedo = mix(albedo*pow(g,1.8), vec3(0.2), clamp(1.0-g, 0.0, 0.0));
     vec3 amb = (vec3(0.2+0.0*n.y)+0.15*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
-    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.1);
+    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.02);
     vec3 col = amb + dif + spc;
     if (isnan(dot(col, vec3(1))))
         return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0), fade(t)), 1.0);
@@ -188,44 +196,12 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
 }
 
 
-vec3 vAlpha(in vec3 ro, in vec3 rd, float t0, float t1) {
-    float t = t0, dt = STEP_SIZE;
-    float v = 0.0, v0 = v, v00 = v, g0 = 0.0, g;
-    float dt0 = 0.0, dt00 = 0.0;
-    int i = int(ZERO);
-    vec3 tcol = vec3(0);
-    float mcol = 1.0;
-    for (; i < MAX_STEP && t < t1; t += dt, i++) {
-        v = funS(ro+rd*t);
-        if (v*v0 < 0.0 && mcol > 0.01) {  // intersection
-            if (isnan(g) || g <= 0.0) g = 1.0;
-            if (isnan(g0) || g0 <= 0.0) g0 = g;
-            float tm = t - dt * (v/g) / ((v/g) - (v0/g0));
-            vec4 rgba = calcColor(ro, rd, tm);
-            tcol += mcol * rgba.xyz * rgba.w;
-            mcol *= 1.0 - rgba.w;
-        }
-        if (isnan(dt0) || dt0 <= 0.0) v00 = v, v0 = v, dt0 = dt00 = 0.0;
-        g = dt0 > 0.0 ? ( // estimate gradient
-            dt00 > 0.0 ? // quadratic fit
-                v00*dt0/(dt00*(dt0+dt00))-v0*(dt0+dt00)/(dt0*dt00)+v*(2.*dt0+dt00)/(dt0*(dt0+dt00))
-                : (v-v0)/dt0  // finite difference
-        ) : 0.;
-        if (isnan(g0) || g0 <= 0.0) g0 = g;
-        dt = (isnan(g) || g==0.) ? STEP_SIZE :
-            clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
-        dt00 = dt0, dt0 = dt, v00 = v0, v0 = v, g0 = g;
-    }
-    return tcol + mcol * BACKGROUND_COLOR;
-}
-
-
 void main(void) {
     vec3 ro = vec3(vXy-screenCenter, 0);
     vec3 rd = vec3(0, 0, 1);
     vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
     float pad = max(STEP_SIZE, 1./255.);
-    vec3 col = {%V_RENDER%}(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
+    vec3 col = vSolid(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
 #if {%GRID%}
     col = pow(col, vec3(0.85));
 #endif

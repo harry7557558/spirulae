@@ -12,7 +12,11 @@ uniform float uScale;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
-#define BACKGROUND_COLOR {%BACKGROUND_COLOR%}
+#if {%LIGHT_THEME%}
+#define BACKGROUND_COLOR vec3(0.9)
+#else
+#define BACKGROUND_COLOR vec3(0.02, 0.022, 0.025)
+#endif
 
 vec3 screenToWorld(vec3 p) {
     vec4 q = transformMatrix * vec4(p, 1);
@@ -126,8 +130,11 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     );
 }
 
+
+#if !{%TRANSPARENCY%}
+
 // Without opacity, finds the zero using bisection search
-vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
+vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
     float t = t0, dt = STEP_SIZE;
     float v = 0.0, v0 = v, v00 = v, v1;
@@ -175,8 +182,9 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
     return calcColor(ro, rd, t).xyz;
 }
 
+#else  // !{%TRANSPARENCY%}
 
-vec3 vAlpha(in vec3 ro, in vec3 rd, float t0, float t1) {
+vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     float t = t0, dt = STEP_SIZE;
     float v = 0.0, v0 = v, v00 = v, g0 = 0.0, g;
     float dt0 = 0.0, dt00 = 0.0;
@@ -207,13 +215,15 @@ vec3 vAlpha(in vec3 ro, in vec3 rd, float t0, float t1) {
     return tcol + mcol * BACKGROUND_COLOR;
 }
 
+#endif
+
 
 void main(void) {
     vec3 ro = vec3(vXy-screenCenter, 0);
     vec3 rd = vec3(0, 0, 1);
     vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
     float pad = max(STEP_SIZE, 1./255.);
-    vec3 col = {%V_RENDER%}(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
+    vec3 col = render(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     // col = vec3(callCount) / 255.0;
 #if {%GRID%}

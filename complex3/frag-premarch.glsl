@@ -27,7 +27,8 @@ vec2 funz(vec2 z) {  // function
 
 #line 30
 float fun(vec3 p) {
-    return p.z - length(funz(p.xy));
+    vec2 z = funz(p.xy);
+    return p.z - ({%HZ%});
 }
 
 // numerical gradient

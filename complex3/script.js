@@ -1,11 +1,14 @@
 // 3D Complex Function Grapher
 
 const builtinFunctions = [
-    ["Sine Reciprocal", "csc(4z)"],
+    ["csc", "csc(z)"],
+    ["tan", "-tan(z)"],
+    ["atanh", "atanh(-z)"],
     ["Log Tower", "ln(z^-5)/5"],
-    ["Five Pillars", "(-i-1)/(2ln((z)^5)^2)"],
+    ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
     ["Eight Needles", "z^8+z^(1/8)"],
-    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.1/ln(g(z)+1"],
+    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/2)+1"],
+    ["Gamma", "gamma(z)"]
 ];
 
 
@@ -25,39 +28,33 @@ document.body.onload = function (event) {
 
     // init parameters
     var glsl = {};
+    let selectHz = document.querySelector("#select-hz");
     let checkboxLight = document.querySelector("#checkbox-light");
-    let checkboxYup = document.querySelector("#checkbox-yup");
     let checkboxGrid = document.querySelector("#checkbox-grid");
-    let checkboxTransparency = document.querySelector("#checkbox-transparency");
     let checkboxDiscontinuity = document.querySelector("#checkbox-discontinuity");
     let selectStep = document.querySelector("#select-step");
-    let selectColor = document.querySelector("#select-color");
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let buttonUpdate = document.getElementById("button-update");
     function getParams() {
         return {
+            sHz: selectHz.value,
             sStep: selectStep.value,
-            sColor: selectColor.selectedIndex,
             bLight: checkboxLight.checked,
-            bYup: checkboxYup.checked,
             bGrid: checkboxGrid.checked,
-            bTransparency: checkboxTransparency.checked,
             bDiscontinuity: checkboxDiscontinuity.checked,
             cLatex: checkboxLatex.checked,
             cAutoCompile: checkboxAutoCompile.checked,
         }
     }
     function setParams(params) {
-        selectStep.value = params.sStep;
-        selectColor.selectedIndex = params.sColor;
-        checkboxLight.checked = params.bLight;
-        checkboxYup.checked = params.bYup;
-        checkboxGrid.checked = params.bGrid;
-        checkboxTransparency.checked = params.bTransparency;
-        checkboxDiscontinuity.checked = params.bDiscontinuity;
-        checkboxLatex.checked = params.cLatex;
-        checkboxAutoCompile.checked = params.cAutoCompile;
+        if (params.sHz) selectHz.value = params.sHz;
+        if (params.sStep) selectStep.value = params.sStep;
+        if (params.bLight) checkboxLight.checked = params.bLight;
+        if (params.bGrid) checkboxGrid.checked = params.bGrid;
+        if (params.bDiscontinuity) checkboxDiscontinuity.checked = params.bDiscontinuity;
+        if (params.cLatex) checkboxLatex.checked = params.cLatex;
+        if (params.cAutoCompile) checkboxAutoCompile.checked = params.cAutoCompile;
     }
 
     // init parameters
@@ -169,15 +166,13 @@ document.body.onload = function (event) {
 
     // update on parameter change
     buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
+    selectHz.addEventListener("input", updateFunctionInput);
     checkboxLight.addEventListener("input", updateFunctionInput);
     checkboxLatex.addEventListener("input", updateFunctionInput);
     checkboxAutoCompile.addEventListener("input", updateFunctionInput);
-    checkboxYup.addEventListener("input", updateFunctionInput);
     checkboxGrid.addEventListener("input", updateFunctionInput);
-    checkboxTransparency.addEventListener("input", updateFunctionInput);
     checkboxDiscontinuity.addEventListener("input", updateFunctionInput);
     selectStep.addEventListener("input", updateFunctionInput);
-    selectColor.addEventListener("input", updateFunctionInput);
     select.addEventListener("input", function (event) {
         resetState();
         input.value = select.value.replaceAll(";", "\n");

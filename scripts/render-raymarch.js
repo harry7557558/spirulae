@@ -65,7 +65,8 @@ function setLegendAxes(state) {
         document.getElementById("axis-y"),
         document.getElementById("axis-z")
     ];
-    let yup = document.getElementById("checkbox-yup").checked;
+    let yup_checkbox = document.getElementById("checkbox-yup");
+    let yup = yup_checkbox && yup_checkbox.checked;
     var mat = mat4(1.0);
     mat = mat4Rotate(mat, state.rx, [1, 0, 0]);
     mat = mat4Rotate(mat, state.rz, [0, 0, 1]);
@@ -476,13 +477,14 @@ function updateShaderFunction(funCode, funGradCode, params) {
     function sub(shaderSource) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
+        shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
-        shaderSource = shaderSource.replaceAll("{%V_RENDER%}", params.bTransparency ? "vAlpha" : "vSolid");
+        shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
         shaderSource = shaderSource.replaceAll("{%COLOR%}", "" + params.sColor);
-        shaderSource = shaderSource.replaceAll("{%Y_UP%}", params.bYup ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%GRID%}", params.bGrid ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", params.bDiscontinuity ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%BACKGROUND_COLOR%}", params.bLight ? "vec3(0.9)" : "vec3(.02,.022,.025)");
+        shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
+        shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.bGrid));
+        shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
+        shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
         return shaderSource;
     }
     console.time("compile shader");
