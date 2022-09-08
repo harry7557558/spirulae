@@ -39,13 +39,13 @@ float fun(vec3 p) {
     return p.z - ({%HZ%});
 }
 
-vec3 funGrad(vec3 p) {  // numerical gradient
-    float h = 0.002*length(p);
-    return vec3(
+// numerical gradient
+vec3 funGrad(vec3 p) {
+    float h = 0.002*length(p.xy);
+    return vec3(vec2(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
-        fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
-        fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
-    ) / (2.0*h);
+        fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0))
+    ) / (2.0*h), 1.0);
 }
 
 
@@ -85,12 +85,6 @@ vec3 colorDomain(vec2 z) {
     float brightness = 0.5;
     float h = atan(z.y, z.x) * 0.15915494309189535;
     float s = 1.0;
-// #if {%CONTOUR_LINEAR%}
-//     s = min(s, 0.5 + 0.5 * pow(abs(sin(3.141592653569793 * length(fz))), 0.3));
-// #endif
-// #if {%CONTOUR_LOG%}
-//     s = min(s, 0.5 + 0.5 * pow(abs(sin(1.3643763538418412 * log(length(fz)))), 0.4));
-// #endif
     float l = 1.0 - pow(1.0 - brightness, log(log(length(z) + 1.0) + 1.05));
     l = mix(l, 1.0, 0.1);
     return hslToRgb(h, s, l);

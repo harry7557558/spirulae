@@ -30,16 +30,6 @@ float fun(vec3 p) {  // function
     {%FUN%}
 }
 
-// numerical gradient
-vec3 funGrad(vec3 p) {
-    float h = 0.002*max(pow(length(p),1./3.),1.);  // error term O(h²)
-    return vec3(
-        fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
-        fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
-        fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
-    ) / (2.0*h);
-}
-
 
 // function and its gradient in screen space
 

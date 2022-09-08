@@ -480,11 +480,13 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
+        shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
         shaderSource = shaderSource.replaceAll("{%COLOR%}", "" + params.sColor);
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
         shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.bGrid));
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
-        shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
+        shaderSource = shaderSource.replaceAll("{%CONTOUR_LINEAR%}", params.bContourLinear ? "1" : "0");
+        shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", params.bContourLog ? "1" : "0");
         return shaderSource;
     }
     console.time("compile shader");
