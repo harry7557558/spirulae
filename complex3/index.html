@@ -48,6 +48,7 @@
                 <option value="log(length(z))">ln(|z|)</option>
                 <option value="log(length(z))+length(z)">ln|z|+|z|</option>
                 <option value="log(length(z)+1.)">ln(|z|+1)</option>
+                <option value="1./length(z)">1/|z|</option>
             </select>graph</span>&ensp;
         <span><select id="select-step">
                 <option value="0.04">low</option>
@@ -86,6 +87,7 @@
                 script.src = src + "?nocache=" + hour;
                 document.head.appendChild(script);
             }
+            loadScript("../scripts/parameter.js");
             loadScript("../scripts/parser.js");
             loadScript("../scripts/render-gl.js");
             loadScript("../scripts/render-raymarch.js");

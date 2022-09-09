@@ -425,17 +425,17 @@ function updateShaderFunction(funCode, funGradCode, params) {
     console.time("compile shader");
 
     // shader program(s)
-    if (renderer.shaderProgram != null)
+    if (renderer.shaderProgram != null) {
         gl.deleteProgram(renderer.shaderProgram);
-    try {
-        var shaderSource = sub(renderer.shaderSource, funCode, funGradCode);
-        var shaderProgram = createShaderProgram(gl, renderer.vsSource, shaderSource);
-        renderer.shaderProgram = shaderProgram;
-    }
-    catch (e) {
-        console.error(e);
         renderer.shaderProgram = null;
-        if (funCode != null) throw e;
+    }
+    if (funCode != null) {
+        try {
+            var shaderSource = sub(renderer.shaderSource, funCode, funGradCode);
+            var shaderProgram = createShaderProgram(gl, renderer.vsSource, shaderSource);
+            renderer.shaderProgram = shaderProgram;
+        }
+        catch (e) { console.error(e); }
     }
 
     console.timeEnd("compile shader");

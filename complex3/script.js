@@ -1,19 +1,26 @@
 // 3D Complex Function Grapher
 
+const NAME = "spirula.complex3.";
+
 const builtinFunctions = [
     ["csc", "csc(z)"],
     ["tan", "-tan(z)"],
     ["atanh", "atanh(-z)"],
+    ["Gamma", "gamma(z)"],
     ["Log Tower", "ln(z^-5)/5"],
     ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
     ["Eight Needles", "z^8+z^(1/8)"],
+    ["Three Forks", "1/lngamma(sqrt(4z^3))"],
+    ["Light Way", "exp(-cos(z))"],
     ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/2)+1"],
-    ["Gamma", "gamma(z)"]
 ];
 
 
 document.body.onload = function (event) {
     console.log("onload");
+
+    // init built-in functions
+    initBuiltInFunctions(builtinFunctions);
 
     // init parser
     initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC));
@@ -28,76 +35,27 @@ document.body.onload = function (event) {
 
     // init parameters
     var glsl = {};
-    let selectHz = document.querySelector("#select-hz");
-    let checkboxLight = document.querySelector("#checkbox-light");
-    let checkboxGrid = document.querySelector("#checkbox-grid");
-    let checkboxDiscontinuity = document.querySelector("#checkbox-discontinuity");
-    let selectStep = document.querySelector("#select-step");
+    let rawParameters = [
+        new GraphingParameter("sHz", "select-hz"),
+        new GraphingParameter("sStep", "select-step"),
+        new GraphingParameter("bLight", "checkbox-light"),
+        new GraphingParameter("bGrid", "checkbox-grid"),
+        new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
+        new GraphingParameter("cLatex", "checkbox-latex"),
+        new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+    ];
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
-    let buttonUpdate = document.getElementById("button-update");
-    function getParams() {
-        return {
-            sHz: selectHz.value,
-            sStep: selectStep.value,
-            bLight: checkboxLight.checked,
-            bGrid: checkboxGrid.checked,
-            bDiscontinuity: checkboxDiscontinuity.checked,
-            cLatex: checkboxLatex.checked,
-            cAutoCompile: checkboxAutoCompile.checked,
-        }
-    }
-    function setParams(params) {
-        if (params.sHz) selectHz.value = params.sHz;
-        if (params.sStep) selectStep.value = params.sStep;
-        if (params.bLight) checkboxLight.checked = params.bLight;
-        if (params.bGrid) checkboxGrid.checked = params.bGrid;
-        if (params.bDiscontinuity) checkboxDiscontinuity.checked = params.bDiscontinuity;
-        if (params.cLatex) checkboxLatex.checked = params.cLatex;
-        if (params.cAutoCompile) checkboxAutoCompile.checked = params.cAutoCompile;
-    }
-
-    // init parameters
-    try {
-        var params = JSON.parse(localStorage.getItem("spirula.complex3.params"));
-        if (params != null) setParams(params);
-    }
-    catch (e) { console.error(e); }
-
-    // init functions
-    let select = document.querySelector("#builtin-functions");
-    let input = document.querySelector("#equation-input");
-    select.innerHTML += "<option value=''>Load example...</option>";
-    for (var i = 0; i < builtinFunctions.length; i++) {
-        let fun = builtinFunctions[i];
-        select.innerHTML += "<option value=" + fun[1] + ">" + fun[0] + "</option>"
-    }
-    var initialExpr = "";
-    try {
-        initialExpr = localStorage.getItem("spirula.complex3.input");
-        if (initialExpr == null) throw initialExpr;
-        select.childNodes[0].setAttribute("value", initialExpr);
-        var selectId = 0;
-        for (var i = 1; i < select.childNodes.length; i++) {
-            var value = select.childNodes[i].value.replace(/\;/g, '\n');
-            if (value == initialExpr.trim())
-                selectId = i;
-        }
-        select.childNodes[selectId].selected = true;
-    }
-    catch (e) {
-        select.childNodes[1].selected = true;
-    }
 
     // called when update function
-    function updateFunctionInput(forceRecompile) {
-        let errorMessage = document.querySelector("#error-message");
+    function updateFunctionInput(forceRecompile = false) {
         let texContainer = document.getElementById("mathjax-preview");
         if (!checkboxLatex.checked) texContainer.innerHTML = "";
-        var expr = input.value;
+        var expr = document.getElementById("equation-input").value;
+        var parameters = parameterToDict(rawParameters);
         try {
-            localStorage.setItem("spirula.complex3.input", expr);
-            localStorage.setItem("spirula.complex3.params", JSON.stringify(getParams()));
+            localStorage.setItem(NAME + "input", expr);
+            localStorage.setItem(NAME + "params", JSON.stringify(parameters));
         } catch (e) { console.error(e); }
 
         // parse input
@@ -115,10 +73,8 @@ document.body.onload = function (event) {
             for (var i = 0; i < parsed.latex.length; i++)
                 parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
             if (errmsg != "") {
-                errorMessage.style.display = "inline-block";
-                errorMessage.style.color = "red";
-                errorMessage.innerHTML = errmsg;
-                updateShaderFunction(null, null);
+                messageError(errmsg);
+                updateShaderFunction(null);
                 if (checkboxLatex.checked)
                     updateLatex(parsed.latex, "white");
                 return;
@@ -128,10 +84,8 @@ document.body.onload = function (event) {
         }
         catch (e) {
             console.error(e);
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "red";
-            errorMessage.innerHTML = e;
-            updateShaderFunction(null, null);
+            messageError(e);
+            updateShaderFunction(null);
             if (parsed != null && checkboxLatex.checked)
                 updateLatex(parsed.latex, "red");
             return;
@@ -139,63 +93,30 @@ document.body.onload = function (event) {
 
         // compile shader
         if (!(checkboxAutoCompile.checked || forceRecompile === true)) {
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "white";
-            errorMessage.innerHTML = "Parameter(s) have been changed. Click \"update\" to recompile shader.";
+            messageUpdate();
             return;
         }
         try {
-            errorMessage.style.display = "none";
+            messageNone();
             if (checkboxLatex.checked)
                 updateLatex(parsed.latex, "white");
             glsl = postfixToGlsl(parsed.postfix);
             glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
             glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
             console.log(glsl.glsl);
-            updateShaderFunction(glsl.glsl, glsl.glslgrad, getParams());
+            updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
         } catch (e) {
             console.error(e);
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "red";
-            errorMessage.innerHTML = e;
-            updateShaderFunction(null, null);
+            messageError(e);
+            updateShaderFunction(null);
             if (checkboxLatex.checked)
                 updateLatex(parsed.latex, "red");
         }
     }
 
-    // update on parameter change
-    buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
-    selectHz.addEventListener("input", updateFunctionInput);
-    checkboxLight.addEventListener("input", updateFunctionInput);
-    checkboxLatex.addEventListener("input", updateFunctionInput);
-    checkboxAutoCompile.addEventListener("input", updateFunctionInput);
-    checkboxGrid.addEventListener("input", updateFunctionInput);
-    checkboxDiscontinuity.addEventListener("input", updateFunctionInput);
-    selectStep.addEventListener("input", updateFunctionInput);
-    select.addEventListener("input", function (event) {
-        resetState();
-        input.value = select.value.replaceAll(";", "\n");
-        updateFunctionInput(true);
-    });
-    input.addEventListener("input", function (event) {
-        select.value = initialExpr;
-        updateFunctionInput();
-    });
-    window.addEventListener("keydown", function (event) {
-        if (event.keyCode == 13 && (event.altKey || event.ctrlKey)) {
-            event.preventDefault();
-            updateFunctionInput(true);
-        }
-        else if (event.keyCode == 191 && event.ctrlKey) {
-            let control = document.getElementById("control");
-            let fps = document.getElementById("fps");
-            if (control.style.display == "none")
-                fps.style.display = control.style.display = "block";
-            else fps.style.display = control.style.display = "none";
-        }
-    });
-    input.value = select.value.replaceAll(";", "\n");
+    // init parameters (cont'd)
+    activateParameters(rawParameters, updateFunctionInput);
+    initParameters(rawParameters, updateFunctionInput);
 
     // main
     loadShaderSources([
@@ -210,7 +131,7 @@ document.body.onload = function (event) {
     ], function () {
         console.log("shaders loaded");
         try {
-            state.name = "spirula.complex3.state";
+            state.name = NAME + "state";
             initWebGL();
             updateFunctionInput(true);
             initRenderer();

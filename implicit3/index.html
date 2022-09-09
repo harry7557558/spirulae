@@ -55,9 +55,9 @@
         <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <br />
         <span title="Surface color mode"><select id="select-color">
-                <option>default</option>
-                <option>normal</option>
-                <option selected>gradient</option>
+                <option value="0">default</option>
+                <option value="1">normal</option>
+                <option value="2" selected>gradient</option>
             </select>color</span>&ensp;
         <span title="Display the surface as semi-transparent"><input type="checkbox"
                 id="checkbox-transparency" />transparency</span>
@@ -176,6 +176,7 @@
                 script.src = src + "?nocache=" + hour;
                 document.head.appendChild(script);
             }
+            loadScript("../scripts/parameter.js");
             loadScript("../scripts/parser.js");
             loadScript("../scripts/render-gl.js");
             loadScript("../scripts/render-raymarch.js");

@@ -46,7 +46,7 @@ vec3 funGrad(vec3 p) {  // numerical gradient
         fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
     ) / (2.0*h);
 }
-
+#line 50
 
 // function and its gradient in screen space
 

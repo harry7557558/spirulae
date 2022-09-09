@@ -481,12 +481,12 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
-        shaderSource = shaderSource.replaceAll("{%COLOR%}", "" + params.sColor);
+        shaderSource = shaderSource.replaceAll("{%COLOR%}", params.sColor);
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
         shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.bGrid));
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
-        shaderSource = shaderSource.replaceAll("{%CONTOUR_LINEAR%}", params.bContourLinear ? "1" : "0");
-        shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", params.bContourLog ? "1" : "0");
+        shaderSource = shaderSource.replaceAll("{%CONTOUR_LINEAR%}", Number(params.bContourLinear));
+        shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", Number(params.bContourLog));
         return shaderSource;
     }
     console.time("compile shader");
@@ -497,25 +497,26 @@ function updateShaderFunction(funCode, funGradCode, params) {
         gl.deleteProgram(renderer.poolProgram);
     renderer.poolProgram = poolProgram;
 
-    if (renderer.premarchProgram != null)
+    if (renderer.premarchProgram != null) {
         gl.deleteProgram(renderer.premarchProgram);
-    if (renderer.raymarchProgram != null)
-        gl.deleteProgram(renderer.raymarchProgram);
-    try {
-        // premarching program
-        var premarchSource = sub(renderer.premarchSource, funCode, funGradCode);
-        var premarchProgram = createShaderProgram(gl, renderer.vsSource, premarchSource);
-        renderer.premarchProgram = premarchProgram;
-        // raymarching program
-        var raymarchSource = sub(renderer.raymarchSource, funCode, funGradCode);
-        var raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
-        renderer.raymarchProgram = raymarchProgram;
-    }
-    catch (e) {
-        console.error(e);
         renderer.premarchProgram = null;
+    }
+    if (renderer.raymarchProgram != null) {
+        gl.deleteProgram(renderer.raymarchProgram);
         renderer.raymarchProgram = null;
-        if (funCode != null) throw e;
+    }
+    if (funCode != null) {
+        try {
+            // premarching program
+            var premarchSource = sub(renderer.premarchSource);
+            var premarchProgram = createShaderProgram(gl, renderer.vsSource, premarchSource);
+            renderer.premarchProgram = premarchProgram;
+            // raymarching program
+            var raymarchSource = sub(renderer.raymarchSource);
+            var raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
+            renderer.raymarchProgram = raymarchProgram;
+        }
+        catch (e) { console.error(e); }
     }
 
     console.timeEnd("compile shader");

@@ -1,5 +1,7 @@
 // 3D Implicit Surface Grapher
 
+const NAME = "spirula.implicit2.";
+
 // a lot of these are from the Desmos Discord server
 // https://discord.gg/hNtrWCTwwa
 const builtinFunctions = [
@@ -28,6 +30,9 @@ const builtinFunctions = [
 document.body.onload = function (event) {
     console.log("onload");
 
+    // init built-in functions
+    initBuiltInFunctions(builtinFunctions);
+
     // init parser
     initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsR));
     independentVariables = {
@@ -37,62 +42,23 @@ document.body.onload = function (event) {
 
     // init parameters
     var glsl = {};
-    let checkboxGrid = document.querySelector("#checkbox-grid");
+    let rawParameters = [
+        new GraphingParameter("bGrid", "checkbox-grid"),
+        new GraphingParameter("cLatex", "checkbox-latex"),
+        new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+    ];
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
-    let buttonUpdate = document.getElementById("button-update");
-    function getParams() {
-        return {
-            bGrid: checkboxGrid.checked,
-            cLatex: checkboxLatex.checked,
-            cAutoCompile: checkboxAutoCompile.checked,
-        }
-    }
-    function setParams(params) {
-        checkboxGrid.checked = params.bGrid;
-        checkboxLatex.checked = params.cLatex;
-        checkboxAutoCompile.checked = params.cAutoCompile;
-    }
-    try {
-        var params = JSON.parse(localStorage.getItem("spirula.implicit2.params"));
-        if (params != null) setParams(params);
-    }
-    catch (e) { console.error(e); }
-
-    // init functions
-    let select = document.querySelector("#builtin-functions");
-    let input = document.querySelector("#equation-input");
-    select.innerHTML += "<option value=''>Load example...</option>";
-    for (var i = 0; i < builtinFunctions.length; i++) {
-        let fun = builtinFunctions[i];
-        select.innerHTML += "<option value=" + fun[1] + ">" + fun[0] + "</option>"
-    }
-    var initialExpr = "";
-    try {
-        initialExpr = localStorage.getItem("spirula.implicit2.input");
-        if (initialExpr == null) throw initialExpr;
-        select.childNodes[0].setAttribute("value", initialExpr);
-        var selectId = 0;
-        for (var i = 1; i < select.childNodes.length; i++) {
-            var value = select.childNodes[i].value.replace(/\;/g, '\n');
-            if (value == initialExpr.trim())
-                selectId = i;
-        }
-        select.childNodes[selectId].selected = true;
-    }
-    catch (e) {
-        select.childNodes[1].selected = true;
-    }
 
     // called when update function
-    function updateFunctionInput(forceRecompile) {
-        let errorMessage = document.querySelector("#error-message");
+    function updateFunctionInput(forceRecompile = false) {
         let texContainer = document.getElementById("mathjax-preview");
         if (!checkboxLatex.checked) texContainer.innerHTML = "";
-        var expr = input.value;
+        var expr = document.getElementById("equation-input").value;
+        var parameters = parameterToDict(rawParameters);
         try {
-            localStorage.setItem("spirula.implicit2.input", expr);
-            localStorage.setItem("spirula.implicit2.params", JSON.stringify(getParams()));
+            localStorage.setItem(NAME + "input", expr);
+            localStorage.setItem(NAME + "params", JSON.stringify(parameters));
         } catch (e) { console.error(e); }
 
         // parse input
@@ -108,10 +74,8 @@ document.body.onload = function (event) {
             extraVariables.delete('e');
             if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
             if (errmsg != "") {
-                errorMessage.style.display = "inline-block";
-                errorMessage.style.color = "red";
-                errorMessage.innerHTML = errmsg;
-                updateShaderFunction(null, null);
+                messageError(errmsg);
+                updateShaderFunction(null);
                 if (checkboxLatex.checked)
                     updateLatex(parsed.latex, "white");
                 return;
@@ -121,10 +85,8 @@ document.body.onload = function (event) {
         }
         catch (e) {
             console.error(e);
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "red";
-            errorMessage.innerHTML = e;
-            updateShaderFunction(null, null);
+            messageError(e);
+            updateShaderFunction(null);
             if (parsed != null && checkboxLatex.checked)
                 updateLatex(parsed.latex, "red");
             return;
@@ -132,63 +94,31 @@ document.body.onload = function (event) {
 
         // compile shader
         if (!(checkboxAutoCompile.checked || forceRecompile === true)) {
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "white";
-            errorMessage.innerHTML = "Parameter(s) have been changed. Click \"update\" to recompile shader.";
+            messageUpdate();
             return;
         }
         try {
-            errorMessage.style.display = "none";
+            messageNone();
             if (checkboxLatex.checked)
                 updateLatex(parsed.latex, "white");
             glsl = postfixToGlsl(parsed.postfix);
             console.log(glsl.glsl);
             console.log(glsl.glslgrad);
-            if (!glsl.isCompatible) {
-                errorMessage.style.display = "inline-block";
-                errorMessage.style.color = "orange";
-                errorMessage.innerHTML = "Graph may be incorrect on some devices.";
-            }
-            updateShaderFunction(glsl.glsl, glsl.glslgrad, getParams());
+            if (!glsl.isCompatible)
+                messageWarning("Graph may be incorrect on some devices.");
+            updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
         } catch (e) {
             console.error(e);
-            errorMessage.style.display = "inline-block";
-            errorMessage.style.color = "red";
-            errorMessage.innerHTML = e;
+            messageError(e);
             updateShaderFunction(null, null);
             if (checkboxLatex.checked)
                 updateLatex(parsed.latex, "red");
         }
     }
 
-    // update on parameter change
-    buttonUpdate.addEventListener("click", function () { updateFunctionInput(true); });
-    checkboxLatex.addEventListener("input", updateFunctionInput);
-    checkboxAutoCompile.addEventListener("input", updateFunctionInput);
-    checkboxGrid.addEventListener("input", updateFunctionInput);
-    select.addEventListener("input", function (event) {
-        resetState();
-        input.value = select.value.replaceAll(";", "\n");
-        updateFunctionInput(true);
-    });
-    input.addEventListener("input", function (event) {
-        select.value = initialExpr;
-        updateFunctionInput();
-    });
-    window.addEventListener("keydown", function (event) {
-        if (event.keyCode == 13 && (event.altKey || event.ctrlKey)) {
-            event.preventDefault();
-            updateFunctionInput(true);
-        }
-        else if (event.keyCode == 191 && event.ctrlKey) {
-            let control = document.getElementById("control");
-            let fps = document.getElementById("fps");
-            if (control.style.display == "none")
-                fps.style.display = control.style.display = "block";
-            else fps.style.display = control.style.display = "none";
-        }
-    });
-    input.value = select.value.replaceAll(";", "\n");
+    // init parameters (cont'd)
+    activateParameters(rawParameters, updateFunctionInput);
+    initParameters(rawParameters, updateFunctionInput);
 
     // main
     loadShaderSources([
