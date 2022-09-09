@@ -179,9 +179,9 @@ const rawMathFunctionsC = [
     new MathFunction(['conjugate', 'conj'], 1, '\\overline{%1}', 'mf_conj(%1)'),
     new MathFunction(['inverse', 'inv'], 1, '\\left(%1\\right)^{-1}', 'mf_inv(%1)'),
     new MathFunction(['gamma'], 1, '\\Gamma\\left(%1\\right)', 'mf_gamma(%1)'),
-    new MathFunction(['loggamma', 'lngamma'], 1, '\\ln\\Gamma\\left(%1\\right)', 'mf_lngamma(%1)'),
+    new MathFunction(['loggamma', 'lngamma', 'lgamma'], 1, '\\ln\\Gamma\\left(%1\\right)', 'mf_lngamma(%1)'),
     new MathFunction(['zeta'], 1, '\\zeta\\left(%1\\right)', 'mf_zeta(%1)'),
-    new MathFunction(['logzeta', 'lnzeta'], 1, '\\ln\\zeta\\left(%1\\right)', 'mf_lnzeta(%1)'),
+    new MathFunction(['logzeta', 'lnzeta', 'lzeta'], 1, '\\ln\\zeta\\left(%1\\right)', 'mf_lnzeta(%1)'),
 ];
 
 // Initialize math functions, pass rawMathFunctions as a parameter

@@ -124,22 +124,29 @@ function initParameters(rawParameters, callback) {
 function messageError(msg) {
     let container = document.getElementById("error-message");
     container.style.display = "inline-block";
+    container.style.backgroundColor = "rgba(255,255,0,1.0)";
     container.style.color = "red";
     container.innerHTML = msg;
 }
 function messageWarning(msg) {
     let container = document.getElementById("error-message");
     container.style.display = "inline-block";
+    container.style.backgroundColor = "rgba(0,0,0,0.4)";
     container.style.color = "orange";
     container.innerHTML = msg;
 }
 function messageUpdate() {
     let container = document.getElementById("error-message");
     container.style.display = "inline-block";
+    container.style.backgroundColor = "#00000000";
     container.style.color = "white";
     container.innerHTML = "Parameter(s) may have been changed. Click \"update\" to recompile shader.";
 }
-function messageNone() {
+function messageNone(event) {
+    if (event) event.preventDefault();
     let container = document.getElementById("error-message");
     container.style.display = "none";
+    container.style.backgroundColor = "#00000000";
 }
+document.getElementById("error-message").addEventListener("click", messageNone);
+document.getElementById("error-message").addEventListener("contextmenu", messageNone);

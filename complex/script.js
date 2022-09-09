@@ -107,6 +107,10 @@ document.body.onload = function (event) {
             glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
             glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
             console.log(glsl.glsl);
+            // numerical approximation involves significant error
+            // zeta is inconsistent across devices
+            if (/mc_(ln)?((gamma)|(zeta))/.test(glsl.glsl))
+                messageWarning("Function evaluation involves numerical approximation and may be inconsistent across devices.");
             updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
         } catch (e) {
             console.error(e);

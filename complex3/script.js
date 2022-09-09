@@ -3,10 +3,10 @@
 const NAME = "spirula.complex3.";
 
 const builtinFunctions = [
-    ["csc", "csc(z)"],
-    ["tan", "-tan(z)"],
-    ["atanh", "atanh(-z)"],
-    ["Gamma", "gamma(z)"],
+    ["csc(z)", "csc(z)"],
+    ["tan(z)", "-tan(z)"],
+    ["atanh(z)", "atanh(-z)"],
+    ["Γ(z)", "gamma(z)"],
     ["Log Tower", "ln(z^-5)/5"],
     ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
     ["Eight Needles", "z^8+z^(1/8)"],
@@ -67,9 +67,14 @@ document.body.onload = function (event) {
             if (parsed.postfix.length > 1) errmsg = "Multiple main equations found.";
             parsed.postfix.push([]);
             parsed.postfix = parsed.postfix[0];
+            console.log(parsed.postfix);
+            var variables = getVariables(parsed.postfix, false);
+            if (variables.has('x') && variables.has('z'))
+                errmsg = "Cannot have both x and z as the independent variable.";
             var extraVariables = getVariables(parsed.postfix, true);
             extraVariables.delete('e');
-            if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
+            if (extraVariables.size != 0)
+                errmsg = "Definition not found: " + Array.from(extraVariables);
             for (var i = 0; i < parsed.latex.length; i++)
                 parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
             if (errmsg != "") {
@@ -104,6 +109,8 @@ document.body.onload = function (event) {
             glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
             glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
             console.log(glsl.glsl);
+            if (/mc_(ln)?((gamma)|(zeta))/.test(glsl.glsl))
+                messageWarning("Function evaluation involves numerical approximation and may be inconsistent across devices.");
             updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
         } catch (e) {
             console.error(e);

@@ -49,7 +49,9 @@
 }
 
 #error-message {
-    display: inline;
+    display: inline-block;
+    margin: 0.5em -0.1em;
+    padding: 0.2em 0.3em;
     white-space: normal;
     margin-bottom: 0
 }
