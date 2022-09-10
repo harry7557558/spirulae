@@ -166,9 +166,9 @@ const rawMathFunctionsR = [
     new MathFunction(['clamp'], 3, '\\operatorname{clamp}\\left(%1,%2,%3\\right)', 'mf_clamp(%1,%2,%3)'),
     new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
     new MathFunction(['hypot'], 2, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\operatorname{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)'),
+    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\operatorname{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)', new Interval(), new Interval(-PI, PI)),
     new MathFunction(['erf'], 1, '\\mathrm{erf}\\left(%1\\right)', 'mf_erf(%1)', new Interval(), new Interval(-1, 1)),
-    new MathFunction(['erfinv'], 1, '\\mathrm{erf}^{-1}\\left(%1\\right)', 'mf_erfinv(%1)', new Interval(-1, 1), new Interval()),
+    new MathFunction(['inverf', 'erfinv'], 1, '\\mathrm{erf}^{-1}\\left(%1\\right)', 'mf_erfinv(%1)', new Interval(-1, 1), new Interval()),
 ];
 // Additional built-in functions for complex parameters
 const rawMathFunctionsC = [

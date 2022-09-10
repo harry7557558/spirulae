@@ -61,15 +61,24 @@ void main(void) {
     vec2 uv = vXy;
     vec2 xy = mix(xyMin, xyMax, 0.5+0.5*uv);
 
+    // get value and gradient
     vec4 gv = funGrad(xy);
     vec2 g = gv.xy;
     float v = gv.w;
-
     g = (xyMax-xyMin)/iResolution * g;
-    float d = v / length(g);
 
+    // handle infinite discontinuity
+    float k = 1./max(abs(v),1.);
+    //k = exp(round(log(k)));
+    k *= 4.;
+    //v *= k, g *= k;
+    // g /= v*v+1., v = atan(v);
+
+    // shading
+    float d = v / length(g);
     vec3 col = d < 0. ? vec3(0.6,0.7,1) : vec3(1,0.7,0.6);
     col = mix(vec3(0), col, clamp(abs(d)-1., 0.3, 1.));
+    if (isnan(dot(g,g))) col = vec3(0,0.6,0);
 
 #if {%GRID%}
     col *= grid(xy);
