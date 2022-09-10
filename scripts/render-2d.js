@@ -330,6 +330,7 @@ function initRenderer() {
         state.screenCenter = screenCenter;
         if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
             || state.renderNeeded) {
+            resizeState();
             state.width = canvas.width = canvas.style.width = window.innerWidth;
             state.height = canvas.height = canvas.style.height = window.innerHeight;
             try {

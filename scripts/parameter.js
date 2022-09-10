@@ -70,9 +70,9 @@ function initParameters(rawParameters, callback) {
     }
     catch (e) { console.error(e); }
     let funSelect = document.getElementById("builtin-functions");
-    let input = document.getElementById("equation-input");
+    let funInput = document.getElementById("equation-input");
     var initialExpr = "";
-    try {
+    try {  // check if input is a built-in function
         initialExpr = localStorage.getItem(NAME + "input");
         if (initialExpr == null) throw initialExpr;
         funSelect.childNodes[0].setAttribute("value", initialExpr);
@@ -88,15 +88,25 @@ function initParameters(rawParameters, callback) {
         funSelect.childNodes[1].selected = true;
     }
     // event listeners
+    document.getElementById("canvas").addEventListener("webglcontextlost", function (event) {
+        event.preventDefault();
+        setTimeout(function () {  // comment input when WebGL context lost
+            var input = funInput.value.split('\n');
+            for (var i = 0; i < input.length; i++)
+                input[i] = '#' + input[i];
+            input = input.join('\n');
+            localStorage.setItem(NAME + "input", input);
+        }, 100);
+    });
     document.getElementById("button-update").addEventListener("click",
         function (event) { callback(true); });
     funSelect.addEventListener("input", function (event) {
         // selecting a new function
         resetState();
-        input.value = funSelect.value.replaceAll(";", "\n");
+        funInput.value = funSelect.value.replaceAll(";", "\n");
         callback(true);
     });
-    input.addEventListener("input", function (event) {
+    funInput.addEventListener("input", function (event) {
         // typing
         funSelect.value = initialExpr;
         callback(false);
@@ -116,7 +126,7 @@ function initParameters(rawParameters, callback) {
             else fps.style.display = control.style.display = "none";
         }
     });
-    input.value = funSelect.value.replaceAll(";", "\n");
+    funInput.value = funSelect.value.replaceAll(";", "\n");
 }
 
 
