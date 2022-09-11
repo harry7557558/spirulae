@@ -15,7 +15,7 @@ function calcScreenCenter() {
     return com;
 }
 
-function calcTransformMatrix(state) {
+function calcTransformMatrix(state, inverse = true) {
     var sc = (state.height / Math.min(state.width, state.height)) / state.scale;
     var transformMatrix = mat4Perspective(
         0.25 * Math.PI,
@@ -24,7 +24,7 @@ function calcTransformMatrix(state) {
     transformMatrix = mat4Translate(transformMatrix, [0, 0, -3.0 * sc]);
     transformMatrix = mat4Rotate(transformMatrix, state.rx, [1, 0, 0]);
     transformMatrix = mat4Rotate(transformMatrix, state.rz, [0, 0, 1]);
-    // return transformMatrix;
+    if (!inverse) return transformMatrix;
     return mat4Inverse(transformMatrix);
 }
 
@@ -59,7 +59,15 @@ function calcLightDirection(transformMatrix, lightTheta, lightPhi) {
 }
 
 // set legend
-function setLegendAxes(state) {
+function renderLegend(state) {
+    // calculate axis length
+    const targetLength = 36;
+    var targetL = targetLength / (0.5 * Math.min(state.width, state.height) * state.scale);
+    var expi = Math.floor(Math.log10(targetL));
+    var l = Math.pow(10, expi);
+    if (l / targetL < 0.2) l *= 5.0;
+    if (l / targetL < 0.5) l *= 2.0;
+    // get information
     let axes = [
         document.getElementById("axis-x"),
         document.getElementById("axis-y"),
@@ -67,16 +75,32 @@ function setLegendAxes(state) {
     ];
     let yup_checkbox = document.getElementById("checkbox-yup");
     let yup = yup_checkbox && yup_checkbox.checked;
-    var mat = mat4(1.0);
-    mat = mat4Rotate(mat, state.rx, [1, 0, 0]);
-    mat = mat4Rotate(mat, state.rz, [0, 0, 1]);
-    var ij = yup ? [0.01, 2, -1] : [0.01, 1, 2];
+    let mat = calcTransformMatrix(state, false);
+    // set axes
+    let ij = yup ? [0, 2, -1] : [0, 1, 2];
     for (var i = 0; i < 3; i++) {
-        var j = Math.floor(Math.abs(ij[i]));
-        var s = 0.9 * Math.sign(ij[i]) * Math.min(2.0 * state.scale, 1.0);
-        axes[i].setAttribute("x2", s * mat[j][0]);
-        axes[i].setAttribute("y2", s * mat[j][1]);
+        var j = Math.abs(ij[i]);
+        var s = l * Math.sign(ij[i] + 1e-6);
+        var m = s * mat[j][3] + mat[3][3];
+        var x = (s * mat[j][0] + mat[3][0]) / m * (0.5 * state.width);
+        var y = (s * mat[j][1] + mat[3][1]) / m * (0.5 * state.height);
+        var z = (s * mat[j][2] + mat[3][2]) / m;
+        axes[i].setAttribute("x2", x);
+        axes[i].setAttribute("y2", -y);
     }
+    // set legend
+    function toSuperscript(num) {
+        num = "" + num;
+        var res = "";
+        for (var i = 0; i < num.length; i++) {
+            if (num[i] == "-") res += "⁻";
+            else res += "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(num[i])];
+        }
+        return res;
+    }
+    if (l >= 1e4 || l < 1e-3)
+        l = Math.round(l * Math.pow(10, -expi)) + "×10" + toSuperscript(expi);
+    document.getElementById("legend-text").textContent = l;
 }
 
 // ============================ WEBGL ==============================
@@ -378,7 +402,7 @@ function initRenderer() {
             var transformMatrix = calcTransformMatrix(state);
             var lightDir = calcLightDirection(transformMatrix, state.lightTheta, state.lightPhi);
             drawScene(screenCenter, transformMatrix, lightDir);
-            setLegendAxes(state);
+            renderLegend(state);
             state.renderNeeded = false;
         }
         oldScreenCenter = screenCenter;
