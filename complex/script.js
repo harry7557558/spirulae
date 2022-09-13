@@ -31,7 +31,7 @@ document.body.onload = function (event) {
 
     // init parser
     initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC));
-    independentVariables = {
+    IndependentVariables = {
         'x': "mf_z()",
         'z': "mf_z()",
         'i': "mc_i()",
@@ -39,111 +39,28 @@ document.body.onload = function (event) {
     };
 
     // init parameters
-    var glsl = {};
-    let rawParameters = [
+    RawParameters = [
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("bContourLinear", "checkbox-contour-linear"),
         new GraphingParameter("bContourLog", "checkbox-contour-log"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
     ];
-    let checkboxLatex = document.getElementById("checkbox-latex");
-    let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
-
-    // called when update function
-    function updateFunctionInput(forceRecompile = false) {
-        let texContainer = document.getElementById("mathjax-preview");
-        if (!checkboxLatex.checked) texContainer.innerHTML = "";
-        var expr = document.getElementById("equation-input").value;
-        var parameters = parameterToDict(rawParameters);
-        try {
-            localStorage.setItem(NAME + "input", expr);
-            localStorage.setItem(NAME + "params", JSON.stringify(parameters));
-        } catch (e) { console.error(e); }
-
-        // parse input
-        var parsed = null;
-        try {
-            parsed = parseInput(expr);
-            var errmsg = "";
-            if (parsed.postfix.length == 0) errmsg = "No function to graph.";
-            if (parsed.postfix.length > 1) errmsg = "Multiple main equations found.";
-            parsed.postfix.push([]);
-            parsed.postfix = parsed.postfix[0];
-            var extraVariables = getVariables(parsed.postfix, true);
-            extraVariables.delete('e');
-            if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
-            for (var i = 0; i < parsed.latex.length; i++)
-                parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
-            if (errmsg != "") {
-                messageError(errmsg);
-                updateShaderFunction(null);
-                if (checkboxLatex.checked)
-                    updateLatex(parsed.latex, "white");
-                return;
-            }
-            if (checkboxLatex.checked)
-                updateLatex(parsed.latex, "white");
-        }
-        catch (e) {
-            console.error(e);
-            messageError(e);
-            updateShaderFunction(null);
-            if (parsed != null && checkboxLatex.checked)
-                updateLatex(parsed.latex, "red");
-            return;
-        }
-
-        // compile shader
-        if (!(checkboxAutoCompile.checked || forceRecompile === true)) {
-            messageUpdate();
-            return;
-        }
-        try {
-            messageNone();
-            if (checkboxLatex.checked)
-                updateLatex(parsed.latex, "white");
-            glsl = postfixToGlsl(parsed.postfix);
-            glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
-            glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
-            console.log(glsl.glsl);
-            // numerical approximation involves significant error
-            // zeta is inconsistent across devices
-            if (/mc_(ln)?((gamma)|(zeta))/.test(glsl.glsl))
-                messageWarning("Function evaluation involves numerical approximation and may be inconsistent across devices.");
-            updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
-        } catch (e) {
-            console.error(e);
-            messageError(e);
-            updateShaderFunction(null);
-            if (checkboxLatex.checked)
-                updateLatex(parsed.latex, "red");
-        }
-    }
-
-    // init parameters (cont'd)
-    activateParameters(rawParameters, updateFunctionInput);
-    initParameters(rawParameters, updateFunctionInput);
+    activateParameters();
+    initParameters();
+    UpdateFunctionInputConfig.complexMode = true;
+    UpdateFunctionInputConfig.equationMode = false;
+    UpdateFunctionInputConfig.warnNaN = false;
+    UpdateFunctionInputConfig.warnNumerical = true;
 
     // main
-    loadShaderSources([
+    initMain([
         "../shaders/vert-pixel.glsl",
         "../shaders/complex-zeta.glsl",
         "../shaders/complex.glsl",
         "frag-shader.glsl",
         "../shaders/frag-imggrad.glsl",
         "../shaders/frag-aa.glsl"
-    ], function () {
-        console.log("shaders loaded");
-        try {
-            state.name = NAME + "state";
-            initWebGL();
-            updateFunctionInput(true);
-            initRenderer();
-        } catch (e) {
-            console.error(e);
-            document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
-        }
-    });
+    ]);
     initMathjax();
 };

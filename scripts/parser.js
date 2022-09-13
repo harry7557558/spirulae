@@ -252,13 +252,13 @@ function initMathFunctions(rawMathFunctions) {
 
 
 // Independent variables, can be reassigned
-var independentVariables = {
+var IndependentVariables = {
     'x': "mf_x()",
     'y': "mf_y()",
     'z': "mf_z()"
 };
 function isIndependentVariable(name) {
-    return independentVariables.hasOwnProperty(name);
+    return IndependentVariables.hasOwnProperty(name);
 }
 
 
@@ -667,10 +667,11 @@ function parseInput(input) {
                     stack.push([equ[i]]);
                 }
                 else if (variable.isFunParam) {
+                    // console.warn("Function definition possibly not properly resolved.");
                     stack.push(variable.postfix);  // ???
                 }
                 else {
-                    if (variable.resolving) throw "Recursive definition is not supported.";
+                    if (variable.resolving) throw "Recursive variable definition is not supported.";
                     variable.resolving = true;
                     var res = dfs(variable.postfix, variables)[0];
                     stack.push(res);
@@ -679,7 +680,7 @@ function parseInput(input) {
             }
             else if (equ[i].type == 'function') {
                 // user-defined function
-                if (mathFunctions[equ[i].str] == undefined) {
+                if (!mathFunctions.hasOwnProperty(equ[i].str)) {
                     let fun = functions[equ[i].str];
                     var variables1 = {};
                     for (var varname in variables)
@@ -695,7 +696,10 @@ function parseInput(input) {
                     }
                     for (var j = 0; j < fun.numArgs; j++)
                         stack.pop();
+                    if (fun.resolving) throw "Recursive function definition is not supported.";
+                    fun.resolving = true;
                     var res = dfs(fun.postfix, variables1)[0];
+                    fun.resolving = false;
                     stack.push(res);
                 }
                 // built-in function
@@ -725,7 +729,7 @@ function parseInput(input) {
                 throw "Definitions are nested too deeply."
             }
         }
-        if (stack.length != 1) throw "Result stack length is not 1";
+        if (stack.length != 1) throw "Result stack size is not 1";
         return stack;
     }
     for (var i = 0; i < mainEqus.length; i++)
@@ -792,17 +796,17 @@ function subEvalObjects(a, b) {
     );
 }
 function mulEvalObjects(a, b) {
+    var boundaries = [
+        a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
+        a.range.x1 * b.range.x0, a.range.x1 * b.range.x1
+    ].filter(x => !isNaN(x));
     return new EvalObject(
         a.postfix.concat(b.postfix.concat([new Token('operator', '*')])),
         "mf_mul(" + a.glsl + "," + b.glsl + ")",
         a.isNumeric && b.isNumeric,
         new Interval(
-            Math.min(
-                a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
-                a.range.x1 * b.range.x0, a.range.x1 * b.range.x1),
-            Math.max(
-                a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
-                a.range.x1 * b.range.x0, a.range.x1 * b.range.x1)
+            Math.min.apply(null, boundaries),
+            Math.max.apply(null, boundaries)
         ),
         a.isCompatible && b.isCompatible
     );
@@ -940,7 +944,7 @@ function postfixToGlsl(queue) {
             var isNumeric = false;
             var interval = new Interval();
             if (isIndependentVariable(token.str)) {
-                s = independentVariables[token.str];
+                s = IndependentVariables[token.str];
             }
             else if (token.str == "e") {
                 s = "mf_const(" + Math.E + ")";
@@ -1126,3 +1130,12 @@ function postfixToLatex(queue) {
     return stack[0].latex;
 }
 
+
+// Debug in node.js
+if (typeof window === "undefined") {
+    initMathFunctions(rawMathFunctionsShared);
+    var input = "w=csc(x)/z;g(z)=w;g(x)";
+    // var input = "f(z)=g(z)+1;g(z)=f(z)+1;f(z)";
+    var result = parseInput(input);
+    console.log(result.postfix);
+}

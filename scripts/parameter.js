@@ -37,10 +37,13 @@ function GraphingParameter(name, id) {
             this.element.value = value;
     };
 }
-function activateParameters(parameters, callback) {
-    for (var i = 0; i < parameters.length; i++) {
-        parameters[i].element.addEventListener("input", function (event) {
-            callback(false);
+
+var RawParameters = [];
+
+function activateParameters() {
+    for (var i = 0; i < RawParameters.length; i++) {
+        RawParameters[i].element.addEventListener("input", function (event) {
+            updateFunctionInput(false);
         });
     }
 }
@@ -62,11 +65,11 @@ function setParameters(parameters, dict) {
 }
 
 // init input and parameters, returns parameters
-function initParameters(rawParameters, callback) {
+function initParameters() {
     // get parameters and input from local storage
     try {
         var params = JSON.parse(localStorage.getItem(NAME + "params"));
-        if (params != null) setParameters(rawParameters, params);
+        if (params != null) setParameters(RawParameters, params);
     }
     catch (e) { console.error(e); }
     let funSelect = document.getElementById("builtin-functions");
@@ -99,23 +102,23 @@ function initParameters(rawParameters, callback) {
         }, 100);
     });
     document.getElementById("button-update").addEventListener("click",
-        function (event) { callback(true); });
+        function (event) { updateFunctionInput(true); });
     funSelect.addEventListener("input", function (event) {
         // selecting a new function
         resetState();
         funInput.value = funSelect.value.replaceAll(";", "\n");
-        callback(true);
+        updateFunctionInput(true);
     });
     funInput.addEventListener("input", function (event) {
         // typing
         funSelect.value = initialExpr;
-        callback(false);
+        updateFunctionInput(false);
     });
     window.addEventListener("keydown", function (event) {
         // Ctrl/Alt + Enter update function
         if (event.key == "Enter" && (event.altKey || event.ctrlKey)) {
             event.preventDefault();
-            callback(true);
+            updateFunctionInput(true);
         }
         // Ctrl + / hide control
         else if (event.key == "/" && event.ctrlKey) {
@@ -160,3 +163,131 @@ function messageNone(event) {
 }
 document.getElementById("error-message").addEventListener("click", messageNone);
 document.getElementById("error-message").addEventListener("contextmenu", messageNone);
+
+
+// Main
+
+var UpdateFunctionInputConfig = {
+    complexMode: false,
+    equationMode: true,
+    warnNaN: true,
+    warnNumerical: false,
+};
+
+var WarningStack = [];
+
+function updateFunctionInput(forceRecompile = false) {
+    let checkboxLatex = document.getElementById("checkbox-latex");
+    let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
+    let texContainer = document.getElementById("mathjax-preview");
+    if (!checkboxLatex.checked) texContainer.innerHTML = "";
+    var parameters = parameterToDict(RawParameters);
+    var expr = document.getElementById("equation-input").value;
+    try {
+        localStorage.setItem(NAME + "input", expr);
+        localStorage.setItem(NAME + "params", JSON.stringify(parameters));
+    } catch (e) { console.error(e); }
+    WarningStack = [];
+
+    // parse input
+    var parsed = null;
+    try {
+        try {
+            parsed = parseInput(expr);
+        } catch (e) {
+            texContainer.style.color = "red";
+            throw e;
+        }
+        var errmsg = "";
+        if (parsed.postfix.length == 0) errmsg = "No function to graph.";
+        if (parsed.postfix.length > 1) errmsg = "Multiple main equations found.";
+        parsed.postfix.push([]);
+        parsed.postfix = parsed.postfix[0];
+        if (UpdateFunctionInputConfig.complexMode) {
+            var variables = getVariables(parsed.postfix, false);
+            if (variables.has('x') && variables.has('z'))
+                errmsg = "Cannot have both x and z as the independent variable.";
+        }
+        var extraVariables = getVariables(parsed.postfix, true);
+        extraVariables.delete('e');
+        if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
+        if (!UpdateFunctionInputConfig.equationMode) {
+            for (var i = 0; i < parsed.latex.length; i++)
+                parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
+        }
+        if (errmsg != "") {
+            messageError(errmsg);
+            updateShaderFunction(null);
+            if (checkboxLatex.checked)
+                updateLatex(parsed.latex, "white");
+            return;
+        }
+        if (checkboxLatex.checked)
+            updateLatex(parsed.latex, "white");
+    }
+    catch (e) {
+        console.error(e);
+        messageError(e);
+        updateShaderFunction(null);
+        if (parsed != null && checkboxLatex.checked)
+            updateLatex(parsed.latex, "red");
+        return;
+    }
+
+    // compile shader
+    if (!(checkboxAutoCompile.checked || forceRecompile === true)) {
+        messageUpdate();
+        return;
+    }
+    try {
+        messageNone();
+        if (checkboxLatex.checked)
+            updateLatex(parsed.latex, "white");
+        glsl = postfixToGlsl(parsed.postfix);
+        if (UpdateFunctionInputConfig.complexMode) {
+            glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
+            glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
+        }
+        console.log(glsl.glsl);
+        if (UpdateFunctionInputConfig.warnNaN && !glsl.isCompatible)
+            console.warn("Graph may be incorrect on some devices.");
+        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(glsl.glsl))
+            console.warn("Function evaluation involves numerical approximation and may be inconsistent across devices.");
+        if (WarningStack.length != 0)
+            messageWarning(WarningStack.join('\n'));
+        updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
+    } catch (e) {
+        console.error(e);
+        messageError(e);
+        updateShaderFunction(null);
+        if (checkboxLatex.checked)
+            updateLatex(parsed.latex, "red");
+    }
+}
+
+
+function initMain(preloadShaderSources) {
+    // https://stackoverflow.com/a/49248484
+    function myCustomWarn(...args) {
+        var messages = args.join('\n');
+        if (WarningStack.indexOf(messages) == -1)
+            WarningStack.push(messages);
+        return console.oldWarn(...args);
+    };
+    console.oldWarn = console.warn;
+    console.warn = myCustomWarn;
+
+    // load shaders and init WebGL
+    loadShaderSources(preloadShaderSources, function () {
+        console.log("shaders loaded");
+        try {
+            state.name = NAME + "state";
+            initWebGL();
+            updateFunctionInput(true);
+            initRenderer();
+        } catch (e) {
+            console.error(e);
+            document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
+        }
+    });
+}

@@ -21,7 +21,6 @@ function resetState(loaded_state = {}, overwrite = true) {
         renderNeeded: true
     };
     var xym = calcXyMinMax();
-    console.log(xym);
     for (var key in xym) state1[key] = xym[key];
     for (var key in state1) {
         if (overwrite || loaded_state[key] == undefined)
