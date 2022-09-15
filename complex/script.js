@@ -18,6 +18,7 @@ const builtinFunctions = [
     ["Mandelbrot Set", "f(x)=x^2+z;f(f(f(f(f(f(f(z"],
     ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
     ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"],
+    ["Rainbow Nautilus", "ln(20e^(5iln(|z|))/z)csc(12arg(z))"],
     ["LnGamma", "lngamma(z)"],
     ["Zeta", "zeta(z)"],
 ];
@@ -39,15 +40,13 @@ document.body.onload = function (event) {
     };
 
     // init parameters
-    RawParameters = [
+    initParameters([
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("bContourLinear", "checkbox-contour-linear"),
         new GraphingParameter("bContourLog", "checkbox-contour-log"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
-    ];
-    activateParameters();
-    initParameters();
+    ]);
     UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.equationMode = false;
     UpdateFunctionInputConfig.warnNaN = false;
@@ -62,5 +61,4 @@ document.body.onload = function (event) {
         "../shaders/frag-imggrad.glsl",
         "../shaders/frag-aa.glsl"
     ]);
-    initMathjax();
 };

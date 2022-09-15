@@ -174,7 +174,7 @@ const rawMathFunctionsR = [
 const rawMathFunctionsC = [
     new MathFunction(['real', 're'], 1, '\\Re\\left(%1\\right)', 'mf_re(%1)'),
     new MathFunction(['imaginary', 'imag', 'im'], 1, '\\Im\\left(%1\\right)', 'mf_im(%1)'),
-    new MathFunction(['magnitude', 'mag', 'abs'], 1, '\\mathrm{mag}\\left(%1\\right)', 'mf_mag(%1)'),
+    new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, '\\left|%1\\right|', 'mf_mag(%1)'),
     new MathFunction(['argument', 'arg'], 1, '\\arg\\left(%1\\right)', 'mf_arg(%1)'),
     new MathFunction(['conjugate', 'conj'], 1, '\\overline{%1}', 'mf_conj(%1)'),
     new MathFunction(['inverse', 'inv'], 1, '\\left(%1\\right)^{-1}', 'mf_inv(%1)'),
@@ -185,7 +185,7 @@ const rawMathFunctionsC = [
 ];
 
 // Initialize math functions, pass rawMathFunctions as a parameter
-let mathFunctions = {};
+let _mathFunctions = {};
 function initMathFunctions(rawMathFunctions) {
     var funs = {};
     for (var i = 0; i < rawMathFunctions.length; i++) {
@@ -247,7 +247,7 @@ function initMathFunctions(rawMathFunctions) {
             return args[0];
         };
     }
-    mathFunctions = funs;
+    _mathFunctions = funs;
 }
 
 
@@ -259,6 +259,52 @@ var IndependentVariables = {
 };
 function isIndependentVariable(name) {
     return IndependentVariables.hasOwnProperty(name);
+}
+
+
+// Greek letters
+
+var _greekLetters = [];
+
+// call this after initing functions
+function initGreekLetters() {
+    // Greek letters, omitted confusable ones
+    const GREEK = [
+        ["α", "alpha"],
+        ["β", "beta"],
+        ["γ", "gamma"],
+        ["δ", "delta"],
+        ["ε", "epsilon"],
+        ["η", "eta"],
+        ["θ", "theta"],
+        ["λ", "lambda"],
+        ["μ", "mu"],
+        ["π", "pi"],
+        ["ρ", "rho"],
+        ["σ", "sigma"],
+        ["τ", "tau"],
+        ["φ", "phi"],
+        ["ψ", "psi"],
+        ["ω", "omega"],
+        ["Δ", "Delta"],
+        ["Λ", "Lambda"],
+        ["Φ", "Phi"],
+        ["Ψ", "Psi"],
+        ["Ω", "Omega"],
+    ];
+    for (var i = 0; i < GREEK.length; i++) {
+        var unicode = GREEK[i][0];
+        var name = GREEK[i][1];
+        var interfere = [];
+        for (var funname in _mathFunctions) {
+            if (funname.indexOf(name) != -1)
+                interfere.push(funname);
+        }
+        if (interfere.length > 0)
+            console.log("The greek letter " + name + " is omitted due to conflict with function name(s) " + interfere.join(', '));
+        else _greekLetters.push([name, unicode])
+    }
+    _greekLetters.sort((a, b) => b[0].length - a[0].length);
 }
 
 
@@ -323,7 +369,7 @@ function exprToPostfix(expr, mathFunctions) {
                 pc: 0
             });
         }
-        else if (/[A-Za-z_\d\.\(\)\^]/.test(expr[i]) || eb.pc > 0) {
+        else if (/[A-Za-zΑ-Ωα-ω_\d\.\(\)\^]/.test(expr[i]) || eb.pc > 0) {
             if (expr[i] == '(') {
                 eb.s += expr[i];
                 eb.pc += 1;
@@ -364,18 +410,18 @@ function exprToPostfix(expr, mathFunctions) {
     var expr1 = "";
     for (var i = 0; i < expr.length;) {
         var v = "";
-        while (i < expr.length && /[A-Za-z_\d\.\(\)]/.test(expr[i])) {
+        while (i < expr.length && /[A-Za-zΑ-Ωα-ω_\d\.\(\)]/.test(expr[i])) {
             v += expr[i];
             i++;
         }
         var has_ = false;
         for (var j = 0; j < v.length;) {
             if (expr1.length > 0) {
-                if ((/\)/.test(expr1[expr1.length - 1]) && /[A-Za-z_\d\.\(]/.test(v[j]))
-                    || (j != 0 && /[A-Za-z_\d\.\)]/.test(v[j - 1]) && /\(/.test(v[j]))) expr1 += "*";
-                else if (!has_ && /[A-Za-z\d\.]/.test(expr1[expr1.length - 1]) && /[A-Za-z]/.test(v[j]) && v[j] != "_")
+                if ((/\)/.test(expr1[expr1.length - 1]) && /[A-Za-zΑ-Ωα-ω_\d\.\(]/.test(v[j]))
+                    || (j != 0 && /[A-Za-zΑ-Ωα-ω_\d\.\)]/.test(v[j - 1]) && /\(/.test(v[j]))) expr1 += "*";
+                else if (!has_ && /[A-Za-zΑ-Ωα-ω\d\.]/.test(expr1[expr1.length - 1]) && /[A-Za-zΑ-Ωα-ω]/.test(v[j]) && v[j] != "_")
                     expr1 += "*";
-                else if (!has_ && /[A-Za-z]/.test(expr1[expr1.length - 1]) && /\d/.test(v[j]))
+                else if (!has_ && /[A-Za-zΑ-Ωα-ω]/.test(expr1[expr1.length - 1]) && /\d/.test(v[j]))
                     expr1 += "_";
             }
             var next_lp = v.substring(j, v.length).search(/\(/);
@@ -392,7 +438,7 @@ function exprToPostfix(expr, mathFunctions) {
             j++;
         }
         if (/\s/.test(expr[i])) {
-            if (/[A-Za-z_\d]{2}/.test(expr1[expr1.length - 1] + expr[i + 1]))
+            if (/[A-Za-zΑ-Ωα-ω_\d]{2}/.test(expr1[expr1.length - 1] + expr[i + 1]))
                 expr1 += "*";
             i++;
         }
@@ -422,7 +468,7 @@ function exprToPostfix(expr, mathFunctions) {
     for (var i = 0; i < expr.length;) {
         // get token
         var token = "";
-        while (i < expr.length && /[A-Za-z0-9_\.]/.test(expr[i])) {
+        while (i < expr.length && /[A-Za-zΑ-Ωα-ω0-9_\.]/.test(expr[i])) {
             token += expr[i];
             i++;
         }
@@ -445,7 +491,7 @@ function exprToPostfix(expr, mathFunctions) {
             stack.push(fun);
         }
         // variable name
-        else if (/^[A-Za-z](_[A-Za-z0-9]+)?$/.test(token)) {
+        else if (/^[A-Za-zΑ-Ωα-ω](_[A-Za-zΑ-Ωα-ω0-9]+)?$/.test(token)) {
             var variable = new Token("variable", token);
             queue.push(variable);
         }
@@ -533,16 +579,29 @@ function getVariables(postfix, excludeIndependent) {
 // Parse console input to postfix notation
 function parseInput(input) {
     // split to arrays
-    input = input.replaceAll('\r', ';').replaceAll('\n', ';');
+    input = input.replace(/\r?\n/g, ';');
     input = input.trim().trim(';').trim().split(';');
 
+    // replace Greek letters
+    for (var i = 0; i < input.length; i++) {
+        var hi = input[i].indexOf('#');
+        if (hi == -1) hi = input[i].length;
+        var before = input[i].substring(0, hi);
+        var after = input[i].substring(hi, input[i].length);
+        for (var gi = 0; gi < _greekLetters.length; gi++) {
+            var gl = _greekLetters[gi];
+            before = before.replaceAll(gl[0], gl[1]);
+        }
+        input[i] = before + after;
+    }
+
     // read each line of input
-    let reVarname = /^[A-Za-z]((_[A-Za-z\d]+)|(_?\d[A-Za-z\d]*))?$/;
+    let reVarname = /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/;
     var parseFunction = function (funstr) {
-        var match = /^([A-Za-z0-9_]+)\s*\(([A-Za-z0-9_\s\,]+)\)$/.exec(funstr);
+        var match = /^([A-Za-zΑ-Ωα-ω0-9_]+)\s*\(([A-Za-zΑ-Ωα-ω0-9_\s\,]+)\)$/.exec(funstr);
         if (match == null) return false;
         if (!reVarname.test(match[1])) return false;
-        if (match[1] == "e") return false;
+        if (match[1] == "e" || match[1] == "π") return false;
         var matches = [match[1]];
         match = match[2].split(',');
         for (var i = 0; i < match.length; i++) {
@@ -576,6 +635,8 @@ function parseInput(input) {
                 else {
                     if (variables_str[left] != undefined)
                         throw "Multiple definitions of variable " + left;
+                    if (left == "π")
+                        throw "You can't use constant 'π' as a variable name.";
                     if (left == "e")
                         throw "You can't use constant 'e' as a variable name.";
                     variables_str[left] = right;
@@ -585,7 +646,7 @@ function parseInput(input) {
             else if (parseFunction(left)) {
                 var fun = parseFunction(left);
                 // main equation
-                if (mathFunctions[fun[0]] != undefined) {
+                if (_mathFunctions[fun[0]] != undefined) {
                     mainEqusLr.push({ left: left, right: balanceParenthesis(right) });
                 }
                 // function definition
@@ -612,7 +673,7 @@ function parseInput(input) {
 
     // parse expressions
     var functions = {};
-    for (var funname in mathFunctions) functions[funname] = mathFunctions[funname];
+    for (var funname in _mathFunctions) functions[funname] = _mathFunctions[funname];
     for (var funname in functions_str) {
         let fun = functions_str[funname];
         functions[funname] = {
@@ -680,7 +741,7 @@ function parseInput(input) {
             }
             else if (equ[i].type == 'function') {
                 // user-defined function
-                if (!mathFunctions.hasOwnProperty(equ[i].str)) {
+                if (!_mathFunctions.hasOwnProperty(equ[i].str)) {
                     let fun = functions[equ[i].str];
                     var variables1 = {};
                     for (var varname in variables)
@@ -951,6 +1012,11 @@ function postfixToGlsl(queue) {
                 isNumeric = true;
                 interval.x0 = interval.x1 = Math.E;
             }
+            else if (token.str == "π") {
+                s = "mf_const(" + Math.PI + ")";
+                isNumeric = true;
+                interval.x0 = interval.x1 = Math.PI;
+            }
             else {
                 throw "Undeclared variable " + token.str;
             }
@@ -982,7 +1048,7 @@ function postfixToGlsl(queue) {
         }
         // function
         else if (token.type == 'function') {
-            var fun = mathFunctions[token.str];
+            var fun = _mathFunctions[token.str];
             var numArgs = token.numArgs;
             var args = [];
             for (var j = numArgs; j > 0; j--)
@@ -1041,7 +1107,12 @@ function postfixToLatex(queue) {
             var j = varname.search('_');
             varname = varname.substring(0, j + 1) + "{" + varname.substring(j + 1, varname.length) + "}";
         }
-        return varname;
+        for (var i = 0; i < _greekLetters.length; i++) {
+            var gl = _greekLetters[i];
+            varname = varname.replaceAll(gl[1], "\\" + gl[0] + " ");
+        }
+        varname = varname.replace(" }", "}").replace(" _", "_");
+        return varname.trim();
     }
     var stack = [];
     for (var i = 0; i < queue.length; i++) {
@@ -1056,6 +1127,7 @@ function postfixToLatex(queue) {
         else if (token.type == "variable") {
             var s = varnameToLatex(token.str);
             if (s == "e") s = "\\operatorname{e}";
+            if (s == "π") s = "\\pi";
             stack.push(new EvalLatexObject([token], s, Infinity));
         }
         // operators
@@ -1104,7 +1176,7 @@ function postfixToLatex(queue) {
                 args.push(stack[stack.length - j]);
             for (var j = 0; j < numArgs; j++)
                 stack.pop();
-            var fun = mathFunctions[token.str];
+            var fun = _mathFunctions[token.str];
             if (fun != undefined) {
                 if (fun['' + numArgs] == undefined) fun = fun['0'];
                 else fun = fun['' + numArgs];

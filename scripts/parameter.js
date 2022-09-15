@@ -40,14 +40,6 @@ function GraphingParameter(name, id) {
 
 var RawParameters = [];
 
-function activateParameters() {
-    for (var i = 0; i < RawParameters.length; i++) {
-        RawParameters[i].element.addEventListener("input", function (event) {
-            updateFunctionInput(false);
-        });
-    }
-}
-
 // for saving in the local storage
 function parameterToDict(parameters) {
     var dict = {};
@@ -65,7 +57,14 @@ function setParameters(parameters, dict) {
 }
 
 // init input and parameters, returns parameters
-function initParameters() {
+function initParameters(parameters) {
+    RawParameters = parameters;
+    // set event listeners
+    for (var i = 0; i < RawParameters.length; i++) {
+        RawParameters[i].element.addEventListener("input", function (event) {
+            updateFunctionInput(false);
+        });
+    }
     // get parameters and input from local storage
     try {
         var params = JSON.parse(localStorage.getItem(NAME + "params"));
@@ -210,6 +209,7 @@ function updateFunctionInput(forceRecompile = false) {
         }
         var extraVariables = getVariables(parsed.postfix, true);
         extraVariables.delete('e');
+        extraVariables.delete('π');
         if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
         if (!UpdateFunctionInputConfig.equationMode) {
             for (var i = 0; i < parsed.latex.length; i++)
@@ -241,8 +241,10 @@ function updateFunctionInput(forceRecompile = false) {
     }
     try {
         messageNone();
-        if (checkboxLatex.checked)
+        if (checkboxLatex.checked) {
+            console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex, "white");
+        }
         glsl = postfixToGlsl(parsed.postfix);
         if (UpdateFunctionInputConfig.complexMode) {
             glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
@@ -267,6 +269,8 @@ function updateFunctionInput(forceRecompile = false) {
 
 
 function initMain(preloadShaderSources) {
+    initGreekLetters();
+
     // https://stackoverflow.com/a/49248484
     function myCustomWarn(...args) {
         var messages = args.join('\n');
@@ -290,4 +294,7 @@ function initMain(preloadShaderSources) {
             document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
         }
     });
+
+    // MathJax - do this at the end
+    initMathjax();
 }

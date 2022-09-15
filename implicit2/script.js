@@ -41,13 +41,11 @@ document.body.onload = function (event) {
     };
 
     // init parameters
-    RawParameters = [
+    initParameters([
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
-    ];
-    activateParameters(RawParameters);
-    initParameters(RawParameters);
+    ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.equationMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
@@ -61,5 +59,4 @@ document.body.onload = function (event) {
         "../shaders/frag-imggrad.glsl",
         "../shaders/frag-aa.glsl"
     ]);
-    initMathjax();
 };
