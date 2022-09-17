@@ -13,9 +13,9 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
 #if {%LIGHT_THEME%}
-#define BACKGROUND_COLOR vec3(0.9)
+#define BACKGROUND_COLOR vec3(0.82,0.8,0.78)
 #else
-#define BACKGROUND_COLOR vec3(0.02, 0.022, 0.025)
+#define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
 #endif
 
 vec3 screenToWorld(vec3 p) {
@@ -83,7 +83,12 @@ float grid(vec3 p, vec3 n) {
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
 float fade(float t) {
-    return smoothstep(0., 1., 5.0*(clamp(1.0-t, 0., 1.)));
+    t = smoothstep(0.7, 1., t);
+    t = t/(1.-t);
+    t = mix(pow(0.8*t, 0.8), pow(0.2*t, 1.5),
+        smoothstep(0., 0.8, dot(BACKGROUND_COLOR,vec3(1./3.))));
+    t = pow(t, 1.2);
+    return exp(-t);
 }
 vec4 calcColor(vec3 ro, vec3 rd, float t) {
     vec3 p = screenToWorld(ro+rd*t);
@@ -97,18 +102,17 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     float g = bool({%GRID%}) ? grid(p, n) : 1.0;
 #if {%COLOR%} == 0
     // porcelain-like shading
-    vec3 albedo = g * mix(vec3(0.9), normalize(n0), 0.05);
-    vec3 amb = (vec3(0.2+0.0*n.y)+0.1*BACKGROUND_COLOR) * albedo;
+    vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+    vec3 amb = (0.03+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
-    vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(10.);
+    vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(20.);
     vec3 rfl = mix(vec3(1.), vec3(4.), clamp(5.*dot(reflect(rd,n),LDIR),0.,1.));
     vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
 #else // {%COLOR%} == 0
 #if {%COLOR%} == 1
     // color based on normal
     vec3 albedo = mix(vec3(1.0), normalize(n0), 0.45);
-    //albedo = pow(albedo, vec3(0.8));
-    albedo /= 1.2*pow(dot(albedo, vec3(0.299,0.587,0.114)), 0.5);
+    albedo /= 1.2*pow(dot(albedo, vec3(0.299,0.587,0.114)), 0.4);
 #elif {%COLOR%} == 2
     // heatmap color based on gradient magnitude
     float grad = 0.5-0.5*cos(PI*log(length(n0))/log(10.));
@@ -116,10 +120,11 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
 #endif // {%COLOR%} == 1
     albedo *= g;
+    albedo = pow(albedo, vec3(2.2));
     // phong shading
-    vec3 amb = (vec3(0.2+0.0*n.y)+0.15*BACKGROUND_COLOR) * albedo;
+    vec3 amb = (0.03+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
-    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.1);
+    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.06);
     vec3 col = amb + dif + spc;
 #endif // {%COLOR%} == 0
     if (isnan(dot(col, vec3(1))))
@@ -224,10 +229,11 @@ void main(void) {
     vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
     float pad = max(STEP_SIZE, 1./255.);
     vec3 col = render(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
-    col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
-    // col = vec3(callCount) / 255.0;
 #if {%GRID%}
     col = pow(col, vec3(0.85));
 #endif
+    col = pow(col, vec3(1./2.2));
+    col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
+    // col = vec3(callCount) / 255.0;
     fragColor = vec4(clamp(col,0.,1.), 1.0);
 }

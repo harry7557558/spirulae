@@ -114,7 +114,9 @@ float grid(vec3 p, vec3 n) {
 float fade(float t) {
     t = smoothstep(0.7, 1., t);
     t = t/(1.-t);
-    t = pow(0.2*t, 1.8);
+    t = mix(pow(0.8*t, 0.8), pow(0.2*t, 1.5),
+        smoothstep(0., 0.8, dot(BACKGROUND_COLOR,vec3(1./3.))));
+    t = pow(t, 1.2);
     return exp(-t);
 }
 
