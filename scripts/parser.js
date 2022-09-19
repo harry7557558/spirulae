@@ -121,7 +121,7 @@ function MathFunction(
 const rawMathFunctionsShared = [
     new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
     new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
-    new MathFunction(['nthroot', 'root'], 2, '\\sqrt[%1]{%2}', 'mf_root(%1,%2)'),
+    new MathFunction(['nthroot', 'root'], 2, '\\sqrt[{%1}]{%2}', 'mf_root(%1,%2)'),
     new MathFunction(['pow'], 2, '\\left(%1\\right)^{%2}', 'mf_pow(%1,%2)'),
     new MathFunction(['exp'], 1, '\\exp\\left(%1\\right)', 'mf_exp(%1)', new Interval(), new Interval(0, Infinity), Math.exp),
     new MathFunction(['log', 'ln'], 1, '\\ln\\left(%1\\right)', 'mf_ln(%1)', new Interval(0, Infinity), new Interval(), Math.log),
@@ -165,8 +165,8 @@ const rawMathFunctionsR = [
     new MathFunction(['min'], 0, '\\min\\left(%0\\right)', 'mf_min(%1,%2)'),
     new MathFunction(['clamp'], 3, '\\operatorname{clamp}\\left(%1,%2,%3\\right)', 'mf_clamp(%1,%2,%3)'),
     new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
-    new MathFunction(['hypot'], 2, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\operatorname{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)', new Interval(), new Interval(-PI, PI)),
+    new MathFunction(['hypot'], 0, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
+    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\mathrm{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)', new Interval(), new Interval(-PI, PI)),
     new MathFunction(['erf'], 1, '\\mathrm{erf}\\left(%1\\right)', 'mf_erf(%1)', new Interval(), new Interval(-1, 1)),
     new MathFunction(['inverf', 'erfinv'], 1, '\\mathrm{erf}^{-1}\\left(%1\\right)', 'mf_erfinv(%1)', new Interval(-1, 1), new Interval()),
 ];
@@ -195,6 +195,19 @@ function initMathFunctions(rawMathFunctions) {
             funs[name]['' + rawMathFunctions[i].numArgs] = rawMathFunctions[i];
         }
     }
+    funs['exp']['1'].subLatex = function (args) {
+        if (args.length != this.numArgs)
+            throw "Incorrect number of arguments for function " + this.names[0];
+        var pfl = 0;  // number of tokens involved
+        for (var i = 0; i < args[0].postfix.length; i++) {
+            var pf = args[0].postfix[i];
+            pfl += pf.hasOwnProperty("postfix") ? pf.postfix.length : 1;
+        }
+        // for short ones, use "e^x" instead of "exp(x)"
+        if (!/\\d?frac/.test(args[0].latex) && pfl <= 5)
+            return "\\operatorname{e}^{" + args[0].latex + "}";
+        return this.latex.replaceAll("%1", args[0].latex);
+    };
     funs['pow']['2'].subGlsl = function (args) {
         if (args.length != 2)
             throw "Incorrect number of arguments for function " + this.names[0];
@@ -239,6 +252,41 @@ function initMathFunctions(rawMathFunctions) {
                             Math.min(args[i].range.x0, args[i + 1].range.x0),
                             Math.min(args[i].range.x1, args[i + 1].range.x1),
                         ),
+                        args[i].isCompatible && args[i + 1].isCompatible));
+                }
+                if (args.length % 2 == 1) args1.push(args[args.length - 1]);
+                args = args1;
+            }
+            return args[0];
+        };
+    }
+    if (funs.hasOwnProperty('hypot')) {
+        funs['hypot']['0'].subLatex = function (args) {
+            if (args.length < 2)
+                throw "To few argument for function " + this.names[0];
+            var argss = [];
+            for (var i = 0; i < args.length; i++) {
+                if (args[i].precedence == Infinity)
+                    argss.push(args[i].latex + "^{2}");
+                else argss.push("\\left(" + args[i].latex + "\\right)^{2}");
+            }
+            return "\\sqrt{" + argss.join('+') + "}";
+        };
+        funs['hypot']['0'].subGlsl = function (args) {
+            if (args.length < 2)
+                throw "To few argument for function " + this.names[0];
+            while (args.length >= 2) {
+                var args1 = [];
+                let two = new EvalObject([], "", true, new Interval(2, 2), true);
+                for (var i = 0; i + 1 < args.length; i += 2) {
+                    var glsl = this.glsl.replaceAll("%1", args[i].glsl).replaceAll("%2", args[i + 1].glsl);
+                    args1.push(new EvalObject(
+                        args[i].postfix.concat(args[i + 1].postfix).concat([new Token('function', this.names[0])]),
+                        glsl, args[i].isNumeric && args[i + 1].isNumeric,
+                        funs['sqrt']['1'].subGlsl([addEvalObjects(
+                            powEvalObjects(args[i], two),
+                            powEvalObjects(args[i + 1], two)
+                        )]).range,
                         args[i].isCompatible && args[i + 1].isCompatible));
                 }
                 if (args.length % 2 == 1) args1.push(args[args.length - 1]);
@@ -592,6 +640,7 @@ function parseInput(input) {
             var gl = _greekLetters[gi];
             before = before.replaceAll(gl[0], gl[1]);
         }
+        before = before.replace(/\=+/, "=");
         input[i] = before + after;
     }
 
@@ -622,6 +671,8 @@ function parseInput(input) {
         if (line == '') continue;
         if (/\=/.test(line)) {
             var lr = line.split('=');
+            if (lr.length > 2)
+                throw new Error("Multiple equal signs found.");
             var left = lr[0].trim();
             var right = lr[1].trim();
             // variable
