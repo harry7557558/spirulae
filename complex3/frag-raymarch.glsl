@@ -39,13 +39,13 @@ float fun(vec3 p) {
     return p.z - ({%HZ%});
 }
 
-// numerical gradient
+// numerical normal
 vec3 funGrad(vec3 p) {
     float h = 0.002*length(p.xy);
-    return vec3(vec2(
+    return normalize(vec3(vec2(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0))
-    ) / (2.0*h), 1.0);
+    ), 2.0*h));
 }
 
 
@@ -123,19 +123,17 @@ float fade(float t) {
 vec4 calcColor(vec3 ro, vec3 rd, float t) {
     vec3 p = screenToWorld(ro+rd*t);
     vec2 z = funz(p.xy);
-    vec3 n0 = funGrad(p).xyz;
+    vec3 n = funGrad(p);
     rd = normalize(screenToWorld(ro+rd)-screenToWorld(ro));
-    n0 = dot(n0,rd)>0. ? -n0 : n0;
-    vec3 n = normalize(n0);
-    float g = bool({%GRID%}) ? grid(p, n) : 1.0;
-    vec3 albedo = pow(colorDomain(z), vec3(1.8));
-    albedo = mix(albedo*pow(g,1.8), vec3(0.2), clamp(1.0-g, 0.0, 0.0));
+    n = dot(n,rd)>0. ? -n : n;
+    float g = bool({%GRID%}) ? 1.1*pow(grid(p, n),1.8) : 1.0;
+    vec3 albedo = pow(colorDomain(z), vec3(1.8)) * g;
     vec3 amb = (vec3(0.2+0.0*n.y)+0.15*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
     vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.02);
     vec3 col = amb + dif + spc;
     if (isnan(dot(col, vec3(1))))
-        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0), fade(t)), 1.0);
+        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0)*g, fade(t)), 1.0);
     return vec4(
         mix(BACKGROUND_COLOR, col, fade(t)),
         1.0-pow(1.0-OPACITY,abs(1.0/dot(rd,n)))
@@ -154,7 +152,8 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
     while (true) {
         v = funS(ro+rd*t);
         if (isBisecting) {  // bisection search
-            if (t1-t0 <= STEP_SIZE/64.) break;
+            // if (t1-t0 <= STEP_SIZE/64.) break;
+            if (t1-t0 <= 1e-4) break;
             if (v*v0 < 0.0) t1 = t, v1 = v;
             else t0 = t, v0 = v;
             t = 0.5*(t0+t1);
@@ -183,7 +182,7 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
             ) : 0.;
             dt = (isnan(g) || g==0.) ? STEP_SIZE :
                 clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
-            dt00 = dt0, dt0 = dt, v00 = v0, v0 = v;
+            dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             t += dt;
         }
         if (++i >= MAX_STEP || t > t1) return BACKGROUND_COLOR;
@@ -198,9 +197,6 @@ void main(void) {
     vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
     float pad = max(STEP_SIZE, 1./255.);
     vec3 col = vSolid(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
-#if {%GRID%}
-    col = pow(col, vec3(0.85));
-#endif
     col = pow(col, vec3(1.0/2.2));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     fragColor = vec4(clamp(col,0.,1.), 1.0);

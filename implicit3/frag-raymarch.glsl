@@ -99,11 +99,11 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
-    float g = bool({%GRID%}) ? grid(p, n) : 1.0;
+    float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
 #if {%COLOR%} == 0
     // porcelain-like shading
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
-    vec3 amb = (0.03+0.2*BACKGROUND_COLOR) * albedo;
+    vec3 amb = (0.1+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
     vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(20.);
     vec3 rfl = mix(vec3(1.), vec3(4.), clamp(5.*dot(reflect(rd,n),LDIR),0.,1.));
@@ -122,13 +122,13 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     albedo *= g;
     albedo = pow(albedo, vec3(2.2));
     // phong shading
-    vec3 amb = (0.03+0.2*BACKGROUND_COLOR) * albedo;
-    vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
-    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.06);
+    vec3 amb = (0.05+0.2*BACKGROUND_COLOR) * albedo;
+    vec3 dif = 0.6*pow(max(dot(n,LDIR),0.0),1.5) * albedo;
+    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.06) * pow(albedo,vec3(0.2));
     vec3 col = amb + dif + spc;
 #endif // {%COLOR%} == 0
     if (isnan(dot(col, vec3(1))))
-        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0), fade(t)), 1.0);
+        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0)*g, fade(t)), 1.0);
     return vec4(
         mix(BACKGROUND_COLOR, col, fade(t)),
         1.0-pow(1.0-OPACITY,abs(1.0/dot(rd,n)))
@@ -150,7 +150,8 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     while (true) {
         v = funS(ro+rd*t);
         if (isBisecting) {  // bisection search
-            if (t1-t0 <= STEP_SIZE/64.) break;
+            // if (t1-t0 <= STEP_SIZE/64.) break;
+            if (t1-t0 <= 1e-4) break;
             if (v*v0 < 0.0) t1 = t, v1 = v;
             else t0 = t, v0 = v;
             t = 0.5*(t0+t1);
@@ -179,7 +180,7 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             ) : 0.;
             dt = (isnan(g) || g==0.) ? STEP_SIZE :
                 clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
-            dt00 = dt0, dt0 = dt, v00 = v0, v0 = v;
+            dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             t += dt;
         }
         if (++i >= MAX_STEP || t > t1) return BACKGROUND_COLOR;
@@ -229,9 +230,6 @@ void main(void) {
     vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
     float pad = max(STEP_SIZE, 1./255.);
     vec3 col = render(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
-#if {%GRID%}
-    col = pow(col, vec3(0.85));
-#endif
     col = pow(col, vec3(1./2.2));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     // col = vec3(callCount) / 255.0;
