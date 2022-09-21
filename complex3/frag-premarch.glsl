@@ -7,6 +7,8 @@ out vec4 fragColor;
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
 
+uniform float rZScale;
+
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
@@ -28,7 +30,7 @@ vec2 funz(vec2 z) {  // function
 #line 30
 float fun(vec3 p) {
     vec2 z = funz(p.xy);
-    return p.z - ({%HZ%});
+    return p.z - rZScale*({%HZ%});
 }
 
 

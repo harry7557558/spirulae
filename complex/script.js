@@ -5,12 +5,11 @@ const NAME = "spirula.complex.";
 const builtinFunctions = [
     ["Sine", "sin(2z)"],
     ["Double Reciprocal", "1/z^2"],
-    ["Fifth Reciprocal", "z^-5-i"],
+    ["Fifth Reciprocal", "z^-5+i"],
     ["Polynomial 3", "(z^3-4)^2"],
     ["Polynomial 6²", "(z^6+z)^6+z"],
     ["Blue Flower", "10/ln(z^5)^2*(-i-1)"],
-    ["Radioactive", "sin(ln(z^3))"],
-    ["Reciprocal Flower", "cos(7/z^1.5)"],
+    ["Radio Tunnel", "sin(ln(z^3))"],
     ["Leaky Hyperbola", "z*atan(1-z^2)"],
     ["Yellow Orange", "(1+i)*(ln(z)^10)^0.1"],
     ["CM Snowflower", "sqrt(ln(z^6)^5)*(-i-1)"],
@@ -19,8 +18,9 @@ const builtinFunctions = [
     ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
     ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"],
     ["Rainbow Nautilus", "ln(20e^(5iln(|z|))/z)csc(12arg(z))"],
-    ["LnGamma", "lngamma(z)"],
-    ["Zeta", "zeta(z)"],
+    ["Log Real", "log(re(((1/z)^12+1)((2/z)^6+1)"],
+    ["LnGamma", "lngamma(4z)"],
+    ["Riemann Zeta", "zeta(10z)"],
 ];
 
 
@@ -46,6 +46,7 @@ document.body.onload = function (event) {
         new GraphingParameter("bContourLog", "checkbox-contour-log"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+        new UniformSlider("rBrightness", "slider-brightness", 0.001, 0.999, 0.6),
     ]);
     UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.equationMode = false;

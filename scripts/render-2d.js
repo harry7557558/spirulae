@@ -195,6 +195,7 @@ async function drawScene(state) {
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "iResolution"), state.width, state.height);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMin"), state.xmin, state.ymin);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMax"), state.xmax, state.ymax);
+    gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "rBrightness"), state.rBrightness);
     renderPass();
 
     if (renderer.enableAntiAliasing) {

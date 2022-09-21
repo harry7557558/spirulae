@@ -16,7 +16,6 @@ function initBuiltInFunctions(builtinFunctions) {
 // name: start with a lowercase letter
 //  - b/c: checkbox (boolean)
 //  - s: selector
-//  - r: range/slider (??)
 function GraphingParameter(name, id) {
     this.element = document.getElementById(id);
     this.name = name;
@@ -33,12 +32,45 @@ function GraphingParameter(name, id) {
             this.element.checked = value;
         if (this.name[0] == "s")
             this.element.value = value;
-        if (this.name[0] == "r")
-            this.element.value = value;
     };
 }
 
+// a slider that controls a shader uniform
+// not saved on local storage
+function UniformSlider(name, id, vmin, vmax, v0) {
+    this.name = name;
+    this.element = document.getElementById(id);
+    this.v0 = v0, this.vmin = vmin, this.vmax = vmax;
+    this.element.min = 0;
+    this.element.max = 1000;
+    this.getValue = function () {
+        var t = this.element.value / 1000;
+        return this.vmin + (this.vmax - this.vmin) * t;
+    };
+    this.setValue = function (value) {
+        var t = (value - this.vmin) / (this.vmax - this.vmin);
+        this.element.value = Math.round(1000 * t);
+        state[slider.name] = value;
+        state.renderNeeded = true;
+    };
+    var slider = this;
+    slider.setValue(v0);
+    state[slider.name] = v0;
+    state.renderNeeded = true;
+    this.element.addEventListener("input", function (event) {
+        updateFunctionInput(false, false);
+        state[slider.name] = slider.getValue();
+        state.renderNeeded = true;
+    });
+    this.element.addEventListener("contextmenu", function (event) {
+        event.preventDefault();
+        slider.setValue(slider.v0);
+        updateFunctionInput(false, false);
+    });
+}
+
 var RawParameters = [];
+var RawUniformSliders = [];
 
 // for saving in the local storage
 function parameterToDict(parameters) {
@@ -61,7 +93,8 @@ function initParameters(parameters) {
     RawParameters = parameters;
     // set event listeners
     for (var i = 0; i < RawParameters.length; i++) {
-        RawParameters[i].element.addEventListener("input", function (event) {
+        if (/^r/.test(RawParameters[i].name));
+        else RawParameters[i].element.addEventListener("input", function (event) {
             updateFunctionInput(false);
         });
     }
@@ -175,7 +208,7 @@ var UpdateFunctionInputConfig = {
 
 var WarningStack = [];
 
-function updateFunctionInput(forceRecompile = false) {
+function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let texContainer = document.getElementById("mathjax-preview");
@@ -186,6 +219,7 @@ function updateFunctionInput(forceRecompile = false) {
         localStorage.setItem(NAME + "input", expr);
         localStorage.setItem(NAME + "params", JSON.stringify(parameters));
     } catch (e) { console.error(e); }
+    if (!updateFunction) return;
     WarningStack = [];
 
     // parse input

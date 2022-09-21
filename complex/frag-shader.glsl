@@ -8,6 +8,8 @@ uniform vec2 iResolution;
 uniform vec2 xyMin;
 uniform vec2 xyMax;
 
+uniform float rBrightness;
+
 #define ZERO 0.0
 #include "../shaders/complex.glsl"
 
@@ -52,7 +54,8 @@ float hue2rgb(float p, float q, float t) {
 }
 vec3 hslToRgb(float h, float s, float l) {
     if (s == 0.) return vec3(l);
-    float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+    // float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+    float q = -0.05*log(exp(-20.*(l*(1.+s)))+exp(-20.*(l+s-l*s)));
     float p = 2. * l - q;
     return vec3(
         hue2rgb(p, q, h + 1./3.),
@@ -62,8 +65,6 @@ vec3 hslToRgb(float h, float s, float l) {
 }
 
 void main(void) {
-    float brightness = 0.5;
-
     vec2 uv = vXy;
     vec2 z = mix(xyMin, xyMax, 0.5+0.5*uv);
     vec2 fz = fun(z);
@@ -76,13 +77,17 @@ void main(void) {
 #if {%CONTOUR_LOG%}
     s = min(s, 0.5 + 0.5 * pow(abs(sin(1.3643763538418412 * log(length(fz)))), 0.4));
 #endif
-    float l = 1.0 - pow(1.0 - brightness, log(log(length(fz) + 1.0) + 1.05));
+    float k = 0.7+0.8*rBrightness;
+    k = 2.5 * (k-1.0) + 1.0;  // comment this line when using the second l
+    float bri = pow(rBrightness,k)/(pow(rBrightness,k)+pow(1.-rBrightness,k));
+    float l = 1.0 - pow(1.0-bri, log(log(length(fz) + 1.0) + 1.05));
+    // float l = 1.0 - pow(0.5, log(log(pow(length(fz)+1., bri/(1.0-bri))-1. + 1.0) + 1.05));
     vec3 col = hslToRgb(h, s, l);
 
     if (isnan(dot(col, vec3(1)))) col = vec3(1);
 
 #if {%GRID%}
-    col = mix(vec3(0.35,0.3,0.25), col, pow(grid(z), 2.));
+    col = mix(vec3(0.35,0.3,0.25), col, 0.1+0.9*pow(grid(z), 2.));
 #endif
 
     fragColor = vec4(clamp(col,0.,1.), 1.0);

@@ -81,10 +81,12 @@ function renderLegend(state) {
     for (var i = 0; i < 3; i++) {
         var j = Math.abs(ij[i]);
         var s = l * Math.sign(ij[i] + 1e-6);
+        s *= Math.min(i == 2 ? calcZScale() : 1.0, 10.);
         var m = s * mat[j][3] + mat[3][3];
         var x = (s * mat[j][0] + mat[3][0]) / m * (0.5 * state.width);
         var y = (s * mat[j][1] + mat[3][1]) / m * (0.5 * state.height);
         var z = (s * mat[j][2] + mat[3][2]) / m;
+        if (!(z > 0. && z < 1.)) x = y = 0.;
         axes[i].setAttribute("x2", x);
         axes[i].setAttribute("y2", -y);
     }
@@ -186,6 +188,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform2f(gl.getUniformLocation(renderer.premarchProgram, "screenCenter"),
         screenCenter[0], screenCenter[1]);
+    gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "rZScale"), calcZScale());
     renderPass();
 
     // pooling
@@ -217,6 +220,8 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
+    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
+    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rBrightness"), state.rBrightness);
     renderPass();
 
     // render image gradient
@@ -284,8 +289,8 @@ var state = {
     rz: -0.9 * Math.PI,
     rx: -0.4 * Math.PI,
     scale: 0.5,
-    lightTheta: null,
-    lightPhi: null,
+    rTheta: null,
+    rPhi: null,
     renderNeeded: true
 };
 function resetState(loaded_state = {}, overwrite = true) {
@@ -298,15 +303,22 @@ function resetState(loaded_state = {}, overwrite = true) {
         rz: -0.9 * Math.PI,
         rx: -0.4 * Math.PI,
         scale: 0.5,
-        lightTheta: document.querySelector("#slider-theta").value * (Math.PI / 180.),
-        lightPhi: document.querySelector("#slider-phi").value * (Math.PI / 180.),
         renderNeeded: true
     };
     for (var key in state1) {
-        if (overwrite || loaded_state[key] == undefined)
+        if (overwrite || !loaded_state.hasOwnProperty(key))
             loaded_state[key] = state1[key];
-        state[key] = loaded_state[key];
+        if (state.hasOwnProperty(key) && !/^r[A-Z]/.test(key))
+            state[key] = loaded_state[key];
     }
+}
+
+// z-scale slider
+function calcZScale() {
+    var t = state.rZScale;
+    if (!(typeof t === "number" && t > 0. && t < 1.))
+        t = 0.5;
+    return Math.pow(t / (1.0 - t), 0.75);
 }
 
 function initWebGL() {
@@ -400,7 +412,7 @@ function initRenderer() {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
             var transformMatrix = calcTransformMatrix(state);
-            var lightDir = calcLightDirection(transformMatrix, state.lightTheta, state.lightPhi);
+            var lightDir = calcLightDirection(transformMatrix, state.rTheta, state.rPhi);
             drawScene(screenCenter, transformMatrix, lightDir);
             renderLegend(state);
             state.renderNeeded = false;
@@ -482,17 +494,6 @@ function initRenderer() {
         }
     }, { passive: true });
     window.addEventListener("resize", updateBuffers);
-
-    let sliderTheta = document.querySelector("#slider-theta");
-    let sliderPhi = document.querySelector("#slider-phi");
-    function updateUniforms() {
-        state.lightTheta = sliderTheta.value * (Math.PI / 180.);
-        state.lightPhi = sliderPhi.value * (Math.PI / 180.);
-        state.renderNeeded = true;
-    }
-    sliderTheta.addEventListener("input", updateUniforms);
-    sliderPhi.addEventListener("input", updateUniforms);
-    updateUniforms();
 }
 
 function updateShaderFunction(funCode, funGradCode, params) {
@@ -516,10 +517,10 @@ function updateShaderFunction(funCode, funGradCode, params) {
     console.time("compile shader");
 
     // pooling program
-    var poolProgram = createShaderProgram(gl, renderer.vsSource, renderer.poolSource);
-    if (renderer.poolProgram != null)
-        gl.deleteProgram(renderer.poolProgram);
-    renderer.poolProgram = poolProgram;
+    if (renderer.poolProgram == null) {
+        var poolProgram = createShaderProgram(gl, renderer.vsSource, renderer.poolSource);
+        renderer.poolProgram = poolProgram;
+    }
 
     if (renderer.premarchProgram != null) {
         gl.deleteProgram(renderer.premarchProgram);

@@ -74,6 +74,8 @@ document.body.onload = function (event) {
         new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+        new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, Math.PI / 6.0),
+        new UniformSlider("rPhi", "slider-phi", 0, Math.PI, Math.PI / 6.0),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.equationMode = true;
