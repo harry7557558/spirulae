@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Spirula | GPU-accelerated online function graphers</title>
+    <meta name="description" content="GPU-accelerated function graphers in a web browser, both 3D and 2D." />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
+    <link rel="stylesheet" href="./src/style.css" />
+
+</head>
+
+<body>
+
+    <div id="container"></div>
+
+    <script>
+        let req = new XMLHttpRequest();
+        req.open("GET", "./README.md");
+        req.onload = function () {
+            let converter = new showdown.Converter();
+            let html = converter.makeHtml(req.responseText);
+            document.getElementById("container").innerHTML = html;
+        }
+        req.send();
+    </script>
+
+</body>
+
+</html>
