@@ -77,6 +77,7 @@ function updateLatex(latexList, color) {
         texContainer.appendChild(container);
     }
     try {
+        MathJax.typesetClear();
         MathJax.typeset();
         texContainer.style.display = null;
         texPreviewPositionDelta(0, 0);

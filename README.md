@@ -4,18 +4,18 @@
 
 GPU-accelerated function graphers in a web browser, both 3D and 2D.
 
-This is a personal passion project. I couldn't find a 3D graphing calulator with a satisfying 3D implicit surface rendering on the internet, so I decided to make one. I was inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/).
+This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I decided to make one. I was inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/).
 
-After my 3D implicit surface grapher received positive feedbacks from other people, I thought, why not extending the same equation parser and renderer to other type of math functions? Under this motivation, I developed the following function graphers:
+After my [3D implicit surface grapher](https://github.com/harry7557558/harry7557558.github.io/tree/master/tools/raymarching-implicit) received positive feedback from other people, I thought, why not extend the same equation parser and renderer to other types of math functions? Under this motivation, I developed the following function graphers:
 
- - [2D implicit curve grapher](./implicit2/index.html)
+ - [Implicit curve grapher](./implicit2/index.html)
  - [3D implicit surface grapher](./implicit3/index.html)
  - [Complex domain coloring grapher](./complex/index.html)
- - [Complex grapher in 3D](./complex3/index.html)
+ - [3D complex domain coloring grapher](./complex3/index.html)
 
-It is important to note that these function graphers are developed completely on my own effort. Since I don't have much knowledge on advanced functions (especially the complex-variabled ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical pratibility and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirula/issues).
+It is important to note that these function graphers are developed completely by my effort. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirula/issues).
 
-The name "Spirula" comes from the name of [a deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) with distinctive spiral shells.
+The name "Spirula" comes from the name of a [deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) that has distinctive spiral shells.
 
 ----
 
@@ -32,11 +32,11 @@ The 3D graphers implements the following parameters/features:
  - Multiple shading modes
  - Dark and light color themes
  - Speed vs. quality control
+ - Lighting control
  - Axes and grid
  - Red highlight discontinuity
  - Semi-transparent surface shading
  - Anti-aliasing
- - Lighting control
 
 ----
 
@@ -56,7 +56,7 @@ These tools have the following known issues:
 Features that may be implemented in the future:
  - Iterative refinement in implicit surface rendering
  - Intersection using interval arithmetic
- - More parameters in viewport control
+ - More parameters in the viewport control
  - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring)
  - Variable sliders
  - Graph sharing via URL

@@ -3,8 +3,12 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>3D Complex Function Grapher</title>
-    <meta name="description" content="Complex function graphing in 3D. (experimental)" />
+    <title>3D Complex Domain Coloring Grapher | Spirula</title>
+    <meta name="description"
+        content="A 3D complex function grapher that supports infinite domain, variable/function definition, and special functions." />
+    <meta name="keywords" content="complex, 3d, function, domain coloring, webgl" />
+    <meta property="og:image" content="../src/gallery-complex3-tan.jpg" />
+    <link rel="image_src" href="../src/gallery-complex3-tan.jpg" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -48,10 +52,12 @@
                 <option value="z.y">Im(z)</option>
                 <option value="length(z)" selected>|z|</option>
                 <option value="log(length(z))">ln(|z|)</option>
-                <option value="log(length(z))+length(z)">ln|z|+|z|</option>
+                <option value="log(length(z))+length(z)">ln(|z|)+|z|</option>
                 <option value="log(length(z)+1.)">ln(|z|+1)</option>
                 <option value="1./length(z)">1/|z|</option>
                 <option value="-log(length(z))">-ln(|z|)</option>
+                <option value="sign(z.x)*asinh(abs(z.x))">asinh(Re(z))</option>
+                <option value="sign(z.y)*asinh(abs(z.y))">asinh(Im(z))</option>
             </select>graph</span>&ensp;
         <span><select id="select-step">
                 <option value="0.04">low</option>
@@ -60,7 +66,7 @@
                 <option value="0.001">ex-high</option>
             </select>quality</span>
         <br />
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
+        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
                 id="checkbox-discontinuity" checked />highlight discontinuity</span>&ensp;
         <br />
@@ -70,8 +76,10 @@
                 style="width:60px" /></span>
         <span title="Light theme"><input type="checkbox" id="checkbox-light" checked />☼</span>
         <br />
-        <span title="Scaling of the z-axis"><input type="range" id="slider-zscale" style="width:70px" />z-scale</span>&ensp;
-        <span title="Domain coloring brightness"><input type="range" id="slider-brightness" style="width:70px" />light</span>
+        <span title="Scaling of the z-axis"><input type="range" id="slider-zscale"
+                style="width:70px" />z-scale</span>&ensp;
+        <span title="Domain coloring brightness"><input type="range" id="slider-brightness"
+                style="width:70px" />brightness</span>
         <br />
         <p id="error-message" style="display:none"></p>
     </div>
@@ -80,8 +88,6 @@
 
     <div id="help-menu" style="visibility:hidden">
         <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
-        <h2>Raymarching Implicit Surface Grapher</h2>
-        <p>Complex function graphing in 3D. (experimental)</p>
     </div>
 
     <script>

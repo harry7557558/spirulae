@@ -3,8 +3,9 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>2D Implicit Curve Grapher</title>
-    <meta name="description" content="Test equation parser and 2D viewport." />
+    <title>Implicit Curve Grapher | Spirula</title>
+    <meta name="description"
+        content="This tool is created for testing 2D renderer and equation parser. Do not treat it too seriously." />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -40,7 +41,7 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span title="Show grid"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
+        <span title="Show axes and grid"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
         <br />
         <p id="error-message" style="display:none"></p>
     </div>
@@ -49,8 +50,6 @@
 
     <div id="help-menu" style="visibility:hidden">
         <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
-        <h2>2D Implicit Curve Grapher</h2>
-        <p>Test equation parser and 2D viewport.</p>
     </div>
 
     <script>

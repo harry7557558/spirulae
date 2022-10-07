@@ -1,5 +1,25 @@
 // Refactored from script.js's
 
+function initHelpMenu() {
+    let container = document.getElementById("help-menu");
+    const errorMsg = "<h2 style='color:orange;'>Failed to load help content.</h2>";
+    var req = new XMLHttpRequest();
+    req.open("GET", "help.md");  // md instead of html because easier to edit on vscode
+    req.onload = function () {
+        if (req.status == 200) container.innerHTML += req.responseText;
+        else container.innerHTML += errorMsg;
+    };
+    req.onerror = function () {
+        container.innerHTML += errorMsg;
+    };
+    req.send();
+    document.addEventListener("keydown", function (event) {
+        if (event.key == "Escape") {
+            event.preventDefault();
+            container.style.visibility = "hidden";
+        }
+    });
+}
 
 // Built-in functions
 
@@ -303,6 +323,9 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
 
 
 function initMain(preloadShaderSources) {
+    // do this at the start
+    initHelpMenu();
+
     initGreekLetters();
 
     // https://stackoverflow.com/a/49248484

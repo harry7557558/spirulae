@@ -1,6 +1,7 @@
 body {
     font-family: Arial, Helvetica, sans-serif;
-    background-color: #eee;
+    background-color: #fff5ee;
+    color: #222;
 }
 
 #container {
@@ -14,4 +15,13 @@ body {
 
 img {
     max-width: 100%;
+}
+
+a {
+    color: #06c;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
 }

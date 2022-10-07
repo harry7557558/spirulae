@@ -3,8 +3,12 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>2D Complex Function Grapher</title>
-    <meta name="description" content="A complex domain coloring grapher in 2D." />
+    <title>Complex Domain Coloring Grapher | Spirula</title>
+    <meta name="description"
+        content="Complex domain coloring in 3D. Supports variable and function definition and special functions." />
+    <meta name="keywords" content="complex, function, domain coloring" />
+    <meta property="og:image" content="../src/gallery-complex-trigs.jpg" />
+    <link rel="image_src" href="../src/gallery-complex-trigs.jpg" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -44,7 +48,8 @@
         <span><input type="checkbox" id="checkbox-contour-log" checked />logarithmic contour</span>
         <br />
         <span title="Show grid"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
-        <span title="Domain coloring brightness"><input type="range" id="slider-brightness" style="width:100px" />brightness</span>
+        <span title="Domain coloring brightness"><input type="range" id="slider-brightness"
+                style="width:100px" />brightness</span>
         <br />
         <p id="error-message" style="display:none"></p>
     </div>
@@ -53,8 +58,6 @@
 
     <div id="help-menu" style="visibility:hidden">
         <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
-        <h2>2D Complex Function Grapher</h2>
-        <p>A complex domain coloring grapher in 2D.</p>
     </div>
 
     <script>

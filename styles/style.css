@@ -45,7 +45,7 @@
     padding: 15px 20px;
     color: white;
     font-size: 0.95em;
-    font-family: 'Arial';
+    font-family: 'Arial', sans-serif;
     white-space: nowrap;
 }
 
@@ -122,6 +122,18 @@ input, select, button {
 #help-menu p {
     font-size: 1em;
     margin: 0.6em 0;
+}
+
+#help-menu code {
+    color: #fea;
+    font-family: 'Consolas', monospace;
+}
+
+#help-menu img {
+    max-width: 100%;
+    max-height: 350px;
+    object-fit: contain;
+    margin: 0.3em 0;
 }
 
 a {
