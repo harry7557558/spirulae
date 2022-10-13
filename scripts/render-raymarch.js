@@ -286,23 +286,25 @@ var state = {
     height: window.innerHeight,
     screenCenter: [0.0, 0.0],
     defaultScreenCenter: true,
-    rz: -0.9 * Math.PI,
-    rx: -0.4 * Math.PI,
-    scale: 0.5,
+    rz: null,
+    rx: null,
+    scale: null,
     rTheta: null,
     rPhi: null,
     renderNeeded: true
 };
 function resetState(loaded_state = {}, overwrite = true) {
+    if (resetState.defaultState == undefined)
+        resetState.defaultState = JSON.parse(JSON.stringify(loaded_state));
     var state1 = {
         name: state.name,
         width: window.innerWidth,
         height: window.innerHeight,
         screenCenter: calcScreenCenter(),
         defaultScreenCenter: true,
-        rz: -0.9 * Math.PI,
-        rx: -0.4 * Math.PI,
-        scale: 0.5,
+        rz: resetState.defaultState.rz,
+        rx: resetState.defaultState.rx,
+        scale: resetState.defaultState.scale,
         renderNeeded: true
     };
     for (var key in state1) {
@@ -514,7 +516,6 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", Number(params.bContourLog));
         return shaderSource;
     }
-    console.time("compile shader");
 
     // pooling program
     if (renderer.poolProgram == null) {
@@ -522,26 +523,55 @@ function updateShaderFunction(funCode, funGradCode, params) {
         renderer.poolProgram = poolProgram;
     }
 
-    if (renderer.premarchProgram != null) {
-        gl.deleteProgram(renderer.premarchProgram);
-        renderer.premarchProgram = null;
+    // parsing error
+    if (funCode == null) {
+        if (renderer.premarchProgram != null) {
+            gl.deleteProgram(renderer.premarchProgram);
+            renderer.premarchProgram = null;
+        }
+        if (renderer.raymarchProgram != null) {
+            gl.deleteProgram(renderer.raymarchProgram);
+            renderer.raymarchProgram = null;
+        }
+        return;
     }
-    if (renderer.raymarchProgram != null) {
-        gl.deleteProgram(renderer.raymarchProgram);
-        renderer.raymarchProgram = null;
-    }
-    if (funCode != null) {
+
+    // cache code
+    if (updateShaderFunction.prevCode == undefined)
+        updateShaderFunction.prevCode = {
+            premarchSource: "",
+            raymarchSource: ""
+        };
+    var prevCode = updateShaderFunction.prevCode;
+    var premarchSource = sub(renderer.premarchSource);
+    var raymarchSource = sub(renderer.raymarchSource);
+
+    console.time("compile shader");
+
+    // premarching program
+    if (prevCode.premarchSource != premarchSource || renderer.premarchProgram == null) {
+        if (renderer.premarchProgram != null) {
+            gl.deleteProgram(renderer.premarchProgram);
+            renderer.premarchProgram = null;
+        }
         try {
-            // premarching program
-            var premarchSource = sub(renderer.premarchSource);
-            var premarchProgram = createShaderProgram(gl, renderer.vsSource, premarchSource);
-            renderer.premarchProgram = premarchProgram;
-            // raymarching program
-            var raymarchSource = sub(renderer.raymarchSource);
-            var raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
-            renderer.raymarchProgram = raymarchProgram;
+            renderer.premarchProgram = createShaderProgram(gl, renderer.vsSource, premarchSource);
         }
         catch (e) { console.error(e); }
+        prevCode.premarchSource = premarchSource;
+    }
+
+    // raymarching program
+    if (prevCode.raymarchSource != raymarchSource || renderer.raymarchProgram == null) {
+        if (renderer.raymarchProgram != null) {
+            gl.deleteProgram(renderer.raymarchProgram);
+            renderer.raymarchProgram = null;
+        }
+        try {
+            renderer.raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
+        }
+        catch (e) { console.error(e); }
+        prevCode.raymarchSource = raymarchSource;
     }
 
     console.timeEnd("compile shader");
