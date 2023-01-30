@@ -1,6 +1,6 @@
 body {
     font-family: Arial, Helvetica, sans-serif;
-    background-color: #fff5ee;
+    background-color: #f0f5ff;
     color: #222;
 }
 
@@ -17,6 +17,18 @@ img {
     max-width: 100%;
 }
 
+p, li {
+    line-height: 1.15em;
+}
+
+p {
+    margin: 0.8em 0;
+}
+
+li {
+    margin: 0.2em 0;
+}
+
 a {
     color: #06c;
     text-decoration: none;
@@ -24,4 +36,9 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+code {
+    color: #850;
+    font-family: monospace;
 }

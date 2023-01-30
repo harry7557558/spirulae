@@ -19,7 +19,7 @@
 #fps {
     margin: -2px 0 0 -6px;
     padding: 2px 6px;
-    font-family: 'Consolas', monospace;
+    font-family: monospace;
     font-size: 20px;
     color: white;
     user-select: none;
@@ -63,7 +63,7 @@
     min-width: 240px;
     min-height: 80px;
     resize: both;
-    font-family: 'Consolas', monospace;
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 1.0em;
     margin: 0.2em 0 0;
     word-break: break-all;
@@ -126,7 +126,7 @@ input, select, button {
 
 #help-menu code {
     color: #fea;
-    font-family: 'Consolas', monospace;
+    font-family: monospace;
 }
 
 #help-menu img {

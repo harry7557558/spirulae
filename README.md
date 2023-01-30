@@ -8,10 +8,10 @@ This is a personal passion project. I couldn't find a 3D graphing calculator wit
 
 After my [3D implicit surface grapher](https://github.com/harry7557558/harry7557558.github.io/tree/master/tools/raymarching-implicit) received positive feedback from other people, I thought, why not extend the same equation parser and renderer to other types of math functions? Under this motivation, I developed the following function graphers:
 
- - [Implicit curve grapher](./implicit2/index.html)
  - [3D implicit surface grapher](./implicit3/index.html)
  - [Complex domain coloring grapher](./complex/index.html)
  - [3D complex domain coloring grapher](./complex3/index.html)
+ - [Implicit curve grapher](./implicit2/index.html) (for testing, not intended to be useful)
 
 It is important to note that these function graphers are developed completely by my effort. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirula/issues).
 
@@ -54,11 +54,16 @@ These tools have the following known issues:
  - Ambiguity in resolving functions with conflicting parameter names
 
 Features that may be implemented in the future:
- - Iterative refinement in implicit surface rendering
- - Intersection using interval arithmetic
- - More parameters in the viewport control
- - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring)
+ - Iterative refinement to improve rendering quality
+ - Code generation (GLSL, C/C++, NumPy, MATLAB, LaTeX, etc.)
+ - Exporting mesh-based 3D models
+ - Vector arithmetic
+ - Mathematically-defined custom colors
  - Variable sliders
+ - Better expression editor (highlighting, bracket matching, etc.)
+ - More viewport control parameters
+ - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers
+ - `<iframe>` embed for webpages
  - Graph sharing via URL
  - Parametric surface grapher
 
