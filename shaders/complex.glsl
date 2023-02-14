@@ -6,6 +6,8 @@
 
 #line 8
 
+uniform float iTime;
+
 #define mc_z() (z)
 #define mc_i() vec2(0,1)
 vec2 mc_const(float a) { return vec2(a,0); }

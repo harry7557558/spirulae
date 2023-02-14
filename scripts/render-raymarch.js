@@ -186,6 +186,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         gl.getUniformLocation(renderer.premarchProgram, "transformMatrix"),
         false,
         mat4ToFloat32Array(transformMatrix));
+    gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.premarchProgram, "screenCenter"),
         screenCenter[0], screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "rZScale"), calcZScale());
@@ -215,6 +216,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         gl.getUniformLocation(renderer.raymarchProgram, "transformMatrix"),
         false,
         mat4ToFloat32Array(transformMatrix));
+    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "screenCenter"),
         screenCenter[0], screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
@@ -272,7 +274,10 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
             gl.deleteQuery(query);
         }
         if (countIndividualTime) console.log(indivTime.join(' '));
-        document.getElementById("fps").textContent = (1000.0 / totTime).toFixed(1) + " fps";
+        var timeMsg = (1000.0 / totTime).toFixed(1) + " fps";
+        if (state.iTime >= 0.0)
+            timeMsg += " - " + state.iTime.toFixed(2) + " s";
+        document.getElementById("fps").innerHTML = timeMsg;
     }
     setTimeout(checkTime, 100);
 }
@@ -286,6 +291,7 @@ var state = {
     height: window.innerHeight,
     screenCenter: [0.0, 0.0],
     defaultScreenCenter: true,
+    iTime: -1.0,
     rz: null,
     rx: null,
     scale: null,
@@ -313,6 +319,7 @@ function resetState(loaded_state = {}, overwrite = true) {
         if (state.hasOwnProperty(key) && !/^r[A-Z]/.test(key))
             state[key] = loaded_state[key];
     }
+    state.iTime = 0.0;
 }
 
 // z-scale slider
@@ -365,6 +372,7 @@ function initWebGL() {
             var new_state = JSON.parse(initialState);
             resetState(new_state, false);
         }
+        new_state.iTime = 0.0;
     }
     catch (e) {
         console.error(e);
@@ -403,7 +411,11 @@ function initRenderer() {
 
     // rendering
     var oldScreenCenter = [-1, -1];
+    var startTime = performance.now();
     function render() {
+        let timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.raymarchSource);
+        if (timeDependent && state.iTime == -1.0)
+            startTime = performance.now();
         var screenCenter = state.defaultScreenCenter ? calcScreenCenter() : state.screenCenter;
         state.screenCenter = screenCenter;
         if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
@@ -417,7 +429,15 @@ function initRenderer() {
             var lightDir = calcLightDirection(transformMatrix, state.rTheta, state.rPhi);
             drawScene(screenCenter, transformMatrix, lightDir);
             renderLegend(state);
-            state.renderNeeded = false;
+            if (timeDependent) {
+                state.renderNeeded = true;
+                state.iTime = 0.001 * (performance.now() - startTime);
+            }
+            else {
+                state.renderNeeded = false;
+                startTime = performance.now();
+                state.iTime = -1.0;
+            }
         }
         oldScreenCenter = screenCenter;
         requestAnimationFrame(render);
@@ -496,6 +516,9 @@ function initRenderer() {
         }
     }, { passive: true });
     window.addEventListener("resize", updateBuffers);
+    document.getElementById("fps").addEventListener("click", function () {
+        state.iTime = -1.0;
+    });
 }
 
 function updateShaderFunction(funCode, funGradCode, params) {

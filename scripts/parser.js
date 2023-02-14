@@ -119,6 +119,7 @@ function MathFunction(
 
 // Built-in functions for both real and complex variables
 const rawMathFunctionsShared = [
+    new MathFunction(['iTime'], 1, '\\mathrm{iTime}', 'mf_const(iTime)'),
     new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
     new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
     new MathFunction(['nthroot', 'root'], 2, '\\sqrt[{%1}]{%2}', 'mf_root(%1,%2)'),
@@ -1257,8 +1258,8 @@ function postfixToLatex(queue) {
 // Debug in node.js
 if (typeof window === "undefined") {
     initMathFunctions(rawMathFunctionsShared);
-    var input = "w=csc(x)/z;g(z)=w;g(x)";
-    // var input = "f(z)=g(z)+1;g(z)=f(z)+1;f(z)";
+    var input = "iTime(0)";
     var result = parseInput(input);
+    // var result = exprToPostfix(input, _mathFunctions);
     console.log(result.postfix);
 }

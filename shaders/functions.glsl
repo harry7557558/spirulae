@@ -3,6 +3,9 @@
 #endif
 
 
+uniform float iTime;
+
+
 // Functions
 
 #define mf_x() (x)

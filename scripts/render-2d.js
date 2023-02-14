@@ -11,6 +11,7 @@ var state = {
     xmax: NaN,
     ymin: NaN,
     ymax: NaN,
+    iTime: -1.0,
     renderNeeded: true
 };
 function resetState(loaded_state = {}, overwrite = true) {
@@ -27,6 +28,7 @@ function resetState(loaded_state = {}, overwrite = true) {
             loaded_state[key] = state1[key];
         state[key] = loaded_state[key];
     }
+    state.iTime = 0.0;
 }
 
 // calculate the center of the screen excluding the control box
@@ -195,6 +197,7 @@ async function drawScene(state) {
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "iResolution"), state.width, state.height);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMin"), state.xmin, state.ymin);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMax"), state.xmax, state.ymax);
+    gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "iTime"), state.iTime);
     gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "rBrightness"), state.rBrightness);
     renderPass();
 
@@ -248,7 +251,10 @@ async function drawScene(state) {
             gl.deleteQuery(query);
         }
         if (countIndividualTime) console.log(indivTime.join(' '));
-        document.getElementById("fps").textContent = (1000.0 / totTime).toFixed(1) + " fps";
+        var timeMsg = (1000.0 / totTime).toFixed(1) + " fps";
+        if (state.iTime >= 0.0)
+            timeMsg += " - " + state.iTime.toFixed(2) + " s";
+        document.getElementById("fps").innerHTML = timeMsg;
     }
     setTimeout(checkTime, 100);
 }
@@ -325,7 +331,11 @@ function initRenderer() {
 
     // rendering
     var oldScreenCenter = [-1, -1];
+    var startTime = performance.now();
     function render() {
+        let timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.shaderSource);
+        if (timeDependent && state.iTime == -1.0)
+            startTime = performance.now();
         var screenCenter = calcScreenCenter();
         state.screenCenter = screenCenter;
         if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
@@ -338,7 +348,15 @@ function initRenderer() {
             } catch (e) { console.error(e); }
             drawScene(state);
             renderLegend();
-            state.renderNeeded = false;
+            if (timeDependent) {
+                state.renderNeeded = true;
+                state.iTime = 0.001 * (performance.now() - startTime);
+            }
+            else {
+                state.renderNeeded = false;
+                startTime = performance.now();
+                state.iTime = -1.0;
+            }
         }
         oldScreenCenter = screenCenter;
         requestAnimationFrame(render);
@@ -409,7 +427,9 @@ function initRenderer() {
         resizeState();
         updateBuffers();
     });
-
+    document.getElementById("fps").addEventListener("click", function () {
+        state.iTime = -1.0;
+    });
 }
 
 function updateShaderFunction(funCode, funGradCode, params) {
@@ -425,18 +445,25 @@ function updateShaderFunction(funCode, funGradCode, params) {
     }
     console.time("compile shader");
 
+    // cache code
+    if (updateShaderFunction.prevCode == undefined)
+        updateShaderFunction.prevCode = {
+            shaderSource: ""
+        };
+    var prevCode = updateShaderFunction.prevCode;
+    var shaderSource = sub(renderer.shaderSource, funCode, funGradCode);
+
     // shader program(s)
-    if (renderer.shaderProgram != null) {
-        gl.deleteProgram(renderer.shaderProgram);
-        renderer.shaderProgram = null;
-    }
-    if (funCode != null) {
+    if (prevCode.shaderSource != shaderSource || renderer.shaderProgram == null) {
+        if (renderer.shaderProgram != null) {
+            gl.deleteProgram(renderer.shaderProgram);
+            renderer.shaderProgram = null;
+        }
         try {
-            var shaderSource = sub(renderer.shaderSource, funCode, funGradCode);
-            var shaderProgram = createShaderProgram(gl, renderer.vsSource, shaderSource);
-            renderer.shaderProgram = shaderProgram;
+            renderer.shaderProgram = createShaderProgram(gl, renderer.vsSource, shaderSource);
         }
         catch (e) { console.error(e); }
+        prevCode.shaderSource = shaderSource;
     }
 
     console.timeEnd("compile shader");
