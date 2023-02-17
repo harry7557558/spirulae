@@ -147,8 +147,10 @@ function initParameters(parameters) {
         event.preventDefault();
         setTimeout(function () {  // comment input when WebGL context lost
             var input = funInput.value.split('\n');
-            for (var i = 0; i < input.length; i++)
-                input[i] = '#' + input[i];
+            for (var i = 0; i < input.length; i++) {
+                if (InputParser.parseLine(input[i]).type == "main")
+                    input[i] = '####' + input[i];
+            }
             input = input.join('\n');
             localStorage.setItem(NAME + "input", input);
         }, 100);
@@ -246,7 +248,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     var parsed = null;
     try {
         try {
-            parsed = parseInput(expr);
+            parsed = InputParser.parseInput(expr);
         } catch (e) {
             texContainer.style.color = "red";
             throw e;

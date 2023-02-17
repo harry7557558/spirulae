@@ -625,8 +625,98 @@ function getVariables(postfix, excludeIndependent) {
     return vars;
 }
 
-// Parse console input to postfix notation
-function parseInput(input) {
+// parser for a line of the equation
+let InputParser = {
+    // regex to match a variable/function name
+    reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
+};
+
+// parse one side of the equation
+InputParser.parseSide = function (funstr) {
+    var match = /^([A-Za-zΑ-Ωα-ω0-9_]+)\s*\(([A-Za-zΑ-Ωα-ω0-9_\s\,]+)\)$/.exec(funstr);
+    if (match == null) return false;
+    if (!InputParser.reVarname.test(match[1])) return false;
+    if (match[1] == "e" || match[1] == "π") return false;
+    var matches = [match[1]];
+    match = match[2].split(',');
+    for (var i = 0; i < match.length; i++) {
+        var name = match[i];
+        if (!InputParser.reVarname.test(name)) return false;
+        if (name.length >= 2 && name[1] != "_")
+            name = name[0] + "_" + name.substring(1, name.length);
+        matches.push(name);
+    }
+    return matches;
+};
+
+// parse one line
+InputParser.parseLine = function (line) {
+    var res = {
+        type: "",
+        main: { left: "", right: "" },
+        variable: { name: "", string: "" },
+        function: { name: "", args: [], string: "" },
+    };
+    line = line.trim();
+    if (/\#/.test(line)) line = line.substring(0, line.search('#')).trim();
+    if (line == '') return res;
+    if (/\=/.test(line)) {
+        var lr = line.split('=');
+        if (lr.length > 2)
+            throw new Error("Multiple equal signs found.");
+        var left = lr[0].trim();
+        var right = lr[1].trim();
+        // variable
+        if (InputParser.reVarname.test(left)) {
+            if (left.length >= 2 && left[1] != "_") left = left[0] + "_" + left.substring(1, left.length);
+            // main equation
+            if (isIndependentVariable(left)) {
+                res.type = "main";
+                res.main = { left: balanceParenthesis(left), right: balanceParenthesis(right) };
+            }
+            // definition
+            else {
+                if (left == "π")
+                    throw new Error("You can't use constant 'π' as a variable name.");
+                if (left == "e")
+                    throw new Error("You can't use constant 'e' as a variable name.");
+                res.type = "variable";
+                res.variable = { name: left, string: right };
+            }
+        }
+        // function
+        else if (InputParser.parseSide(left)) {
+            var fun = InputParser.parseSide(left);
+            // main equation
+            if (_mathFunctions[fun[0]] != undefined) {
+                res.type = "main";
+                res.main = { left: left, right: balanceParenthesis(right) };
+            }
+            // function definition
+            else {
+                res.type = "function";
+                res.function.name = fun[0];
+                res.function.args = fun.slice(1);
+                res.function.string = right;
+            }
+        }
+        // main equation
+        else {
+            res.type = "main";
+            if (Number(right) == '0') res.main = { left: balanceParenthesis(left), right: '0' };
+            else res.main = { left: balanceParenthesis(left), right: balanceParenthesis(right) };
+        }
+    }
+    // main equation
+    else {
+        res.type = "main";
+        res.main = { left: line, right: '0' };
+    }
+    return res;
+}
+
+// parse input to postfix notation
+InputParser.parseInput = function(input) {
     // split to arrays
     input = input.replace(/\r?\n/g, ';');
     input = input.trim().trim(';').trim().split(';');
@@ -646,80 +736,25 @@ function parseInput(input) {
     }
 
     // read each line of input
-    let reVarname = /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/;
-    var parseFunction = function (funstr) {
-        var match = /^([A-Za-zΑ-Ωα-ω0-9_]+)\s*\(([A-Za-zΑ-Ωα-ω0-9_\s\,]+)\)$/.exec(funstr);
-        if (match == null) return false;
-        if (!reVarname.test(match[1])) return false;
-        if (match[1] == "e" || match[1] == "π") return false;
-        var matches = [match[1]];
-        match = match[2].split(',');
-        for (var i = 0; i < match.length; i++) {
-            var name = match[i];
-            if (!reVarname.test(name)) return false;
-            if (name.length >= 2 && name[1] != "_")
-                name = name[0] + "_" + name.substring(1, name.length);
-            matches.push(name);
-        }
-        return matches;
-    };
     var functions_str = {};
     var variables_str = {};
     var mainEqusLr = [];  // main equation left/right
     for (var i = 0; i < input.length; i++) {
-        var line = input[i].trim();
-        if (/\#/.test(line)) line = line.substring(0, line.search('#')).trim();
-        if (line == '') continue;
-        if (/\=/.test(line)) {
-            var lr = line.split('=');
-            if (lr.length > 2)
-                throw new Error("Multiple equal signs found.");
-            var left = lr[0].trim();
-            var right = lr[1].trim();
-            // variable
-            if (reVarname.test(left)) {
-                if (left.length >= 2 && left[1] != "_") left = left[0] + "_" + left.substring(1, left.length);
-                // main equation
-                if (isIndependentVariable(left)) {
-                    mainEqusLr.push({ left: balanceParenthesis(left), right: balanceParenthesis(right) });
-                }
-                // definition
-                else {
-                    if (variables_str[left] != undefined)
-                        throw "Multiple definitions of variable " + left;
-                    if (left == "π")
-                        throw "You can't use constant 'π' as a variable name.";
-                    if (left == "e")
-                        throw "You can't use constant 'e' as a variable name.";
-                    variables_str[left] = right;
-                }
-            }
-            // function
-            else if (parseFunction(left)) {
-                var fun = parseFunction(left);
-                // main equation
-                if (_mathFunctions[fun[0]] != undefined) {
-                    mainEqusLr.push({ left: left, right: balanceParenthesis(right) });
-                }
-                // function definition
-                else {
-                    if (functions_str[fun[0]] != undefined)
-                        throw "Multiple definitions of function " + fun[0];
-                    functions_str[fun[0]] = {
-                        params: fun.slice(1),
-                        definition: right
-                    };
-                }
-            }
-            // main equation
-            else {
-                if (Number(right) == '0') mainEqusLr.push({ left: balanceParenthesis(left), right: '0' });
-                else mainEqusLr.push({ left: balanceParenthesis(left), right: balanceParenthesis(right) });
-            }
+        var res = InputParser.parseLine(input[i]);
+        if (res.type == "main") {
+            mainEqusLr.push(res.main);
         }
-        // main equation
-        else {
-            mainEqusLr.push({ left: line, right: '0' })
+        else if (res.type == "function") {
+            var fun = res.function;
+            if (functions_str[fun.name] != undefined)
+                throw "Multiple definitions of function " + fun[0];
+            functions_str[fun.name] = fun;
+        }
+        else if (res.type == "variable") {
+            var variable = res.variable;
+            if (variables_str[variable.name] != undefined)
+                throw "Multiple definitions of variable " + left;
+            variables_str[variable.name] = variable.string;
         }
     }
 
@@ -729,9 +764,9 @@ function parseInput(input) {
     for (var funname in functions_str) {
         let fun = functions_str[funname];
         functions[funname] = {
-            'args': fun.params,
-            'numArgs': fun.params.length,
-            'definition': fun.definition,
+            'args': fun.args,
+            'numArgs': fun.args.length,
+            'definition': fun.string,
             'postfix': null,
             'resolving': false
         }

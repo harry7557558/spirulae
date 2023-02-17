@@ -17,8 +17,9 @@
 }
 
 #fps {
-    margin: -2px 0 0 -6px;
-    padding: 2px 6px;
+    margin: 0 0 2px -6px;
+    padding: 0 6px;
+    width: fit-content;
     font-family: monospace;
     font-size: 20px;
     color: white;

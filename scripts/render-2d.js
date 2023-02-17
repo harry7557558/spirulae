@@ -229,12 +229,14 @@ async function drawScene(state) {
 
     // check timer
     function checkTime() {
-        if (timerQueries.length == 0) return;
+        let fpsDisplay = document.getElementById("fps");
         if (timer == null) {
             for (var i = 0; i < timerQueries.length; i++)
                 gl.deleteQuery(timerQueries[i]);
+            fpsDisplay.innerHTML = state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s" : "";
             return;
         }
+        if (timerQueries.length == 0) return;
         let query = timerQueries[timerQueries.length - 1];
         if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
             setTimeout(checkTime, 40);
@@ -251,12 +253,11 @@ async function drawScene(state) {
             gl.deleteQuery(query);
         }
         if (countIndividualTime) console.log(indivTime.join(' '));
-        var timeMsg = (1000.0 / totTime).toFixed(1) + " fps";
-        if (state.iTime >= 0.0)
-            timeMsg += " - " + state.iTime.toFixed(2) + " s";
-        document.getElementById("fps").innerHTML = timeMsg;
+        fpsDisplay.innerHTML = (
+            state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s - " : "") +
+            (1000.0 / totTime).toFixed(1) + " fps";
     }
-    setTimeout(checkTime, 100);
+    setTimeout(checkTime, 40);
 }
 
 
@@ -290,10 +291,6 @@ function initWebGL() {
     renderer.timerExt = renderer.gl.getExtension('EXT_disjoint_timer_query_webgl2');
     if (renderer.timerExt)
         document.getElementById("fps").textContent = "Timer loaded.";
-    else {
-        document.getElementById("fps").style.display = "none";
-        console.warn("Timer unavailable.");
-    }
 
     // state
     try {
@@ -333,7 +330,10 @@ function initRenderer() {
     var oldScreenCenter = [-1, -1];
     var startTime = performance.now();
     function render() {
-        let timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.shaderSource);
+        var timeDependent = true;
+        try {
+            timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.shaderSource);
+        } catch (e) { }
         if (timeDependent && state.iTime == -1.0)
             startTime = performance.now();
         var screenCenter = calcScreenCenter();
@@ -435,6 +435,14 @@ function initRenderer() {
 function updateShaderFunction(funCode, funGradCode, params) {
     let gl = renderer.gl;
 
+    if (funCode == null) {
+        if (renderer.shaderProgram != null) {
+            gl.deleteProgram(renderer.shaderProgram);
+            renderer.shaderProgram = null;
+        }
+        return;
+    }
+
     function sub(shaderSource) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
@@ -451,7 +459,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
             shaderSource: ""
         };
     var prevCode = updateShaderFunction.prevCode;
-    var shaderSource = sub(renderer.shaderSource, funCode, funGradCode);
+    var shaderSource = sub(renderer.shaderSource, funCode);
 
     // shader program(s)
     if (prevCode.shaderSource != shaderSource || renderer.shaderProgram == null) {
