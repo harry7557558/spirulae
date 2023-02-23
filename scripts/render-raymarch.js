@@ -412,7 +412,7 @@ function initRenderer() {
     function render() {
         var timeDependent = true;
         try {
-            timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.raymarchSource);
+            timeDependent = /\(iTime\)/.test(updateShaderFunction.prevCode.raymarchSource);
         } catch (e) { }
         if (timeDependent && state.iTime == -1.0)
             startTime = performance.now();

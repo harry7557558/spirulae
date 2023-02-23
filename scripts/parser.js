@@ -1,322 +1,43 @@
+// Parse function strings into postfix
+
 "use strict";
 
-// parse math equations, generate LaTeX and GLSL code
 
-const PI = Math.PI;
-
-
-
-// ============================ DEFINITIONS ==============================
-
-
-function Token(type, str) {
-    console.assert(type == 'number' || type == 'variable' ||
-        type == 'operator' || type == 'function' || type == null);
-    this.type = type;  // type of the token
-    this.str = str;  // name of the token represented as a string
-    this.numArgs = 0;  // number of arguments for functions
-}
-
-function Interval(x0 = -Infinity, x1 = Infinity) {
-    this.x0 = Math.min(x0, x1);
-    this.x1 = Math.max(x0, x1);
-    if (!isFinite(this.x0)) this.x0 = -Infinity;
-    if (!isFinite(this.x1)) this.x1 = Infinity;
-    this.isPositive = function () {
-        return this.x0 >= 0.;
-    };
-    this.isNegative = function () {
-        return this.x1 <= 0.;
-    };
-    this.containsZero = function () {
-        return this.x0 <= 0. && this.x1 >= 0.;
-    };
-}
-
-function EvalObject(
-    postfix, glsl,
-    isNumeric, range = Interval(), isCompatible = true
-) {
-    this.postfix = postfix;
-    this.glsl = glsl;
-    this.isNumeric = isNumeric;  // zero gradient
-    this.range = range;  // non-negative
-    this.isCompatible = isCompatible;  // has no NAN
-}
-
-function EvalLatexObject(postfix, latex, precedence) {
-    this.postfix = postfix;
-    this.latex = latex;
-    this.precedence = precedence;
-}
-
-
-// Built-in functions
-
-function MathFunction(
-    // all functions
-    names, numArgs, latex, glsl,
-    // univariate functions only
-    // @monotonicFun: a callable function, not null when the function is not both increasing and decreasing
-    domain = new Interval(), range = new Interval(), monotonicFun = null
-    // multivariable functions
-    // assert(this function has zero NAN area when all args have no NAN)
-    // otherwise (pow, log) rewrite the subGlsl function
-) {
-    this.names = names;
-    this.numArgs = numArgs;
-    this.latex = latex;
-    this.glsl = glsl;
-    this.domain = domain;
-    this.range = range;
-    this.monotonicFun = monotonicFun;
-    this.subGlsl = function (args) {
-        if (args.length != this.numArgs)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        var glsl = this.glsl;
-        var postfix = [];
-        var isNumeric = true;
-        var isCompatible = true;
-        for (var i = 0; i < args.length; i++) {
-            var rep = "%" + (i + 1);
-            postfix = postfix.concat(args[i].postfix);
-            glsl = glsl.replaceAll(rep, args[i].glsl);
-            isNumeric = isNumeric && args[i].isNumeric;
-            isCompatible = isCompatible && args[i].isCompatible;
+let MathParser = {
+    // independent variables, can be reassigned
+    IndependentVariables: {
+        'x': "x",
+        'y': "y",
+        'z': "z"
+    },
+    isIndependentVariable: function (name) {
+        return MathParser.IndependentVariables.hasOwnProperty(name);
+    },
+    // regex to match a variable/function name
+    reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
+    matchFunction: function (funstr) {
+        var match = /^([A-Za-zΑ-Ωα-ω0-9_]+)\s*\(([A-Za-zΑ-Ωα-ω0-9_\s\,]+)\)$/.exec(funstr);
+        if (match == null) return false;
+        if (!MathParser.reVarname.test(match[1])) return false;
+        if (match[1] == "e" || match[1] == "π") return false;
+        var matches = [match[1]];
+        match = match[2].split(',');
+        for (var i = 0; i < match.length; i++) {
+            var name = match[i];
+            if (!MathParser.reVarname.test(name)) return false;
+            if (name.length >= 2 && name[1] != "_")
+                name = name[0] + "_" + name.substring(1, name.length);
+            matches.push(name);
         }
-        var result = new EvalObject(
-            postfix.concat([new Token('function', names[0])]),
-            glsl, isNumeric, new Interval(this.range.x0, this.range.x1), isCompatible);
-        if (args.length == 1) {
-            const eps = 1e-8;
-            if (args[0].range.x0 < this.domain.x0 - eps || args[0].range.x1 > this.domain.x1 + eps)
-                result.isCompatible = false;
-            if (this.monotonicFun != null &&
-                args[0].range.x0 >= this.domain.x0 && args[0].range.x1 <= this.range.x1)
-                result.range = new Interval(
-                    this.monotonicFun(args[0].range.x0), this.monotonicFun(args[0].range.x1));
-            else result.range = new Interval(this.range.x0, this.range.x1);
-        }
-        return result;
-    };
-    this.subLatex = function (args) {
-        if (/%0/.test(this.latex)) {
-            var latexes = [];
-            for (var i = 0; i < args.length; i++)
-                latexes.push(args[i].latex);
-            return this.latex.replaceAll("%0", latexes.join(','));
-        }
-        if (args.length != this.numArgs)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        var latex = this.latex;
-        for (var i = 0; i < args.length; i++) {
-            var repv = "%" + (i + 1);
-            latex = latex.replaceAll(repv, args[i].latex);
-        }
-        return latex;
-    }
-}
-
-// Built-in functions for both real and complex variables
-const rawMathFunctionsShared = [
-    new MathFunction(['iTime'], 1, '\\mathrm{iTime}', 'mf_const(iTime)'),
-    new MathFunction(['sqrt'], 1, '\\sqrt{%1}', 'mf_sqrt(%1)', new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
-    new MathFunction(['cbrt'], 1, '\\sqrt[3]{%1}', 'mf_cbrt(%1)', Math.cbrt),
-    new MathFunction(['nthroot', 'root'], 2, '\\sqrt[{%1}]{%2}', 'mf_root(%1,%2)'),
-    new MathFunction(['pow'], 2, '\\left(%1\\right)^{%2}', 'mf_pow(%1,%2)'),
-    new MathFunction(['exp'], 1, '\\exp\\left(%1\\right)', 'mf_exp(%1)', new Interval(), new Interval(0, Infinity), Math.exp),
-    new MathFunction(['log', 'ln'], 1, '\\ln\\left(%1\\right)', 'mf_ln(%1)', new Interval(0, Infinity), new Interval(), Math.log),
-    new MathFunction(['log'], 2, '\\log_{%1}\\left(%2\\right)', 'mf_log(%1,%2)'),
-    new MathFunction(['sin'], 1, '\\sin\\left(%1\\right)', 'mf_sin(%1)', new Interval(), new Interval(-1, 1)),
-    new MathFunction(['cos'], 1, '\\cos\\left(%1\\right)', 'mf_cos(%1)', new Interval(), new Interval(-1, 1)),
-    new MathFunction(['tan'], 1, '\\tan\\left(%1\\right)', 'mf_tan(%1)'),
-    new MathFunction(['csc'], 1, '\\csc\\left(%1\\right)', 'mf_csc(%1)'),
-    new MathFunction(['sec'], 1, '\\sec\\left(%1\\right)', 'mf_sec(%1)'),
-    new MathFunction(['cot'], 1, '\\cot\\left(%1\\right)', 'mf_cot(%1)'),
-    new MathFunction(['sinh'], 1, '\\sinh\\left(%1\\right)', 'mf_sinh(%1)', new Interval(), new Interval(), Math.sinh),
-    new MathFunction(['cosh'], 1, '\\cosh\\left(%1\\right)', 'mf_cosh(%1)', new Interval(), new Interval(1, Infinity)),
-    new MathFunction(['tanh'], 1, '\\tanh\\left(%1\\right)', 'mf_tanh(%1)', new Interval(), new Interval(-1, 1), Math.tanh),
-    new MathFunction(['csch'], 1, '\\mathrm{csch}\\left(%1\\right)', 'mf_csch(%1)'),
-    new MathFunction(['sech'], 1, '\\mathrm{sech}\\left(%1\\right)', 'mf_sech(%1)', new Interval(), new Interval(0, 1)),
-    new MathFunction(['coth'], 1, '\\mathrm{coth}\\left(%1\\right)', 'mf_coth(%1)'),
-    new MathFunction(['arcsin', 'arsin', 'asin'], 1, '\\arcsin\\left(%1\\right)', 'mf_arcsin(%1)', new Interval(-1, 1), new Interval(-0.5 * PI, 0.5 * PI), Math.asin),
-    new MathFunction(['arccos', 'arcos', 'acos'], 1, '\\arccos\\left(%1\\right)', 'mf_arccos(%1)', new Interval(-1, 1), new Interval(0.0, PI), Math.acos),
-    new MathFunction(['arctan', 'artan', 'atan'], 1, '\\arctan\\left(%1\\right)', 'mf_arctan(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), Math.atan),
-    new MathFunction(['arccot', 'arcot', 'acot'], 1, '\\mathrm{arccot}\\left(%1\\right)', 'mf_arccot(%1)', new Interval(), new Interval(-0.5 * PI, 0.5 * PI), (x) => 0.5 * PI - Math.atan(x)),
-    new MathFunction(['arcsec', 'arsec', 'asec'], 1, '\\mathrm{arcsec}\\left(%1\\right)', 'mf_arcsec(%1)', new Interval(0, 0), new Interval(0, PI)),
-    new MathFunction(['arccsc', 'arcsc', 'acsc'], 1, '\\mathrm{arccsc}\\left(%1\\right)', 'mf_arccsc(%1)', new Interval(0, 0), new Interval(-0.5 * PI, 0.5 * PI)),
-    new MathFunction(['arcsinh', 'arsinh', 'asinh'], 1, '\\mathrm{arcsinh}\\left(%1\\right)', 'mf_arcsinh(%1)', new Interval(), new Interval(), Math.asinh),
-    new MathFunction(['arccosh', 'arcosh', 'acosh'], 1, '\\mathrm{arccosh}\\left(%1\\right)', 'mf_arccosh(%1)', new Interval(1, Infinity), new Interval(0, Infinity), Math.acosh),
-    new MathFunction(['arctanh', 'artanh', 'atanh'], 1, '\\mathrm{arctanh}\\left(%1\\right)', 'mf_arctanh(%1)', new Interval(-1, 1), new Interval(), Math.atanh),
-    new MathFunction(['arccoth', 'arcoth', 'acoth'], 1, '\\mathrm{arccoth}\\left(%1\\right)', 'mf_arccoth(%1)'),
-    new MathFunction(['arcsech', 'arsech', 'asech'], 1, '\\mathrm{arcsech}\\left(%1\\right)', 'mf_arcsech(%1)', new Interval(0, 1), new Interval(0, Infinity), (x) => Math.acosh(1 / x)),
-    new MathFunction(['arccsch', 'arcsch', 'acsch'], 1, '\\mathrm{arccsch}\\left(%1\\right)', 'mf_arccsch(%1)', new Interval(), new Interval()),
-];
-// Additional built-in functions for real parameters
-const rawMathFunctionsR = [
-    new MathFunction(['abs'], 1, '\\left|%1\\right|', 'mf_abs(%1)', new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['if'], 3, '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}', 'mf_if(%1,%2,%3)'),
-    new MathFunction(['mod'], 2, '\\operatorname{mod}\\left(%1,%2\\right)', 'mf_mod(%1,%2)'),
-    new MathFunction(['fract', 'frac'], 1, '\\operatorname{frac}\\left(%1\\right)', 'mf_fract(%1)', new Interval(), new Interval(0, 1)),
-    new MathFunction(['floor'], 1, '\\lfloor{%1}\\rfloor', 'mf_floor(%1)', new Interval(), new Interval(), Math.floor),
-    new MathFunction(['ceil'], 1, '\\lceil{%1}\\rceil', 'mf_ceil(%1)', new Interval(), new Interval(), Math.ceil),
-    new MathFunction(['round'], 1, '\\operatorname{round}\\left(%1\\right)', 'mf_round(%1)', new Interval(), new Interval(), Math.round),
-    new MathFunction(['sign', 'sgn'], 1, '\\operatorname{sign}\\left(%1\\right)', 'mf_sign(%1)', new Interval(), new Interval(-1, 1), (x) => x > 0. ? 1. : x < 0. ? -1. : 0.),
-    new MathFunction(['max'], 0, '\\max\\left(%0\\right)', 'mf_max(%1,%2)'),
-    new MathFunction(['min'], 0, '\\min\\left(%0\\right)', 'mf_min(%1,%2)'),
-    new MathFunction(['clamp'], 3, '\\operatorname{clamp}\\left(%1,%2,%3\\right)', 'mf_clamp(%1,%2,%3)'),
-    new MathFunction(['lerp', 'mix'], 3, '\\operatorname{lerp}\\left(%1,%2,%3\\right)', 'mf_lerp(%1,%2,%3)'),
-    new MathFunction(['hypot'], 0, "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}", "mf_hypot(%1,%2)", new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, '\\mathrm{atan2}\\left(%1,%2\\right)', 'mf_atan2(%1,%2)', new Interval(), new Interval(-PI, PI)),
-    new MathFunction(['erf'], 1, '\\mathrm{erf}\\left(%1\\right)', 'mf_erf(%1)', new Interval(), new Interval(-1, 1)),
-    new MathFunction(['inverf', 'erfinv'], 1, '\\mathrm{erf}^{-1}\\left(%1\\right)', 'mf_erfinv(%1)', new Interval(-1, 1), new Interval()),
-];
-// Additional built-in functions for complex parameters
-const rawMathFunctionsC = [
-    new MathFunction(['real', 're'], 1, '\\Re\\left(%1\\right)', 'mf_re(%1)'),
-    new MathFunction(['imaginary', 'imag', 'im'], 1, '\\Im\\left(%1\\right)', 'mf_im(%1)'),
-    new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, '\\left|%1\\right|', 'mf_mag(%1)'),
-    new MathFunction(['argument', 'arg'], 1, '\\arg\\left(%1\\right)', 'mf_arg(%1)'),
-    new MathFunction(['conjugate', 'conj'], 1, '\\overline{%1}', 'mf_conj(%1)'),
-    new MathFunction(['inverse', 'inv'], 1, '\\left(%1\\right)^{-1}', 'mf_inv(%1)'),
-    new MathFunction(['gamma'], 1, '\\Gamma\\left(%1\\right)', 'mf_gamma(%1)'),
-    new MathFunction(['loggamma', 'lngamma', 'lgamma'], 1, '\\ln\\Gamma\\left(%1\\right)', 'mf_lngamma(%1)'),
-    new MathFunction(['zeta'], 1, '\\zeta\\left(%1\\right)', 'mf_zeta(%1)'),
-    new MathFunction(['logzeta', 'lnzeta', 'lzeta'], 1, '\\ln\\zeta\\left(%1\\right)', 'mf_lnzeta(%1)'),
-];
-
-// Initialize math functions, pass rawMathFunctions as a parameter
-let _mathFunctions = {};
-function initMathFunctions(rawMathFunctions) {
-    var funs = {};
-    for (var i = 0; i < rawMathFunctions.length; i++) {
-        for (var j = 0; j < rawMathFunctions[i].names.length; j++) {
-            var name = rawMathFunctions[i].names[j];
-            if (funs[name] == undefined) funs[name] = {};
-            funs[name]['' + rawMathFunctions[i].numArgs] = rawMathFunctions[i];
-        }
-    }
-    funs['exp']['1'].subLatex = function (args) {
-        if (args.length != this.numArgs)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        var pfl = 0;  // number of tokens involved
-        for (var i = 0; i < args[0].postfix.length; i++) {
-            var pf = args[0].postfix[i];
-            pfl += pf.hasOwnProperty("postfix") ? pf.postfix.length : 1;
-        }
-        // for short ones, use "e^x" instead of "exp(x)"
-        if (!/\\d?frac/.test(args[0].latex) && pfl <= 5)
-            return "\\operatorname{e}^{" + args[0].latex + "}";
-        return this.latex.replaceAll("%1", args[0].latex);
-    };
-    funs['pow']['2'].subGlsl = function (args) {
-        if (args.length != 2)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        return powEvalObjects(args[0], args[1]);
-    };
-    funs['root']['2'].subGlsl = funs['nthroot']['2'].subGlsl = function (args) {
-        if (args.length != 2)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        return new EvalObject(
-            args[0].postfix.concat(args[1].postfix).concat([new Token('function', this.names[0])]),
-            this.glsl.replaceAll("%1", args[0].glsl).replaceAll("%2", args[1].glsl),
-            args[0].isNumeric && args[1].isNumeric,
-            args[1].range.isPositive() ? new Interval(
-                Math.pow(args[1].range.x0, 1.0 / args[0].range.x1),
-                Math.pow(args[1].range.x1, 1.0 / args[0].range.x0)
-            ) : new Interval(),
-            args[0].isCompatible && args[1].isCompatible && args[1].range.isPositive()
-        );
-    };
-    funs['log']['2'].subGlsl = function (args) {
-        if (args.length != 2)
-            throw "Incorrect number of arguments for function " + this.names[0];
-        return divEvalObjects(
-            funs['ln']['1'].subGlsl([args[1]]),
-            funs['ln']['1'].subGlsl([args[0]]));
-    }
-    if (funs.hasOwnProperty('max') && funs.hasOwnProperty('min')) {
-        funs['max']['0'].subGlsl = funs['min']['0'].subGlsl = function (args) {
-            if (args.length < 2)
-                throw "To few argument for function " + this.names[0];
-            while (args.length >= 2) {
-                var args1 = [];
-                for (var i = 0; i + 1 < args.length; i += 2) {
-                    var glsl = this.glsl.replaceAll("%1", args[i].glsl).replaceAll("%2", args[i + 1].glsl);
-                    args1.push(new EvalObject(
-                        args[i].postfix.concat(args[i + 1].postfix).concat([new Token('function', this.names[0])]),
-                        glsl, args[i].isNumeric && args[i + 1].isNumeric,
-                        this.names[0] == 'max' ? new Interval(
-                            Math.max(args[i].range.x0, args[i + 1].range.x0),
-                            Math.max(args[i].range.x1, args[i + 1].range.x1),
-                        ) : new Interval(
-                            Math.min(args[i].range.x0, args[i + 1].range.x0),
-                            Math.min(args[i].range.x1, args[i + 1].range.x1),
-                        ),
-                        args[i].isCompatible && args[i + 1].isCompatible));
-                }
-                if (args.length % 2 == 1) args1.push(args[args.length - 1]);
-                args = args1;
-            }
-            return args[0];
-        };
-    }
-    if (funs.hasOwnProperty('hypot')) {
-        funs['hypot']['0'].subLatex = function (args) {
-            if (args.length < 2)
-                throw "To few argument for function " + this.names[0];
-            var argss = [];
-            for (var i = 0; i < args.length; i++) {
-                if (args[i].precedence == Infinity)
-                    argss.push(args[i].latex + "^{2}");
-                else argss.push("\\left(" + args[i].latex + "\\right)^{2}");
-            }
-            return "\\sqrt{" + argss.join('+') + "}";
-        };
-        funs['hypot']['0'].subGlsl = function (args) {
-            if (args.length < 2)
-                throw "To few argument for function " + this.names[0];
-            while (args.length >= 2) {
-                var args1 = [];
-                let two = new EvalObject([], "", true, new Interval(2, 2), true);
-                for (var i = 0; i + 1 < args.length; i += 2) {
-                    var glsl = this.glsl.replaceAll("%1", args[i].glsl).replaceAll("%2", args[i + 1].glsl);
-                    args1.push(new EvalObject(
-                        args[i].postfix.concat(args[i + 1].postfix).concat([new Token('function', this.names[0])]),
-                        glsl, args[i].isNumeric && args[i + 1].isNumeric,
-                        funs['sqrt']['1'].subGlsl([addEvalObjects(
-                            powEvalObjects(args[i], two),
-                            powEvalObjects(args[i + 1], two)
-                        )]).range,
-                        args[i].isCompatible && args[i + 1].isCompatible));
-                }
-                if (args.length % 2 == 1) args1.push(args[args.length - 1]);
-                args = args1;
-            }
-            return args[0];
-        };
-    }
-    _mathFunctions = funs;
-}
-
-
-// Independent variables, can be reassigned
-var IndependentVariables = {
-    'x': "mf_x()",
-    'y': "mf_y()",
-    'z': "mf_z()"
+        return matches;
+    },
+    // greek letters
+    greekLetters: [],
 };
-function isIndependentVariable(name) {
-    return IndependentVariables.hasOwnProperty(name);
-}
 
 
-// Greek letters
-
-var _greekLetters = [];
-
-// call this after initing functions
-function initGreekLetters() {
+// Initialize Greek letter list, called after initing functions
+MathParser.initGreekLetters = function () {
     // Greek letters, omitted confusable ones
     const GREEK = [
         ["α", "alpha"],
@@ -345,22 +66,20 @@ function initGreekLetters() {
         var unicode = GREEK[i][0];
         var name = GREEK[i][1];
         var interfere = [];
-        for (var funname in _mathFunctions) {
+        for (var funname in MathFunctions) {
             if (funname.indexOf(name) != -1)
                 interfere.push(funname);
         }
         if (interfere.length > 0)
-            console.log("The greek letter " + name + " is omitted due to conflict with function name(s) " + interfere.join(', '));
-        else _greekLetters.push([name, unicode])
+            console.log("The Greek letter " + name + " is omitted due to conflict with function name(s) " + interfere.join(', '));
+        else MathParser.greekLetters.push([name, unicode])
     }
-    _greekLetters.sort((a, b) => b[0].length - a[0].length);
+    MathParser.greekLetters.sort((a, b) => b[0].length - a[0].length);
 }
 
 
-// ============================ PARSING ==============================
-
 // Balance parenthesis, used to be part of exprToPostfix()
-function balanceParenthesis(expr) {
+MathParser.balanceParenthesis = function (expr) {
     expr = expr.trim().replace(/\[/g, '(').replace(/\]/g, ')');
     if (expr == "") throw "Empty expression";
     var exprs = [{ str: "", parenCount: 0, absCount: 0 }];
@@ -403,9 +122,10 @@ function balanceParenthesis(expr) {
     return exprs[0].str;
 }
 
+
 // Parse a human math expression to postfix notation
-function exprToPostfix(expr, mathFunctions) {
-    expr = balanceParenthesis(expr);
+MathParser.exprToPostfix = function (expr, mathFunctions) {
+    expr = MathParser.balanceParenthesis(expr);
 
     // subtraction sign
     var expr1s = [{ s: "", pc: 0 }];
@@ -609,15 +329,30 @@ function exprToPostfix(expr, mathFunctions) {
         queue.push(stack[stack.length - 1]);
         stack.pop();
     }
+
+    // replace operators with functions
+    if (false) for (var i = 0; i < queue.length; i++) {
+        if (queue[i].type == 'operator') {
+            queue[i].type = 'function';
+            queue[i].numArgs = 2;
+            queue[i].str = {
+                '+': 'Add', '-': 'Sub',
+                '*': 'Mul', '/': 'Div',
+                '^': 'pow'
+            }[queue[i].str];
+        }
+    }
     return queue;
 }
 
+
 // Get a list of variables from a postfix notation
-function getVariables(postfix, excludeIndependent) {
+MathParser.getVariables = function (postfix, excludeIndependent) {
     var vars = new Set();
     for (var i = 0; i < postfix.length; i++) {
         if (postfix[i].type == 'variable') {
-            if (excludeIndependent && isIndependentVariable(postfix[i].str))
+            if (excludeIndependent &&
+                MathParser.isIndependentVariable(postfix[i].str))
                 continue;
             vars.add(postfix[i].str);
         }
@@ -625,32 +360,9 @@ function getVariables(postfix, excludeIndependent) {
     return vars;
 }
 
-// parser for a line of the equation
-let InputParser = {
-    // regex to match a variable/function name
-    reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
-};
 
-// parse one side of the equation
-InputParser.parseSide = function (funstr) {
-    var match = /^([A-Za-zΑ-Ωα-ω0-9_]+)\s*\(([A-Za-zΑ-Ωα-ω0-9_\s\,]+)\)$/.exec(funstr);
-    if (match == null) return false;
-    if (!InputParser.reVarname.test(match[1])) return false;
-    if (match[1] == "e" || match[1] == "π") return false;
-    var matches = [match[1]];
-    match = match[2].split(',');
-    for (var i = 0; i < match.length; i++) {
-        var name = match[i];
-        if (!InputParser.reVarname.test(name)) return false;
-        if (name.length >= 2 && name[1] != "_")
-            name = name[0] + "_" + name.substring(1, name.length);
-        matches.push(name);
-    }
-    return matches;
-};
-
-// parse one line
-InputParser.parseLine = function (line) {
+// Parse one line, determines type
+MathParser.parseLine = function (line) {
     var res = {
         type: "",
         main: { left: "", right: "" },
@@ -667,12 +379,15 @@ InputParser.parseLine = function (line) {
         var left = lr[0].trim();
         var right = lr[1].trim();
         // variable
-        if (InputParser.reVarname.test(left)) {
+        if (MathParser.reVarname.test(left)) {
             if (left.length >= 2 && left[1] != "_") left = left[0] + "_" + left.substring(1, left.length);
             // main equation
-            if (isIndependentVariable(left)) {
+            if (MathParser.isIndependentVariable(left)) {
                 res.type = "main";
-                res.main = { left: balanceParenthesis(left), right: balanceParenthesis(right) };
+                res.main = {
+                    left: MathParser.balanceParenthesis(left),
+                    right: MathParser.balanceParenthesis(right)
+                };
             }
             // definition
             else {
@@ -683,29 +398,38 @@ InputParser.parseLine = function (line) {
                 res.type = "variable";
                 res.variable = { name: left, string: right };
             }
+            return res;
         }
         // function
-        else if (InputParser.parseSide(left)) {
-            var fun = InputParser.parseSide(left);
+        var functionMatch = MathParser.matchFunction(left);
+        if (functionMatch) {
             // main equation
-            if (_mathFunctions[fun[0]] != undefined) {
+            if (MathFunctions[functionMatch[0]] != undefined) {
                 res.type = "main";
-                res.main = { left: left, right: balanceParenthesis(right) };
+                res.main = {
+                    left: left,
+                    right: MathParser.balanceParenthesis(right)
+                };
             }
             // function definition
             else {
                 res.type = "function";
-                res.function.name = fun[0];
-                res.function.args = fun.slice(1);
+                res.function.name = functionMatch[0];
+                res.function.args = functionMatch.slice(1);
                 res.function.string = right;
             }
+            return res;
         }
         // main equation
-        else {
-            res.type = "main";
-            if (Number(right) == '0') res.main = { left: balanceParenthesis(left), right: '0' };
-            else res.main = { left: balanceParenthesis(left), right: balanceParenthesis(right) };
-        }
+        res.type = "main";
+        if (Number(right) == '0') res.main = {
+            left: MathParser.balanceParenthesis(left),
+            right: '0'
+        };
+        else res.main = {
+            left: MathParser.balanceParenthesis(left),
+            right: MathParser.balanceParenthesis(right)
+        };
     }
     // main equation
     else {
@@ -715,8 +439,12 @@ InputParser.parseLine = function (line) {
     return res;
 }
 
-// parse input to postfix notation
-InputParser.parseInput = function(input) {
+
+// Parse input (all lines)
+// Generate postfix expression and LaTeX
+MathParser.parseInput = function (input) {
+    // accept different comments
+    input = input.replaceAll('%', '#').replaceAll('//', '#');
     // split to arrays
     input = input.replace(/\r?\n/g, ';');
     input = input.trim().trim(';').trim().split(';');
@@ -727,8 +455,8 @@ InputParser.parseInput = function(input) {
         if (hi == -1) hi = input[i].length;
         var before = input[i].substring(0, hi);
         var after = input[i].substring(hi, input[i].length);
-        for (var gi = 0; gi < _greekLetters.length; gi++) {
-            var gl = _greekLetters[gi];
+        for (var gi = 0; gi < MathParser.greekLetters.length; gi++) {
+            var gl = MathParser.greekLetters[gi];
             before = before.replaceAll(gl[0], gl[1]);
         }
         before = before.replace(/\=+/, "=");
@@ -740,7 +468,7 @@ InputParser.parseInput = function(input) {
     var variables_str = {};
     var mainEqusLr = [];  // main equation left/right
     for (var i = 0; i < input.length; i++) {
-        var res = InputParser.parseLine(input[i]);
+        var res = MathParser.parseLine(input[i]);
         if (res.type == "main") {
             mainEqusLr.push(res.main);
         }
@@ -760,7 +488,8 @@ InputParser.parseInput = function(input) {
 
     // parse expressions
     var functions = {};
-    for (var funname in _mathFunctions) functions[funname] = _mathFunctions[funname];
+    for (var funname in MathFunctions)
+        functions[funname] = MathFunctions[funname];
     for (var funname in functions_str) {
         let fun = functions_str[funname];
         functions[funname] = {
@@ -777,11 +506,11 @@ InputParser.parseInput = function(input) {
             if (functions_str.hasOwnProperty(fun.args[i]))
                 throw "You can't use function name \"" + fun.args[i] + "\" as a function argument name.";
         }
-        fun.postfix = exprToPostfix(fun.definition, functions);
+        fun.postfix = MathParser.exprToPostfix(fun.definition, functions);
     }
     var variables = {};
     for (var varname in variables_str) {
-        var postfix = exprToPostfix(variables_str[varname], functions);
+        var postfix = MathParser.exprToPostfix(variables_str[varname], functions);
         variables[varname] = {
             'postfix': postfix,
             'isFunParam': false,
@@ -790,8 +519,8 @@ InputParser.parseInput = function(input) {
     }
     var mainEqus = [];
     for (var i = 0; i < mainEqusLr.length; i++) {
-        mainEqusLr[i].left = exprToPostfix(mainEqusLr[i].left, functions);
-        mainEqusLr[i].right = exprToPostfix(mainEqusLr[i].right, functions);
+        mainEqusLr[i].left = MathParser.exprToPostfix(mainEqusLr[i].left, functions);
+        mainEqusLr[i].right = MathParser.exprToPostfix(mainEqusLr[i].right, functions);
         if (mainEqusLr[i].right.length == 1 && Number(mainEqusLr[i].right[0].str) == 0) {
             mainEqus.push(mainEqusLr[i].left);
         }
@@ -828,7 +557,7 @@ InputParser.parseInput = function(input) {
             }
             else if (equ[i].type == 'function') {
                 // user-defined function
-                if (!_mathFunctions.hasOwnProperty(equ[i].str)) {
+                if (!MathFunctions.hasOwnProperty(equ[i].str)) {
                     let fun = functions[equ[i].str];
                     var variables1 = {};
                     for (var varname in variables)
@@ -900,8 +629,8 @@ InputParser.parseInput = function(input) {
                 var lr = line.split('=');
                 left = lr[0].trim(), right = lr[1].trim();
             }
-            left = postfixToLatex(exprToPostfix(left, functions));
-            right = postfixToLatex(exprToPostfix(right, functions));
+            left = postfixToLatex(MathParser.exprToPostfix(left, functions));
+            right = postfixToLatex(MathParser.exprToPostfix(right, functions));
             line = left + "=" + right;
         }
         if (comment != "") {
@@ -921,136 +650,9 @@ InputParser.parseInput = function(input) {
 
 // ============================ EVALUATION ==============================
 
-// operations of EvabObject
-function addEvalObjects(a, b) {
-    return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '+')])),
-        "mf_add(" + a.glsl + "," + b.glsl + ")",
-        a.isNumeric && b.isNumeric,
-        new Interval(a.range.x0 + b.range.x0, a.range.x1 + b.range.x1),
-        a.isCompatible && b.isCompatible
-    );
-}
-function subEvalObjects(a, b) {
-    var interval = new Interval(
-        a.range.x0 - b.range.x1,
-        a.range.x1 - b.range.x0);
-    return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '-')])),
-        "mf_sub(" + a.glsl + "," + b.glsl + ")",
-        a.isNumeric && b.isNumeric,
-        interval,
-        a.isCompatible && b.isCompatible
-    );
-}
-function mulEvalObjects(a, b) {
-    var boundaries = [
-        a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
-        a.range.x1 * b.range.x0, a.range.x1 * b.range.x1
-    ].filter(x => !isNaN(x));
-    return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '*')])),
-        "mf_mul(" + a.glsl + "," + b.glsl + ")",
-        a.isNumeric && b.isNumeric,
-        new Interval(
-            Math.min.apply(null, boundaries),
-            Math.max.apply(null, boundaries)
-        ),
-        a.isCompatible && b.isCompatible
-    );
-}
-function divEvalObjects(a, b) {
-    var interval = new Interval();
-    if (b.range.containsZero()) {
-        if ((a.range.isPositive() || a.range.isNegative()) && (b.range.isPositive() || b.range.isNegative()))
-            interval = new Interval(0,
-                a.range.isPositive() == b.range.isPositive() ? Infinity : -Infinity);
-    }
-    else if (!isFinite(a.range.x0) && isFinite(a.range.x1)) {
-        if (b.range.isPositive()) interval = new Interval(
-            -Infinity, Math.max(a.range.x1 / b.range.x0, a.range.x1 / b.range.x1));
-        if (b.range.isNegative()) interval = new Interval(
-            Math.min(a.range.x1 / b.range.x0, a.range.x1 / b.range.x1), Infinity);
-    }
-    else if (!isFinite(a.range.x1) && isFinite(a.range.x0)) {
-        if (b.range.isPositive()) interval = new Interval(
-            Math.min(a.range.x0 / b.range.x0, a.range.x0 / b.range.x1), Infinity);
-        if (b.range.isNegative()) interval = new Interval(
-            -Infinity, Math.max(a.range.x0 / b.range.x0, a.range.x0 / b.range.x1));
-    }
-    else if (isFinite(a.range.x0) && isFinite(a.range.x1)) {
-        interval = new Interval(
-            Math.min(
-                a.range.x0 / b.range.x0, a.range.x0 / b.range.x1,
-                a.range.x1 / b.range.x0, a.range.x1 / b.range.x1),
-            Math.max(
-                a.range.x0 / b.range.x0, a.range.x0 / b.range.x1,
-                a.range.x1 / b.range.x0, a.range.x1 / b.range.x1)
-        );
-    }
-    return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '/')])),
-        "mf_div(" + a.glsl + "," + b.glsl + ")",
-        a.isNumeric && b.isNumeric,
-        interval,
-        a.isCompatible && b.isCompatible
-    );
-}
-function powEvalObjects(a, b) {
-    if (a.glsl == 'e' || a.glsl == '' + Math.E) {
-        return new EvalObject(
-            a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
-            "mf_exp(" + b.glsl + ")",
-            b.isNumeric,
-            new Interval(Math.exp(b.range.x0), Math.exp(b.range.x1)),
-            b.isCompatible
-        )
-    }
-    var n = b.range.x0 == b.range.x1 ? b.range.x0 : NaN;
-    if (n >= -64 && n <= 65536 && n == Math.round(n)) {
-        if (n == 0) return new EvalObject(
-            [new Token("number", '1.')], "mf_const(1.)",
-            true, new Interval(1, 1), a.isCompatible
-        );
-        if (n == 1) return a;
-        var spow = function (a, b) {
-            return b % 2 == 0 ? Math.pow(Math.abs(a), b) :
-                (a < 0. ? -1. : 1.) * Math.pow(Math.abs(a), b);
-        }
-        var interval = new Interval(
-            n % 2 == 0 && a.range.containsZero() ? 0.0 :
-                Math.min(spow(a.range.x0, n), spow(a.range.x1, n)),
-            Math.max(spow(a.range.x0, n), spow(a.range.x1, n)));
-        if (n >= 2 && n <= 12)
-            return new EvalObject(
-                a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
-                "mf_pow" + n + "(" + a.glsl + ")",
-                a.isNumeric, interval, a.isCompatible
-            )
-        return new EvalObject(
-            a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
-            "mf_powint(" + a.glsl + "," + b.glsl + ")",
-            a.isNumeric, interval,
-            a.range.containsZero() && n < -4 ? false : a.isCompatible
-        )
-    }
-    var interval = new Interval();
-    if (a.range.isPositive()) interval = new Interval(
-        Math.pow(a.range.x0, b.range.x0),
-        Math.pow(a.range.x1, b.range.x1)
-    );
-    return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
-        "mf_pow(" + a.glsl + "," + b.glsl + ")",
-        a.isNumeric && b.isNumeric,
-        interval,
-        a.isCompatible && a.range.isPositive() && b.isCompatible
-    )
-}
-
 
 // Convert a post-polish math expression to GLSL code
-function postfixToGlsl(queue) {
+function postfixToGlsl(queue, lang) {
     // subtree counter
     var subtreesLength = 0;
     var subtrees = {};
@@ -1069,7 +671,7 @@ function postfixToGlsl(queue) {
             };
             intermediates.push({
                 id: id,
-                glsl: evalobj.glsl,
+                code: evalobj.code,
             });
             subtreesLength += 1;
         }
@@ -1083,24 +685,27 @@ function postfixToGlsl(queue) {
         if (token.type == 'number') {
             var s = token.str;
             if (!/\./.test(s)) s += '.';
-            stack.push(new EvalObject([token], "mf_const(" + s + ")",
-                true, new Interval(Number(s), Number(s)), true));
+            var obj = new EvalObject([token],
+                s,
+                true, new Interval(Number(s), Number(s)), true);
+            obj.code = MathFunctions['CONST']['1'].subSource([obj], lang).code;
+            stack.push(obj);
         }
         // variable
         else if (token.type == "variable") {
             var s = token.str;
             var isNumeric = false;
             var interval = new Interval();
-            if (isIndependentVariable(token.str)) {
-                s = IndependentVariables[token.str];
+            if (MathParser.isIndependentVariable(token.str)) {
+                s = MathParser.IndependentVariables[token.str];
             }
             else if (token.str == "e") {
-                s = "mf_const(" + Math.E + ")";
+                s = Math.E + "";
                 isNumeric = true;
                 interval.x0 = interval.x1 = Math.E;
             }
             else if (token.str == "π") {
-                s = "mf_const(" + Math.PI + ")";
+                s = Math.PI + "";
                 isNumeric = true;
                 interval.x0 = interval.x1 = Math.PI;
             }
@@ -1117,25 +722,29 @@ function postfixToGlsl(queue) {
                 var v1 = stack[stack.length - 2];
                 var v2 = stack[stack.length - 1];
                 stack.pop(); stack.pop();
-                v = powEvalObjects(v1, v2);
+                v = FunctionSubs.powEvalObjects(v1, v2, lang);
             }
             else {
                 var v1 = stack[stack.length - 2];
                 var v2 = stack[stack.length - 1];
                 stack.pop(); stack.pop();
-                if (token.str == "+") v = addEvalObjects(v1, v2);
-                if (token.str == "-") v = subEvalObjects(v1, v2);
-                if (token.str == "*") v = mulEvalObjects(v1, v2);
-                if (token.str == "/") v = divEvalObjects(v1, v2);
+                if (token.str == "+")
+                    v = FunctionSubs.addEvalObjects(v1, v2, lang);
+                if (token.str == "-")
+                    v = FunctionSubs.subEvalObjects(v1, v2, lang);
+                if (token.str == "*")
+                    v = FunctionSubs.mulEvalObjects(v1, v2, lang);
+                if (token.str == "/")
+                    v = FunctionSubs.divEvalObjects(v1, v2, lang);
             }
             var id = addSubtree(v);
             v.postfix = [new Token('variable', id)];
-            v.glsl = "v" + id;
+            v.code = "v" + id;
             stack.push(v);
         }
         // function
         else if (token.type == 'function') {
-            var fun = _mathFunctions[token.str];
+            var fun = MathFunctions[token.str];
             var numArgs = token.numArgs;
             var args = [];
             for (var j = numArgs; j > 0; j--)
@@ -1144,12 +753,12 @@ function postfixToGlsl(queue) {
                 stack.pop();
             if (fun['' + numArgs] == undefined) fun = fun['0'];
             else fun = fun['' + numArgs];
-            if (fun == undefined)
-                throw "Incorrect number of arguments for function " + token.str;
-            var v = fun.subGlsl(args);
+            if (fun == undefined) throw new Error(
+                "Incorrect number of arguments for function `" + token.str + "`");
+            var v = fun.subSource(args, lang);
             var id = addSubtree(v);
             v.postfix = [new Token('variable', id)];
-            v.glsl = "v" + id;
+            v.code = "v" + id;
             stack.push(v);
         }
         else {
@@ -1159,24 +768,24 @@ function postfixToGlsl(queue) {
     if (stack.length != 1) throw "Result stack length is not 1";
     // get result
     var result = {
-        glsl: [],
-        glslgrad: [],
+        code: [],
+        codegrad: [],
         isCompatible: stack[0].isCompatible
     };
-    var toGrad = function (glsl) {
-        return glsl.replace(/([^A-Za-z]?)mf_/g, "$1mfg_");
+    var toGrad = function (code) {
+        return code.replace(/([^A-Za-z]?)mf_/g, "$1mfg_");
     };
     for (var i = 0; i < intermediates.length; i++) {
         let intermediate = intermediates[i];
-        var v = "float v" + intermediate.id + " = " + intermediate.glsl + ";";
-        var g = "vec4 v" + intermediate.id + " = " + toGrad(intermediate.glsl) + ";";
-        result.glsl.push(v);
-        result.glslgrad.push(g);
+        var v = "float v" + intermediate.id + " = " + intermediate.code + ";";
+        var g = "vec4 v" + intermediate.id + " = " + toGrad(intermediate.code) + ";";
+        result.code.push(v);
+        result.codegrad.push(g);
     }
-    result.glsl.push("return " + stack[0].glsl + ";");
-    result.glsl = result.glsl.join('\n');
-    result.glslgrad.push("return " + toGrad(stack[0].glsl) + ";");
-    result.glslgrad = result.glslgrad.join('\n');
+    result.code.push("return " + stack[0].code + ";");
+    result.code = result.code.join('\n');
+    result.codegrad.push("return " + toGrad(stack[0].code) + ";");
+    result.codegrad = result.codegrad.join('\n');
     return result;
 }
 
@@ -1194,8 +803,8 @@ function postfixToLatex(queue) {
             var j = varname.search('_');
             varname = varname.substring(0, j + 1) + "{" + varname.substring(j + 1, varname.length) + "}";
         }
-        for (var i = 0; i < _greekLetters.length; i++) {
-            var gl = _greekLetters[i];
+        for (var i = 0; i < MathParser.greekLetters.length; i++) {
+            var gl = MathParser.greekLetters[i];
             varname = varname.replaceAll(gl[1], "\\" + gl[0] + " ");
         }
         varname = varname.replace(" }", "}").replace(" _", "_");
@@ -1224,7 +833,7 @@ function postfixToLatex(queue) {
             var v2 = stack[stack.length - 1];
             stack.pop(); stack.pop();
             var tex1 = v1.latex, tex2 = v2.latex;
-            if (token.str != "/" && !(token.str == "^" && tex1 == "\\operatorname{e}")) {
+            if (token.str != "/") {
                 if (precedence > v1.precedence)
                     tex1 = "\\left(" + tex1 + "\\right)";
                 if (precedence >= v2.precedence)
@@ -1248,8 +857,10 @@ function postfixToLatex(queue) {
             }
             else if (token.str == "^") {
                 latex = "{" + tex1 + "}^{" + tex2 + "}";
+                if (token.str == "^" && tex1 == "\\operatorname{e}" && false)
+                    latex = MathFunctions['exp']['1'].subLatex([v2]);
             }
-            else throw "Unrecognized operator" + token.str;
+            else throw new Error("Unrecognized operator" + token.str);
             var obj = new EvalLatexObject(
                 v1.postfix.concat(v2.postfix).concat([token]),
                 latex, precedence);
@@ -1263,11 +874,12 @@ function postfixToLatex(queue) {
                 args.push(stack[stack.length - j]);
             for (var j = 0; j < numArgs; j++)
                 stack.pop();
-            var fun = _mathFunctions[token.str];
+            var fun = MathFunctions[token.str];
             if (fun != undefined) {
                 if (fun['' + numArgs] == undefined) fun = fun['0'];
                 else fun = fun['' + numArgs];
-                if (fun == undefined) throw "Incorrect number of function arguments for " + token.str;
+                if (fun == undefined) throw new Error(
+                    "Incorrect number of function arguments for function `" + token.str + "`");
                 stack.push(new EvalLatexObject(
                     args.concat([token]), fun.subLatex(args), Infinity));
             }
@@ -1292,9 +904,10 @@ function postfixToLatex(queue) {
 
 // Debug in node.js
 if (typeof window === "undefined") {
-    initMathFunctions(rawMathFunctionsShared);
+    BuiltInMathFunctions.initMathFunctions(
+        BuiltInMathFunctions.rawMathFunctionsShared);
     var input = "iTime(0)";
     var result = parseInput(input);
-    // var result = exprToPostfix(input, _mathFunctions);
+    // var result = MathParser.exprToPostfix(input, MathFunctions);
     console.log(result.postfix);
 }

@@ -18,9 +18,10 @@ const builtinFunctions = [
     ["Ln Wineglass", "x^2+y^2-ln(z+1)^2-0.02"],
     ["Spheres", "(sin(2x)sin(2y)sin(2z)-0.9)e^(x+y)"],
     ["Noisy Sphere", "x^2+y^2+z^2=1+0.1sin(10x)sin(10y)sin(10z)"],
-    ["Noisy Octahedron", "abs(x)+abs(y)+abs(z)-1+0.7cos(10x)cos(10y)cos(10z)"],
+    ["Noisy Octa", "abs(x)+abs(y)+abs(z)-1+0.7cos(10x)cos(10y)cos(10z)"],
     // ["Noisy Peanut", "1/((x-1)^2+y^2+z^2)+1/((x+1)^2+y^2+z^2)-1.4=0.02(cos(30x)+cos(30y)cos(30z))"],
-    ["Radioactive Sphere", "f(k)=sin(kx)sin(ky)sin(kz)/k;k=10&#32;#&#32;play&#32;with&#32;this&#32;parameter;s=ln(e^10+e^k);x^2+y^2+z^2-1=f(s(f(k)+f(2k)+f(3k)+f(4k)+f(8k)))"],
+    ["Bull's Head", "cos(3x)cos(3y)+sin(3y)cos(3z)-asin(sin(3z)cos(3x))+x^2+y^2+z^2-1"],
+    ["Radio Sphere", "f(k)=sin(kx)sin(ky)sin(kz)/k;k=10&#32;#&#32;play&#32;with&#32;this&#32;parameter;s=ln(e^10+e^k);x^2+y^2+z^2-1=f(s(f(k)+f(2k)+f(3k)+f(4k)+f(8k)))"],
     ["Bracelet", "rho=hypot(x,y)-1;a=atan(y,x);rho1=hypot(rho,z);a1=atan(z,rho);r=0.1(1+0.1asin(0.99sin(2a1-2.5a))^2;f(x,y,z)=hypot(rho,z)-r;4f(0.9x,y,0.5z)"],
     ["Sin Terrace", "z=0.25round(4sin(x)sin(y))"],
     ["Tan Cells", "z=1/((tan(x)tan(y))^2+1)-1/2"],
@@ -32,19 +33,25 @@ const builtinFunctions = [
     ["Atan2 Donut", "(x^2+y^2+z^2+0.9)^2-4(x^2+z^2)=0.1asin(0.9sin(5atan(z,x)+40y))"],
     ["Atan2 Flower", "a=atan2(z,x)+pi/2;(x^2+z^2)^2+16y^2=2(x^2+z^2)(sin(2.5a)^2+0.5sin(10a)^2)"],
     ["Log2 Spheres", "m=max(|x|,|y|,|z|);k=3/2-m;n=ceil(log(2,k))-2;(3*2^n-k)^2+(x^2+y^2+z^2-m^2)=4^n"],
+    ["Bouquet", "r=hypot(x,y,z);theta=atan2(y,x);phi=atan2(hypot(x,y),z)^1.5;r(1-0.5cos(phi))=(1-sin(min(5phi,pi/2))sin(2.5theta-20e^-5phi)^2)cos(5phi)"],
     ["Eyes 1", "n=3ln((x^2+z^2)/(|x|+0.01));sqrt(x^2+z^2)sin(n)^2=10y^2+x^2+0.5z^2-0.3z"],
     ["Eyes 2", "a=3(z+x+1);b=3(z-x+1);sin(min(a*sin(b),b*sin(a)))-cos(max(a*cos(b),b*cos(a)))=(3-2z)/9+((2x^2+z^2)/6)^3+100y^2"],
     ["Spiral 1", "k=0.14;r=1/k*ln(hypot(x,y));10((k(xcos(r)+ysin(r))-0.5^2(x^2+y^2))^2+z^2)=x^2+y^2"],
-    ["Spiral 2", "k=0.3;r=1/k*ln(hypot(x,y));(k*(xcos(r)+ysin(r)))^2+z^2=0.1tanh(x^2+y^2+0.3)-0.01(x^2+y^2)"],
+    ["Spiral 2", "k=0.2;r=1/k*ln(hypot(x,y));(k*(xcos(r)+ysin(r)))^2+z^2=0.09tanh(x^2+y^2)-0.02(x^2+y^2)"],
     ["Spiral 3", "k=0.14;r=hypot(x,y,0.01);r1=1/k*ln(r);10((k(xcos(r1)+ysin(r1))-(0.5r)^2)^2+((z+0.5r-0.5)(r^2+0.1))^2)=r^2"],
+    ["Spiral 4", "g(x)=10atan(x);r=hypot(x,y);s=xsin(g(r))-ycos(g(r);t(x,y,z)=8z^2(r^2+0.1)^-0.6+0.015r^2-tanh(s);0.25t(4z+2,4x,4y)"],
+    ["Spiral 5", "g(x)=20root(4,x);r=hypot(x,y);s(x,y,z)=((2(z+0.1sin(10r)))^4)+0.1r^2-xsin(g(r))+ycos(g(r));0.25s(-4z,4x,4y)"],
     ["Atan2 Spirula", "k=0.15&#32;#&#32;r=e^kt;#&#32;polar&#32;coordinates;r=2hypot(x,y);a=atan(y,x);#&#32;index&#32;of&#32;spiral&#32;layer;n=min((log(r)/k-a)/(2pi),1);#&#32;distance&#32;to&#32;logarithmic&#32;spiral;d(n)=abs(e^(k*(2pin+a))-r);d1=min(d(floor(n)),d(ceil(n)));sqrt(d1^2+4z^2)=0.4r^0.7(1+0.01sin(40a))"],
+    ["Spiky Spirula", "r1=hypot(x,y);r2=r1*(1+0.5e^(-r1^6)(2/pi*asin(0.99sin(10atan(y,x))))^5exp(-(8z)^2/r1));d(x,y,z)=xcos(3ln(r2))+ysin(3ln(r2))-(x^2+y^2+10z^2/r1);3d(-0.3x,0.3z-0.2,0.3y)"],
+    ["Spiral Cliff", "r=hypot(x,y);g=15atan(2r);s=xsin(g)-ycos(g);ze^(10z)=tanh(tanh(r)s)"],
+    ["FCC Cell", "s=max(|x|,|y|,|z|);s1=(|x|-1)^2+(|y|-1)^2+(|z|-1)^2-1/2;s2=(s-1)^2+(x^2+y^2+z^2-s^2)-1/2;min(4max(s1,s-1),2max(s2,s-1))"],
     ["Atomic Orbitals", "r2(x,y,z)=x^2+y^2+z^2;r(x,y,z)=sqrt(r2(x,y,z));x1(x,y,z)=x/r(x,y,z);y1(x,y,z)=y/r(x,y,z);z1(x,y,z)=z/r(x,y,z);d(r0,x,y,z)=r0^2-r2(x,y,z);r00(x,y,z)=d(0.28,x,y,z);r10(x,y,z)=d(-0.49y1(x,y,z),x,y,z);r11(x,y,z)=d(0.49z1(x,y,z),x,y,z);r12(x,y,z)=d(-0.49x1(x,y,z),x,y,z);r20(x,y,z)=d(1.09x1(x,y,z)y1(x,y,z),x,y,z);r21(x,y,z)=d(-1.09y1(x,y,z)z1(x,y,z),x,y,z);r22(x,y,z)=d(0.32(3z1(x,y,z)^2-1),x,y,z);r23(x,y,z)=d(-1.09x1(x,y,z)z1(x,y,z),x,y,z);r24(x,y,z)=d(0.55(x1(x,y,z)^2-y1(x,y,z)^2),x,y,z);max(r00(x,y,z-1.5),r10(x+1,y,z-0.4),r11(x,y,z-0.4),r12(x-1,y,z-0.4),r20(x+2,y,z+1),r21(x+1,y,z+1),r22(x,y,z+1),r23(x-1,y,z+1),r24(x-2,y,z+1))"],
     ["Terrain", "h(x,y)=fract(126sin(12x+33y+98))-0.5;s(x)=3x^2-2x^3;v00=h(floor(x),floor(y));v01=h(floor(x),floor(y)+1);v10=h(floor(x)+1,floor(y));v11=h(floor(x)+1,floor(y)+1);f(x,y)=mix(mix(v00,v01,s(fract(y))),mix(v10,v11,s(fract(y))),s(fract(x)));v(x,y)=f(x,y)+f(2x,2y)/2+f(4x,4y)/4+f(8x,8y)/8+f(16x,16y)/16;z=ln(1+exp(40(v(x,y)-(0.05(x^2+y^2))^2)))/40"],
     ["Fractal Roots", "u(x,y)=x^2-y^2+z;v(x,y)=2xy;u1(x,y)=u(u(x,y)+x,v(x,y)+y);v1(x,y)=v(u(x,y)+x,v(x,y)+y);u2(x,y)=u(u1(x,y)+x,v1(x,y)+y);v2(x,y)=v(u1(x,y)+x,v1(x,y)+y);log(u2(x,y)^2+v2(x,y)^2)=0"],
     ["Spiky Fractal", "u(x,y,z)=yz;v(x,y,z)=xz;w(x,y,z)=xy;u1(x,y,z)=u(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);v1(x,y,z)=v(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);w1(x,y,z)=w(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);u2(x,y,z)=u(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);v2(x,y,z)=v(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);w2(x,y,z)=w(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);u3(x,y,z)=u(u2(x,y,z)+x,v2(x,y,z)+y,w2(x,y,z)+z);v3(x,y,z)=v(u2(x,y,z)+x,v2(x,y,z)+y,w2(x,y,z)+z);w3(x,y,z)=w(u2(x,y,z)+x,v2(x,y,z)+y,w2(x,y,z)+z);log(u3(x,y,z)^2+v3(x,y,z)^2+w3(x,y,z)^2)=log(0.01)"],
     ["Mandelbrot", "u(x,y)=x^2-y^2;v(x,y)=2xy;u1(x,y)=u(u(x,y)+x,v(x,y)+y);v1(x,y)=v(u(x,y)+x,v(x,y)+y);u2(x,y)=u(u1(x,y)+x,v1(x,y)+y);v2(x,y)=v(u1(x,y)+x,v1(x,y)+y);u3(x,y)=u(u2(x,y)+x,v2(x,y)+y);v3(x,y)=v(u2(x,y)+x,v2(x,y)+y);u4(x,y)=u(u3(x,y)+x,v3(x,y)+y);v4(x,y)=v(u3(x,y)+x,v3(x,y)+y;u5(x,y)=u(u4(x,y)+x,v4(x,y)+y);v5(x,y)=v(u4(x,y)+x,v4(x,y)+y);u6(x,y)=u(u5(x,y)+x,v5(x,y)+y);v6(x,y)=v(u5(x,y)+x,v5(x,y)+y);log(u6(x-1/2,hypot(y,z))^2+v6(x-1/2,hypot(y,z))^2)=0"],
     ["Burning Ship", "u(x,y)=x^2-y^2;v(x,y)=2abs(xy);u1(x,y)=u(u(x,y)+x,v(x,y)+y);v1(x,y)=v(u(x,y)+x,v(x,y)+y);u2(x,y)=u(u1(x,y)+x,v1(x,y)+y);v2(x,y)=v(u1(x,y)+x,v1(x,y)+y);u3(x,y)=u(u2(x,y)+x,v2(x,y)+y);v3(x,y)=v(u2(x,y)+x,v2(x,y)+y);u4(x,y)=u(u3(x,y)+x,v3(x,y)+y);v4(x,y)=v(u3(x,y)+x,v3(x,y)+y;u5(x,y)=u(u4(x,y)+x,v4(x,y)+y);v5(x,y)=v(u4(x,y)+x,v4(x,y)+y);u6(x,y)=u(u5(x,y)+x,v5(x,y)+y);v6(x,y)=v(u5(x,y)+x,v5(x,y)+y);z=0.8(u6(-x-1/4,-y-1/2)^2+v6(-x-1/4,-y-1/2)^2)^-0.1-1"],
-    ["Mandelbulb", "n=8;r=hypot(x,y,z);a=atan(y,x);b=atan(hypot(x,y),z);u(x,y,z)=r^n*sin(nb)cos(na);v(x,y,z)=r^n*sin(nb)sin(na);w(x,y,z)=r^n*cos(nb);u1(x,y,z)=u(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);v1(x,y,z)=v(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);w1(x,y,z)=w(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);u2(x,y,z)=u(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);v2(x,y,z)=v(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);w2(x,y,z)=w(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);log(hypot(u2(x,y,z),v2(x,y,z),w2(x,y,z)))=0"],
+    ["MandelTorus", "n=6;R=1.5;r=hypot(hypot(x,y)-R,z);a=atan(y,x);b=atan(hypot(x,y)-R,z);u(x,y,z)=cos(na)(R+r^nsin(nb));v(x,y,z)=sin(na)(R+r^nsin(nb));w(x,y,z)=r^ncos(nb);u1(x,y,z)=u(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);v1(x,y,z)=v(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);w1(x,y,z)=w(u(x,y,z)+x,v(x,y,z)+y,w(x,y,z)+z);u2(x,y,z)=u(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);v2(x,y,z)=v(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);w2(x,y,z)=w(u1(x,y,z)+x,v1(x,y,z)+y,w1(x,y,z)+z);T(x,y,z)=log(hypot(u2(x,y,z),v2(x,y,z),w2(x,y,z)));T(0.6x(R+1),0.6z(R+1),0.6y(R+1))=R*(e^-n+n-1)/(1+e^-n)"],
     // ["Slicing Fruit", "#&#32;spherical&#32;coordinates;r=sqrt(x^2+y^2+z^2);theta=atan2(y,x);phi=atan2(hypot(x,y),z);#&#32;function;t1=0.1sin(2theta)sin(3phi)+0.3sin(12theta)sin(12phi-0.5sin(3theta));r1=0.2+0.8sin(phi)^0.5+rsin(phi)t1;f(x,y,z)=e^(-0.1z)(x^2+y^2+0.5z^2+0.7z);s1=cos(4(x+y+2z+0.3sin(2x-y)))-0.3;max(f(x,y,z)-r1,0.6r1-f(x,y,z),s1)=0"],
     ["Pumpkin", "#&#32;polar&#32;coordinates;r=hypot(x,y);a=atan2(y,x);#&#32;body&#32;of&#32;the&#32;pumpkin;r1=r/(1+0.05sqrt(r)e^(0.7sin(8a));b=hypot(r1,z)-1+0.4/(5r^2+1)+0.1sin(2z)+0.005r1(sin(12a)+0.5sin(37a));#&#32;tip&#32;of&#32;the&#32;pumpkin;t(x,y,z)=max(r-0.07exp(0.5sin(z)),-z,z+0.1cos(3x)-1);ln(e^(-20b)+e^(-30t(x-0.2sin(z-0.6),y,z)))"],
     ["Amogus", "#&#32;smoothed&#32;union;s_min(x,y,k)=-ln(e^(-kx)+e^(-ky))/k;#&#32;body&#32;parts&#32;(L^p&#32;ellipsoids);s_body=(1.5|y|)^3+|x|^3+(z/1.4)^4-1+0.1z;s_leg=(1.9|y|)^3+(2.5abs(|x|-0.5))^3.5+(z+1)^2-1;s_eyes=(4(y-0.8))^4+(1.5x)^2+(2(z-0.3))^4-1;s_back=(3(y+0.8))^4+(1.3x)^2+(1.2(z+0.1))^4-1;#&#32;put&#32;them&#32;together;s_min(s_min(s_min(s_body,s_leg,2),s_eyes,2),s_back,2)"],
@@ -65,11 +72,14 @@ document.body.onload = function (event) {
     initBuiltInFunctions(builtinFunctions);
 
     // init parser
-    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsR));
-    IndependentVariables = {
-        'x': "mf_x()",
-        'y': "mf_y()",
-        'z': "mf_z()"
+    BuiltInMathFunctions.initMathFunctions(
+        BuiltInMathFunctions.rawMathFunctionsShared
+            .concat(BuiltInMathFunctions.rawMathFunctionsR)
+    );
+    MathParser.IndependentVariables = {
+        'x': "x",
+        'y': "y",
+        'z': "z"
     };
 
     // init parameters

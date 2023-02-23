@@ -11,11 +11,12 @@ After my [3D implicit surface grapher](https://github.com/harry7557558/harry7557
  - [3D implicit surface grapher](./implicit3/index.html)
  - [Complex domain coloring grapher](./complex/index.html)
  - [3D complex domain coloring grapher](./complex3/index.html)
- - [Implicit curve grapher](./implicit2/index.html) (for testing, not intended to be useful)
+
+[//]: # "- [Implicit curve grapher](./implicit2/index.html) (for testing, not intended to be useful)"
 
 It is important to note that these function graphers are developed completely by my effort. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirula/issues).
 
-The name "Spirula" comes from the name of a [deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) that has distinctive spiral shells.
+The name "Spirula" comes from the name of a [deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) that has distinctive spiral shells. I consider myself a fan of spirals so it's not surprising that you see a lot of spirals in example graphs.
 
 ----
 

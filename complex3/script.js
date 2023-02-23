@@ -23,12 +23,14 @@ document.body.onload = function (event) {
     initBuiltInFunctions(builtinFunctions);
 
     // init parser
-    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC));
-    _mathFunctions['zeta'][1].glsl = "mc_zeta_fast(%1)";
-    //_mathFunctions['logzeta'][1].glsl = _mathFunctions['lnzeta'][1].glsl = "mc_lnzeta_fast(%1)";
-    IndependentVariables = {
-        'x': "mf_z()",
-        'z': "mf_z()",
+    BuiltInMathFunctions.initMathFunctions(
+        BuiltInMathFunctions.rawMathFunctionsShared
+            .concat(BuiltInMathFunctions.rawMathFunctionsC)
+    );
+    MathFunctions['zeta'][1].langs.glslc = "mc_zeta_fast(%1)";
+    MathParser.IndependentVariables = {
+        'x': "z",
+        'z': "z",
         'i': "mc_i()",
         'j': "mc_i()"
     };

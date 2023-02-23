@@ -34,10 +34,13 @@ document.body.onload = function (event) {
     initBuiltInFunctions(builtinFunctions);
 
     // init parser
-    initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsR));
-    IndependentVariables = {
-        'x': "mf_x()",
-        'y': "mf_y()"
+    BuiltInMathFunctions.initMathFunctions(
+        BuiltInMathFunctions.rawMathFunctionsShared
+            .concat(BuiltInMathFunctions.rawMathFunctionsR)
+    );
+    MathParser.IndependentVariables = {
+        'x': "x",
+        'y': "y"
     };
 
     // init parameters

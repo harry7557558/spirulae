@@ -148,7 +148,7 @@ function initParameters(parameters) {
         setTimeout(function () {  // comment input when WebGL context lost
             var input = funInput.value.split('\n');
             for (var i = 0; i < input.length; i++) {
-                if (InputParser.parseLine(input[i]).type == "main")
+                if (MathParser.parseLine(input[i]).type == "main")
                     input[i] = '####' + input[i];
             }
             input = input.join('\n');
@@ -248,7 +248,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     var parsed = null;
     try {
         try {
-            parsed = InputParser.parseInput(expr);
+            parsed = MathParser.parseInput(expr);
         } catch (e) {
             texContainer.style.color = "red";
             throw e;
@@ -259,11 +259,11 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         parsed.postfix.push([]);
         parsed.postfix = parsed.postfix[0];
         if (UpdateFunctionInputConfig.complexMode) {
-            var variables = getVariables(parsed.postfix, false);
+            var variables = MathParser.getVariables(parsed.postfix, false);
             if (variables.has('x') && variables.has('z'))
                 errmsg = "Cannot have both x and z as the independent variable.";
         }
-        var extraVariables = getVariables(parsed.postfix, true);
+        var extraVariables = MathParser.getVariables(parsed.postfix, true);
         extraVariables.delete('e');
         extraVariables.delete('π');
         if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
@@ -302,19 +302,20 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex, "white");
         }
-        glsl = postfixToGlsl(parsed.postfix);
+        glsl = postfixToGlsl(parsed.postfix,
+            UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl');
         if (UpdateFunctionInputConfig.complexMode) {
-            glsl.glsl = glsl.glsl.replace(/([^\w])mf_/g, "$1mc_");
-            glsl.glsl = glsl.glsl.replace(/float/g, "vec2");
+            glsl.code = glsl.code.replace(/([^\w])mf_/g, "$1mc_");
+            glsl.code = glsl.code.replace(/float/g, "vec2");
         }
-        console.log(glsl.glsl);
+        console.log(glsl.code);
         if (UpdateFunctionInputConfig.warnNaN && !glsl.isCompatible)
             console.warn("Graph may be incorrect on some devices.");
-        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(glsl.glsl))
+        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(glsl.code))
             console.warn("Function evaluation involves numerical approximation and may be inconsistent across devices.");
         if (WarningStack.length != 0)
             messageWarning(WarningStack.join('\n'));
-        updateShaderFunction(glsl.glsl, glsl.glslgrad, parameters);
+        updateShaderFunction(glsl.code, glsl.codegrad, parameters);
     } catch (e) {
         console.error(e);
         messageError(e);
@@ -329,7 +330,7 @@ function initMain(preloadShaderSources) {
     // do this at the start
     initHelpMenu();
 
-    initGreekLetters();
+    MathParser.initGreekLetters();
 
     // https://stackoverflow.com/a/49248484
     function myCustomWarn(...args) {

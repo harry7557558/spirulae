@@ -8,72 +8,72 @@ uniform float iTime;
 
 // Functions
 
-#define mf_x() (x)
-#define mf_y() (y)
-#define mf_z() (z)
-float mf_const(float a) { return a; }
-float mf_add(float a, float b) { return a + b; }
-float mf_sub(float a, float b) { return a - b; }
-float mf_mul(float a, float b) { return a * b; }
-float mf_div(float a, float b) { return a / b; }
-float mf_pow2(float a) { return a*a; }
-float mf_pow3(float a) { return a*a*a; }
-float mf_pow4(float a) { return a*a*a*a; }
-float mf_pow5(float a) { return a*a*a*a*a; }
-float mf_pow6(float a) { return a*a*a*a*a*a; }
-float mf_pow7(float a) { return a*a*a*a*a*a*a; }
-float mf_pow8(float a) { return a*a*a*a*a*a*a*a; }
-float mf_pow9(float a) { return a*a*a*a*a*a*a*a*a; }
-float mf_pow10(float a) { return a*a*a*a*a*a*a*a*a*a; }
-float mf_pow11(float a) { return a*a*a*a*a*a*a*a*a*a*a; }
-float mf_pow12(float a) { return a*a*a*a*a*a*a*a*a*a*a*a; }
-float mf_powint(float a, float b) { float k=round(b); return (mod(k,2.)==0.?1.:sign(a))*pow(abs(a),k); }
+//#define mf_x() (x)
+//#define mf_y() (y)
+//#define mf_z() (z)
+//float mf_const(float a) { return a; }
+//float mf_add(float a, float b) { return a + b; }
+//float mf_sub(float a, float b) { return a - b; }
+//float mf_mul(float a, float b) { return a * b; }
+//float mf_div(float a, float b) { return a / b; }
+//float mf_pow2(float a) { return a*a; }
+//float mf_pow3(float a) { return a*a*a; }
+//float mf_pow4(float a) { return a*a*a*a; }
+//float mf_pow5(float a) { return a*a*a*a*a; }
+//float mf_pow6(float a) { return a*a*a*a*a*a; }
+//float mf_pow7(float a) { return a*a*a*a*a*a*a; }
+//float mf_pow8(float a) { return a*a*a*a*a*a*a*a; }
+//float mf_pow9(float a) { return a*a*a*a*a*a*a*a*a; }
+//float mf_pow10(float a) { return a*a*a*a*a*a*a*a*a*a; }
+//float mf_pow11(float a) { return a*a*a*a*a*a*a*a*a*a*a; }
+//float mf_pow12(float a) { return a*a*a*a*a*a*a*a*a*a*a*a; }
+//float mf_powint(float a, float b) { return (mod(abs(b)+0.5,2.)<1.?1.:sign(a))*pow(abs(a),b); }
 
-float mf_if(float a1, float a2, float a3) { return a1 > 0. ? a2 : a3; }
-float mf_mod(float a1, float a2) { return mod(a1, a2); }
-float mf_fract(float a) { return fract(a); }
-float mf_floor(float a) { return floor(a); }
-float mf_ceil(float a) { return ceil(a); }
-float mf_round(float a) { return round(a); }
-float mf_abs(float a) { return abs(a); }
-float mf_sign(float a) { return sign(a); }
-float mf_max(float a, float b) { return max(a, b); }
-float mf_min(float a, float b) { return min(a, b); }
-float mf_clamp(float a, float b, float c) { return clamp(a, b, c); }
-float mf_lerp(float a, float b, float c) { return mix(a, b, c); }
-float mf_sqrt(float a) { return sqrt(a); }
-float mf_cbrt(float a) { return sign(a)*pow(abs(a), 1./3.); }
-float mf_pow(float a, float b) { return pow(a, b); }
-float mf_root(float a, float b) { return pow(b, 1.0/a); }
-float mf_hypot(float a, float b) { return length(vec2(a, b)); }
-float mf_exp(float a) { return exp(a); }
-float mf_ln(float a) { return log(a); }
-float mf_log(float a, float b) { return log(b) / log(a); }
-float mf_sin(float a) { return sin(a); }
-float mf_cos(float a) { return cos(a); }
-float mf_tan(float a) { return tan(a); }
-float mf_csc(float a) { return 1.0/sin(a); }
-float mf_sec(float a) { return 1.0/cos(a); }
-float mf_cot(float a) { return cos(a)/sin(a); }
-float mf_sinh(float a) { return sinh(a); }
-float mf_cosh(float a) { return cosh(a); }
-float mf_tanh(float a) { return tanh(a); }
-float mf_csch(float a) { return 1.0/sinh(a); }
-float mf_sech(float a) { return 1.0/cosh(a); }
-float mf_coth(float a) { return 1.0/tanh(a); }
-float mf_atan2(float a, float b) { return atan(a, b); }
-float mf_arcsin(float a) { return asin(a); }
-float mf_arccos(float a) { return acos(a); }
-float mf_arctan(float a) { return atan(a); }
-float mf_arccot(float a) { return 0.5*PI-atan(a); }
-float mf_arcsec(float a) { return acos(1.0/a); }
-float mf_arccsc(float a) { return asin(1.0/a); }
-float mf_arcsinh(float a) { return asinh(a); }
-float mf_arccosh(float a) { return acosh(a); }
-float mf_arctanh(float a) { return atanh(a); }
-float mf_arccoth(float a) { return atanh(1./a); }
-float mf_arcsech(float a) { return acosh(1.0/a); }
-float mf_arccsch(float a) { return asinh(1.0/a); }
+//float mf_if(float a1, float a2, float a3) { return a1 > 0. ? a2 : a3; }
+//float mf_mod(float a1, float a2) { return mod(a1, a2); }
+//float mf_fract(float a) { return fract(a); }
+//float mf_floor(float a) { return floor(a); }
+//float mf_ceil(float a) { return ceil(a); }
+//float mf_round(float a) { return round(a); }
+//float mf_abs(float a) { return abs(a); }
+//float mf_sign(float a) { return sign(a); }
+//float mf_max(float a, float b) { return max(a, b); }
+//float mf_min(float a, float b) { return min(a, b); }
+//float mf_clamp(float a, float b, float c) { return clamp(a, b, c); }
+//float mf_lerp(float a, float b, float c) { return mix(a, b, c); }
+//float mf_sqrt(float a) { return sqrt(a); }
+//float mf_cbrt(float a) { return sign(a)*pow(abs(a), 1./3.); }
+//float mf_pow(float a, float b) { return pow(a, b); }
+//float mf_root(float a, float b) { return pow(b, 1.0/a); }
+//float mf_hypot(float a, float b) { return length(vec2(a, b)); }
+//float mf_exp(float a) { return exp(a); }
+//float mf_ln(float a) { return log(a); }
+//float mf_log(float a, float b) { return log(b) / log(a); }
+//float mf_sin(float a) { return sin(a); }
+//float mf_cos(float a) { return cos(a); }
+//float mf_tan(float a) { return tan(a); }
+//float mf_csc(float a) { return 1.0/sin(a); }
+//float mf_sec(float a) { return 1.0/cos(a); }
+//float mf_cot(float a) { return cos(a)/sin(a); }
+//float mf_sinh(float a) { return sinh(a); }
+//float mf_cosh(float a) { return cosh(a); }
+//float mf_tanh(float a) { return tanh(a); }
+//float mf_csch(float a) { return 1.0/sinh(a); }
+//float mf_sech(float a) { return 1.0/cosh(a); }
+//float mf_coth(float a) { return 1.0/tanh(a); }
+//float mf_atan2(float a, float b) { return atan(a, b); }
+//float mf_arcsin(float a) { return asin(a); }
+//float mf_arccos(float a) { return acos(a); }
+//float mf_arctan(float a) { return atan(a); }
+//float mf_arccot(float a) { return 0.5*PI-atan(a); }
+//float mf_arcsec(float a) { return acos(1.0/a); }
+//float mf_arccsc(float a) { return asin(1.0/a); }
+//float mf_arcsinh(float a) { return asinh(a); }
+//float mf_arccosh(float a) { return acosh(a); }
+//float mf_arctanh(float a) { return atanh(a); }
+//float mf_arccoth(float a) { return atanh(1./a); }
+//float mf_arcsech(float a) { return acosh(1.0/a); }
+//float mf_arccsch(float a) { return asinh(1.0/a); }
 float mf_erf(float x) {
     float t = 1.0 / (1.0 + 0.3275911*abs(x));
     float k = t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));

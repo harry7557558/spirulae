@@ -332,7 +332,7 @@ function initRenderer() {
     function render() {
         var timeDependent = true;
         try {
-            timeDependent = /m[fc]_const\(iTime\)/.test(updateShaderFunction.prevCode.shaderSource);
+            timeDependent = /\(iTime\)/.test(updateShaderFunction.prevCode.shaderSource);
         } catch (e) { }
         if (timeDependent && state.iTime == -1.0)
             startTime = performance.now();
