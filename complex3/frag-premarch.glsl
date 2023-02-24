@@ -21,10 +21,12 @@ vec3 screenToWorld(vec3 p) {
 // function and its gradient in world space
 #include "../shaders/complex.glsl"
 
+{%FUN%}
+
 int callCount = 0;
 vec2 funz(vec2 z) {  // function
     callCount += 1;
-    {%FUN%}
+    return funRaw(z);
 }
 
 #line 30

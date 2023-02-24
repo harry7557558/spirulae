@@ -3,7 +3,7 @@
 #endif
 
 
-uniform float iTime;
+// uniform float iTime;
 
 
 // Functions
@@ -74,17 +74,25 @@ uniform float iTime;
 //float mf_arccoth(float a) { return atanh(1./a); }
 //float mf_arcsech(float a) { return acosh(1.0/a); }
 //float mf_arccsch(float a) { return asinh(1.0/a); }
-float mf_erf(float x) {
-    float t = 1.0 / (1.0 + 0.3275911*abs(x));
-    float k = t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));
-    return sign(x) * (1.0 - k * exp(-x*x));
-}
-float mf_erfinv(float x) {
-    float u = log(1.0-x*x);
-    float c = 0.5*u + 2.0/(0.147*PI);
-    return sign(x) * sqrt(sqrt(c*c-u/0.147)-c);
-}
+// float mf_erf(float x) {
+//     float t = 1.0/(1.0+0.3275911*abs(x));
+//     float k = t*(0.254829592+t*(-0.284496736+t*(1.421413741+t*(-1.453152027+t*1.061405429))));
+//     return sign(x)*(1.0-k*exp(-x*x));
+// }
+// float mf_erfc(float x) {
+//     if (x <= 1.0) return 1.0-mf_erf(x);
+//     float v = exp(-1.00382243*x*x+0.13228106*x+0.63881364-1.83299332*log(x+1.41509185));
+//     if (x >= 2.0) return v;
+//     return mix(1.0-mf_erf(x),v,smoothstep(1.0,2.0,x));
+// }
+// float mf_erfinv(float x) {
+//     float u = log(1.0-x*x);
+//     float c = 0.5*u+2.0/(0.147*PI);
+//     return sign(x)*sqrt(sqrt(c*c-u/0.147)-c);
+// }
 
+
+#if 0
 
 // Functions with gradient
 // xyz: gradient; w: value
@@ -161,3 +169,5 @@ vec4 mfg_erfinv(vec4 a) {
     float einv = 2.0/sqrt(PI)*exp(-inv*inv);
     return vec4(a.xyz/einv, inv);
 }
+
+#endif

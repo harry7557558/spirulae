@@ -6,7 +6,7 @@
 
 #line 8
 
-uniform float iTime;
+// uniform float iTime;
 
 #define mc_z() (z)
 #define mc_i() vec2(0,1)

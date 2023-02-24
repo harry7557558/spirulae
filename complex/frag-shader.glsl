@@ -14,9 +14,8 @@ uniform float rBrightness;
 #include "../shaders/complex.glsl"
 
 // function
-vec2 fun(vec2 z) {
-    {%FUN%}
-}
+{%FUN%}
+#define fun(z) funRaw(z)
 
 #line 20
 

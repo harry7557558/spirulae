@@ -19,6 +19,8 @@ vec3 screenToWorld(vec3 p) {
 // function and its gradient in world space
 #include "../shaders/functions.glsl"
 
+{%FUN%}
+
 int callCount = 0;
 float fun(vec3 p) {  // function
     callCount += 1;
@@ -27,7 +29,7 @@ float fun(vec3 p) {  // function
 #else
     float x=p.x, y=p.y, z=p.z;
 #endif
-    {%FUN%}
+    return funRaw(x, y, z);
 }
 
 

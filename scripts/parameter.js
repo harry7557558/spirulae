@@ -302,20 +302,19 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex, "white");
         }
-        glsl = postfixToGlsl(parsed.postfix,
-            UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl');
-        if (UpdateFunctionInputConfig.complexMode) {
-            glsl.code = glsl.code.replace(/([^\w])mf_/g, "$1mc_");
-            glsl.code = glsl.code.replace(/float/g, "vec2");
-        }
-        console.log(glsl.code);
-        if (UpdateFunctionInputConfig.warnNaN && !glsl.isCompatible)
+        glsl = CodeGenerator.postfixToSource(
+            [parsed.postfix], ["funRaw"],
+            UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
+        );
+        var code = glsl.source;
+        console.log(code);
+        if (UpdateFunctionInputConfig.warnNaN && !glsl.isCompatible[0])
             console.warn("Graph may be incorrect on some devices.");
-        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(glsl.code))
+        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(code))
             console.warn("Function evaluation involves numerical approximation and may be inconsistent across devices.");
         if (WarningStack.length != 0)
             messageWarning(WarningStack.join('\n'));
-        updateShaderFunction(glsl.code, glsl.codegrad, parameters);
+        updateShaderFunction(code, null, parameters);
     } catch (e) {
         console.error(e);
         messageError(e);

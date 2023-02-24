@@ -134,11 +134,18 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '%1',
         glsl: '%1',
         glslc: 'vec2(%1,0)',
+        cppf: '%1f',
     }),
     new MathFunction(['iTime'], 1, {
         latex: '\\mathrm{iTime}',
         glsl: '(iTime)',
+        glslExt: ['iTime'],
         glslc: 'vec2((iTime),0)',
+        glslcExt: ['iTime'],
+        cppf: 'iTime',
+        cppfExt: ['iTime'],
+        cppd: 'iTime',
+        cppdExt: ['iTime'],
     }),
     new MathFunction(['ADD'], 2, {
         latex: '%1+%2',
@@ -174,6 +181,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '\\sqrt[{%1}]{%2}',
         glsl: 'pow(%2,1.0/%1)',
         glslc: 'mc_root(%1,%2)',
+        cppf: 'pow(%2,1.0f/%1)',
     }),
     new MathFunction(['pow'], 2, {
         latex: '\\left(%1\\right)^{%2}',
@@ -209,11 +217,13 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '\\csc\\left(%1\\right)',
         glsl: '1.0/sin(%1)',
         glslc: 'mc_csc(%1)',
+        cppf: '1.0f/sin(%1)',
     }),
     new MathFunction(['sec'], 1, {
         latex: '\\sec\\left(%1\\right)',
         glsl: '1.0/cos(%1)',
         glslc: 'mc_sec(%1)',
+        cppf: '1.0f/cos(%1)',
     }),
     new MathFunction(['cot'], 1, {
         latex: '\\cot\\left(%1\\right)',
@@ -239,16 +249,19 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '\\mathrm{csch}\\left(%1\\right)',
         glsl: '1.0/sinh(%1)',
         glslc: 'mc_csch(%1)',
+        cppf: '1.0f/sinh(%1)',
     }),
     new MathFunction(['sech'], 1, {
         latex: '\\mathrm{sech}\\left(%1\\right)',
         glsl: '1.0/cosh(%1)',
         glslc: 'mc_sech(%1)',
+        cppf: '1.0f/cosh(%1)',
     }, new Interval(), new Interval(0, 1)),
     new MathFunction(['coth'], 1, {
         latex: '\\mathrm{coth}\\left(%1\\right)',
         glsl: '1.0/tanh(%1)',
         glslc: 'mc_coth(%1)',
+        cppf: '1.0f/tanh(%1)',
     }),
     new MathFunction(['arcsin', 'arsin', 'asin'], 1, {
         latex: '\\arcsin\\left(%1\\right)',
@@ -269,6 +282,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '\\mathrm{arccot}\\left(%1\\right)',
         glsl: '1.5707963267948966-atan(%1)',
         glslc: 'mc_arccot(%1)',
+        cppf: '1.5707963267948966f-atan(%1)',
     }, new Interval(), new Interval(-0.5 * PI, 0.5 * PI), (x) => 0.5 * PI - Math.atan(x)),
     new MathFunction(['arcsec', 'arsec', 'asec'], 1, {
         latex: '\\mathrm{arcsec}\\left(%1\\right)',
@@ -299,16 +313,19 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         latex: '\\mathrm{arccoth}\\left(%1\\right)',
         glsl: 'atanh(1.0/%1)',
         glslc: 'mc_arccoth(%1)',
+        cppf: 'atanh(1.0f/%1)',
     }),
     new MathFunction(['arcsech', 'arsech', 'asech'], 1, {
         latex: '\\mathrm{arcsech}\\left(%1\\right)',
         glsl: 'acosh(1.0/%1)',
         glslc: 'mc_arcsech(%1)',
+        cppf: 'acosh(1.0f/%1)',
     }, new Interval(0, 1), new Interval(0, Infinity), (x) => Math.acosh(1 / x)),
     new MathFunction(['arccsch', 'arcsch', 'acsch'], 1, {
         latex: '\\mathrm{arccsch}\\left(%1\\right)',
         glsl: 'asinh(1.0/%1)',
         glslc: 'mc_arccsch(%1)',
+        cppf: 'asinh(1.0f/%1)',
     }, new Interval(), new Interval()),
 ];
 
@@ -316,19 +333,26 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
 BuiltInMathFunctions.rawMathFunctionsR = [
     new MathFunction(['abs'], 1, {
         latex: '\\left|%1\\right|',
-        glsl: 'abs(%1)'
+        glsl: 'abs(%1)',
+        cppf: 'fabs(%1)',
+        cppd: 'fabs(%1)',
     }, new Interval(), new Interval(0, Infinity)),
     new MathFunction(['if'], 3, {
         latex: '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}',
-        glsl: '%1>0.?%2:%3'
+        glsl: '%1>0.?%2:%3',
+        cppf: '%1>0.0f?%2:%3',
     }),
     new MathFunction(['mod'], 2, {
         latex: '\\operatorname{mod}\\left(%1,%2\\right)',
-        glsl: 'mod(%1,%2)'
+        glsl: 'mod(%1,%2)',
+        cppf: '%1-floor(%1/%2)*%2',
+        cppd: '%1-floor(%1/%2)*%2',
     }),
     new MathFunction(['fract', 'frac'], 1, {
         latex: '\\operatorname{frac}\\left(%1\\right)',
-        glsl: 'fract(%1)'
+        glsl: 'fract(%1)',
+        cppf: '%1-floor(%1)',
+        cppd: '%1-floor(%1)',
     }, new Interval(), new Interval(0, 1)),
     new MathFunction(['floor'], 1, {
         latex: '\\lfloor{%1}\\rfloor',
@@ -344,67 +368,87 @@ BuiltInMathFunctions.rawMathFunctionsR = [
     }, new Interval(), new Interval(), Math.round),
     new MathFunction(['sign', 'sgn'], 1, {
         latex: '\\operatorname{sign}\\left(%1\\right)',
-        glsl: 'sign(%1)'
+        glsl: 'sign(%1)',
+        cppf: '%1>0.0f?1.0f:%1<0.0f?-1.0f:0.0f',
+        cppd: '%1>0.0?1.0:%1<0.0?-1.0:0.0',
     }, new Interval(), new Interval(-1, 1), (x) => x > 0. ? 1. : x < 0. ? -1. : 0.),
     new MathFunction(['max'], 0, {
         latex: '\\max\\left(%0\\right)',
-        glsl: 'max(%1,%2)'
+        glsl: 'max(%1,%2)',
+        cppf: 'fmax(%1,%2)',
+        cppd: 'fmax(%1,%2)',
     }),
     new MathFunction(['min'], 0, {
         latex: '\\min\\left(%0\\right)',
-        glsl: 'min(%1,%2)'
+        glsl: 'min(%1,%2)',
+        cppf: 'fmin(%1,%2)',
+        cppd: 'fmin(%1,%2)',
     }),
     new MathFunction(['clamp'], 3, {
         latex: '\\operatorname{clamp}\\left(%1,%2,%3\\right)',
-        glsl: 'clamp(%1,%2,%3)'
+        glsl: 'clamp(%1,%2,%3)',
+        cppf: '%1<%2?%2:%1>%3?%3:%1',
+        cppd: '%1<%2?%2:%1>%3?%3:%1',
     }),
     new MathFunction(['lerp', 'mix'], 3, {
         latex: '\\operatorname{lerp}\\left(%1,%2,%3\\right)',
-        glsl: 'mix(%1,%2,%3)'
+        glsl: 'mix(%1,%2,%3)',
+        cppf: '%1+(%2-%1)*%3',
+        cppd: '%1+(%2-%1)*%3',
     }),
     new MathFunction(['log10'], 1, {
         latex: '\\log_{10}\\left(%1\\right)',
         glsl: '0.43429448190325176*log(%1)',
+        cppf: 'log10(%1)',
+        cppd: 'log10(%1)',
     }, new Interval(0, Infinity), new Interval(), Math.log10),
     new MathFunction(['log2'], 1, {
         latex: '\\log_{2}\\left(%1\\right)',
         glsl: '1.4426950408889634*log(%1)',
+        cppf: 'log2(%1)',
+        cppd: 'log2(%1)',
     }, new Interval(0, Infinity), new Interval(), Math.log2),
     new MathFunction(['log'], 2, {
         latex: '\\log_{%1}\\left(%2\\right)',
         glsl: 'log(%2)/log(%1)'
     }),
     new MathFunction(['powint'], 2, {
-        latex: '\\left(%1\\right)^{%2}',
-        glsl: '(mod(abs(%2)+0.5,2.)<1.?1.:sign(%1))*pow(abs(%1),%2)'
+        glsl: '(mod(abs(%2)+0.5,2.)<1.?1.:sign(%1))*pow(abs(%1),%2)',
+        cppf: '(%1>0.0f||fmod(abs(%2)+0.5f,2.0f)<1.0f?1.0f:-1.0f)*pow(abs(%1),%2)',
+        cppd: '(%1>0.||fmod(abs(%2)+0.5,2.)<1.?1.:-1.)*pow(abs(%1),%2)',
     }),
     new MathFunction(['hypot'], 0, {
         latex: "\\sqrt{\\left(%1\\right)^2+\\left(%2\\right)^2}",
-        glsl: "length(vec2(%1,%2))"
-    }, new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['hypot1'], 1, {
-        glsl: "%1"
-    }, new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['hypot2'], 2, {
-        glsl: "length(vec2(%1,%2))"
-    }, new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['hypot3'], 3, {
-        glsl: "length(vec3(%1,%2,%3))"
-    }, new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['hypot4'], 4, {
-        glsl: "length(vec4(%1,%2,%3,%4))"
+        glsl: "sqrt(%1*%1+%2*%2)"
     }, new Interval(), new Interval(0, Infinity)),
     new MathFunction(['atan2', 'arctan', 'artan', 'atan'], 2, {
         latex: '\\mathrm{atan2}\\left(%1,%2\\right)',
-        glsl: 'atan(%1,%2)'
+        glsl: 'atan(%1,%2)',
+        cppf: 'atan2(%1,%2)',
+        cppd: 'atan2(%1,%2)',
     }, new Interval(), new Interval(-PI, PI)),
     new MathFunction(['erf'], 1, {
         latex: '\\mathrm{erf}\\left(%1\\right)',
-        glsl: 'mf_erf(%1)'
+        glsl: 'mf_erf(%1)',
+        glslExt: ['erf'],
+        cppf: 'erf(%1)',
+        cppd: 'erf(%1)',
     }, new Interval(), new Interval(-1, 1)),
+    new MathFunction(['erfc'], 1, {
+        latex: '\\mathrm{erfc}\\left(%1\\right)',
+        glsl: 'mf_erfc(%1)',
+        glslExt: ['erf', 'erfc'],
+        cppf: 'erfc(%1)',
+        cppd: 'erfc(%1)',
+    }, new Interval(), new Interval(0, 2)),
     new MathFunction(['inverf', 'erfinv'], 1, {
         latex: '\\mathrm{erf}^{-1}\\left(%1\\right)',
-        glsl: 'mf_erfinv(%1)'
+        glsl: 'mf_erfinv(%1)',
+        glslExt: ['erfinv'],
+        cppf: 'erfinv(%1)',
+        cppfExt: ['erfinv'],
+        cppd: 'erfinv(%1)',
+        cppdExt: ['erfinv'],
     }, new Interval(-1, 1), new Interval()),
 ];
 
@@ -545,7 +589,9 @@ FunctionSubs.divEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.powEvalObjects = function (a, b, lang) {
-    if (a.code == 'e' || a.code == '' + Math.E) {
+    if (a.code == 'e' ||
+        a.code == MathFunctions['CONST']['1'].langs[lang]
+            .replaceAll("%1", Math.E)) {
         return new EvalObject(
             a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
             MathFunctions['exp']['1'].subSource([b], lang).code,
@@ -654,33 +700,14 @@ FunctionSubs.hypotLatex = function (args) {
 FunctionSubs.hypotEvalObjects = function (args, lang) {
     if (args.length < 2)
         throw "To few argument for function " + this.names[0];
-    while (args.length > 1) {
-        var args1 = [];
-        let two = new EvalObject([], "", true, new Interval(2, 2), true);
-        for (var i = 0; i < args.length; i += 4) {
-            var numArgs = Math.min(args.length - i, 4);
-            var code = MathFunctions['hypot' + numArgs]['' + numArgs].langs[lang];
-            var postfix = [];
-            var isNumeric = true, isCompatible = true;
-            var eo = FunctionSubs.powEvalObjects(args[i], two, lang);
-            for (var _ = 0; _ < numArgs; _++) {
-                var arg = args[i + _];
-                code = code.replaceAll("%" + (_ + 1), arg.code);
-                postfix = postfix.concat(arg.postfix);
-                isNumeric &= arg.isNumeric, isCompatible &= arg.isCompatible;
-                if (_ > 0) eo = FunctionSubs.addEvalObjects(
-                    eo, FunctionSubs.powEvalObjects(args[i + _], two, lang), lang);
-            }
-            args1.push(new EvalObject(
-                postfix.concat([new Token('function', this.names[0])]),
-                code,
-                isNumeric,
-                MathFunctions['sqrt']['1'].subSource([eo], lang).range,
-                isCompatible));
-        }
-        args = args1;
+    let two = new EvalObject([], "", true, new Interval(2, 2), true);
+    var res = null;
+    for (var i = 0; i < args.length; i += 1) {
+        var a2 = FunctionSubs.powEvalObjects(args[i], two, lang);
+        if (res == null) res = a2;
+        else res = FunctionSubs.addEvalObjects(res, a2, lang);
     }
-    return args[0];
+    return MathFunctions['sqrt']['1'].subSource([res], lang);
 };
 
 FunctionSubs.atan2EvalObjects = function (args, lang) {
@@ -759,6 +786,7 @@ FunctionSubs.log2EvalObjects = function (args, lang) {
 // Example: initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC))
 
 BuiltInMathFunctions.initMathFunctions = function (funList) {
+    // function list
     let funs = MathFunctions;
     for (var i = 0; i < funList.length; i++) {
         for (var j = 0; j < funList[i].names.length; j++) {
@@ -767,6 +795,25 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
             funs[name]['' + funList[i].numArgs] = funList[i];
         }
     }
+
+    // code generator language inheritance
+    for (var langi = 0; langi < CodeGenerator.langsOrder.length; langi++) {
+        var lang = CodeGenerator.langsOrder[langi];
+        var inherit = CodeGenerator.langs[lang].inherit;
+        for (var funname in funs) {
+            for (var argc in funs[funname]) {
+                let fun = funs[funname][argc];
+                if (!fun.langs.hasOwnProperty(lang))
+                    for (var i = 0; i < inherit.length; i++)
+                        if (fun.langs.hasOwnProperty(inherit[i])) {
+                            fun.langs[lang] = fun.langs[inherit[i]];
+                            break;
+                        }
+            }
+        }
+    }
+
+    // special substitutions
     funs['ADD']['2'].subSource = function (args, lang) {
         this.assertArgs(args);
         return FunctionSubs.addEvalObjects(args[0], args[1], lang);

@@ -249,9 +249,10 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         if (/^[0-9]*\.{0,1}[0-9]*$/.test(token) || /^[0-9]*\.{0,1}[0-9]+$/.test(token)) {
             if (!isFinite(Number(token))) throw "Failed to parse number " + token;
             var num = token.trim('0');
-            if (num == "") num = "0.";
+            if (num == "") num = "0";
             if (num[0] == '.') num = "0" + num;
             if (!/\./.test(num)) num += ".";
+            if (/\.$/.test(num)) num += "0";
             queue.push(new Token("number", num));
         }
         // function
@@ -328,19 +329,6 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
     while (stack.length != 0) {
         queue.push(stack[stack.length - 1]);
         stack.pop();
-    }
-
-    // replace operators with functions
-    if (false) for (var i = 0; i < queue.length; i++) {
-        if (queue[i].type == 'operator') {
-            queue[i].type = 'function';
-            queue[i].numArgs = 2;
-            queue[i].str = {
-                '+': 'Add', '-': 'Sub',
-                '*': 'Mul', '/': 'Div',
-                '^': 'pow'
-            }[queue[i].str];
-        }
     }
     return queue;
 }
@@ -445,8 +433,25 @@ MathParser.parseLine = function (line) {
 MathParser.parseInput = function (input) {
     // accept different comments
     input = input.replaceAll('%', '#').replaceAll('//', '#');
+
+    // copypasta x²+y²+z²–1
+    input = input.replace(/[\uff01-\uff5e]/g,
+        (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+    input = input.replace(/[˗‐‑‒–⁃−﹘]/g, '-');
+    input = input.replace(/[⁎∗·•‧∙⋅⸱]/g, '*');
+    input = input.replace(/[⁄∕⟋÷]/g, '/');
+    input = input.replace(/[ˆ]/g, '^');
+    input = input.replace(/[^\^](⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, function (_, s) {
+        const a = "⁻⁰¹²³⁴⁵⁶⁷⁸⁹", b = "-0123456789";
+        var res = _[0] + '^';
+        for (var i = 0; i < s.length; i++)
+            res += b[a.indexOf(s[i])];
+        return res;
+    });
+
     // split to arrays
     input = input.replace(/\r?\n/g, ';');
+    input = input.replace(/\s+/, ' ');
     input = input.trim().trim(';').trim().split(';');
 
     // replace Greek letters
@@ -629,8 +634,8 @@ MathParser.parseInput = function (input) {
                 var lr = line.split('=');
                 left = lr[0].trim(), right = lr[1].trim();
             }
-            left = postfixToLatex(MathParser.exprToPostfix(left, functions));
-            right = postfixToLatex(MathParser.exprToPostfix(right, functions));
+            left = CodeGenerator.postfixToLatex(MathParser.exprToPostfix(left, functions));
+            right = CodeGenerator.postfixToLatex(MathParser.exprToPostfix(right, functions));
             line = left + "=" + right;
         }
         if (comment != "") {
@@ -647,267 +652,3 @@ MathParser.parseInput = function (input) {
     }
 }
 
-
-// ============================ EVALUATION ==============================
-
-
-// Convert a post-polish math expression to GLSL code
-function postfixToGlsl(queue, lang) {
-    // subtree counter
-    var subtreesLength = 0;
-    var subtrees = {};
-    var intermediates = [];
-    function addSubtree(evalobj) {
-        let postfix = evalobj.postfix;
-        var key = [];
-        for (var i = 0; i < postfix.length; i++) key.push(postfix[i].str);
-        key = key.join(',');
-        if (!subtrees.hasOwnProperty(key)) {
-            var id = '' + subtreesLength;
-            subtrees[key] = {
-                id: id,
-                length: postfix.length,
-                postfix: postfix,
-            };
-            intermediates.push({
-                id: id,
-                code: evalobj.code,
-            });
-            subtreesLength += 1;
-        }
-        return subtrees[key].id;
-    }
-    // postfix evaluation
-    var stack = [];  // EvalObject objects
-    for (var i = 0; i < queue.length; i++) {
-        var token = queue[i];
-        // number
-        if (token.type == 'number') {
-            var s = token.str;
-            if (!/\./.test(s)) s += '.';
-            var obj = new EvalObject([token],
-                s,
-                true, new Interval(Number(s), Number(s)), true);
-            obj.code = MathFunctions['CONST']['1'].subSource([obj], lang).code;
-            stack.push(obj);
-        }
-        // variable
-        else if (token.type == "variable") {
-            var s = token.str;
-            var isNumeric = false;
-            var interval = new Interval();
-            if (MathParser.isIndependentVariable(token.str)) {
-                s = MathParser.IndependentVariables[token.str];
-            }
-            else if (token.str == "e") {
-                s = Math.E + "";
-                isNumeric = true;
-                interval.x0 = interval.x1 = Math.E;
-            }
-            else if (token.str == "π") {
-                s = Math.PI + "";
-                isNumeric = true;
-                interval.x0 = interval.x1 = Math.PI;
-            }
-            else {
-                throw "Undeclared variable " + token.str;
-            }
-            stack.push(new EvalObject(
-                [token], s, isNumeric, interval, true));
-        }
-        // operators
-        else if (token.type == "operator") {
-            var v = null;
-            if (token.str == "^") {
-                var v1 = stack[stack.length - 2];
-                var v2 = stack[stack.length - 1];
-                stack.pop(); stack.pop();
-                v = FunctionSubs.powEvalObjects(v1, v2, lang);
-            }
-            else {
-                var v1 = stack[stack.length - 2];
-                var v2 = stack[stack.length - 1];
-                stack.pop(); stack.pop();
-                if (token.str == "+")
-                    v = FunctionSubs.addEvalObjects(v1, v2, lang);
-                if (token.str == "-")
-                    v = FunctionSubs.subEvalObjects(v1, v2, lang);
-                if (token.str == "*")
-                    v = FunctionSubs.mulEvalObjects(v1, v2, lang);
-                if (token.str == "/")
-                    v = FunctionSubs.divEvalObjects(v1, v2, lang);
-            }
-            var id = addSubtree(v);
-            v.postfix = [new Token('variable', id)];
-            v.code = "v" + id;
-            stack.push(v);
-        }
-        // function
-        else if (token.type == 'function') {
-            var fun = MathFunctions[token.str];
-            var numArgs = token.numArgs;
-            var args = [];
-            for (var j = numArgs; j > 0; j--)
-                args.push(stack[stack.length - j]);
-            for (var j = 0; j < numArgs; j++)
-                stack.pop();
-            if (fun['' + numArgs] == undefined) fun = fun['0'];
-            else fun = fun['' + numArgs];
-            if (fun == undefined) throw new Error(
-                "Incorrect number of arguments for function `" + token.str + "`");
-            var v = fun.subSource(args, lang);
-            var id = addSubtree(v);
-            v.postfix = [new Token('variable', id)];
-            v.code = "v" + id;
-            stack.push(v);
-        }
-        else {
-            throw "Unrecognized token " + equ[i];
-        }
-    }
-    if (stack.length != 1) throw "Result stack length is not 1";
-    // get result
-    var result = {
-        code: [],
-        codegrad: [],
-        isCompatible: stack[0].isCompatible
-    };
-    var toGrad = function (code) {
-        return code.replace(/([^A-Za-z]?)mf_/g, "$1mfg_");
-    };
-    for (var i = 0; i < intermediates.length; i++) {
-        let intermediate = intermediates[i];
-        var v = "float v" + intermediate.id + " = " + intermediate.code + ";";
-        var g = "vec4 v" + intermediate.id + " = " + toGrad(intermediate.code) + ";";
-        result.code.push(v);
-        result.codegrad.push(g);
-    }
-    result.code.push("return " + stack[0].code + ";");
-    result.code = result.code.join('\n');
-    result.codegrad.push("return " + toGrad(stack[0].code) + ";");
-    result.codegrad = result.codegrad.join('\n');
-    return result;
-}
-
-// Convert a post-polish math expression to LaTeX code
-function postfixToLatex(queue) {
-    const operators = {
-        '-': 1, '+': 1,
-        '*': 2, '/': 2,
-        '^': 3
-    };
-    function varnameToLatex(varname) {
-        if (varname.length >= 2 && varname[1] != "_")
-            varname = varname[0] + "_" + varname.substring(1, varname.length);
-        if (/_/.test(varname)) {
-            var j = varname.search('_');
-            varname = varname.substring(0, j + 1) + "{" + varname.substring(j + 1, varname.length) + "}";
-        }
-        for (var i = 0; i < MathParser.greekLetters.length; i++) {
-            var gl = MathParser.greekLetters[i];
-            varname = varname.replaceAll(gl[1], "\\" + gl[0] + " ");
-        }
-        varname = varname.replace(" }", "}").replace(" _", "_");
-        return varname.trim();
-    }
-    var stack = [];
-    for (var i = 0; i < queue.length; i++) {
-        var token = queue[i];
-        // number
-        if (token.type == 'number') {
-            var s = token.str.replace(/\.$/, "");
-            if (s == "" || s[0] == ".") s = "0" + s;
-            stack.push(new EvalLatexObject([token], s, Infinity));
-        }
-        // variable
-        else if (token.type == "variable") {
-            var s = varnameToLatex(token.str);
-            if (s == "e") s = "\\operatorname{e}";
-            if (s == "π") s = "\\pi";
-            stack.push(new EvalLatexObject([token], s, Infinity));
-        }
-        // operators
-        else if (token.type == "operator") {
-            var precedence = operators[token.str];
-            var v1 = stack[stack.length - 2];
-            var v2 = stack[stack.length - 1];
-            stack.pop(); stack.pop();
-            var tex1 = v1.latex, tex2 = v2.latex;
-            if (token.str != "/") {
-                if (precedence > v1.precedence)
-                    tex1 = "\\left(" + tex1 + "\\right)";
-                if (precedence >= v2.precedence)
-                    tex2 = "\\left(" + tex2 + "\\right)";
-            }
-            var latex = "";
-            if (token.str == "-") {
-                if (v1.latex == "0") latex = "-" + tex2;
-                else latex = tex1 + "-" + tex2;
-            }
-            else if (token.str == "+") {
-                latex = tex1 + "+" + tex2;
-            }
-            else if (token.str == "*") {
-                if (/^[\{\s]*[\d\.]/.test(tex2))
-                    latex = "{" + tex1 + "}\\cdot{" + tex2 + "}";
-                else latex = "{" + tex1 + "}{" + tex2 + "}";
-            }
-            else if (token.str == "/") {
-                latex = "\\frac{" + tex1 + "}{" + tex2 + "}";
-            }
-            else if (token.str == "^") {
-                latex = "{" + tex1 + "}^{" + tex2 + "}";
-                if (token.str == "^" && tex1 == "\\operatorname{e}" && false)
-                    latex = MathFunctions['exp']['1'].subLatex([v2]);
-            }
-            else throw new Error("Unrecognized operator" + token.str);
-            var obj = new EvalLatexObject(
-                v1.postfix.concat(v2.postfix).concat([token]),
-                latex, precedence);
-            stack.push(obj);
-        }
-        // function
-        else if (token.type == 'function') {
-            var numArgs = token.numArgs;
-            var args = [];
-            for (var j = numArgs; j > 0; j--)
-                args.push(stack[stack.length - j]);
-            for (var j = 0; j < numArgs; j++)
-                stack.pop();
-            var fun = MathFunctions[token.str];
-            if (fun != undefined) {
-                if (fun['' + numArgs] == undefined) fun = fun['0'];
-                else fun = fun['' + numArgs];
-                if (fun == undefined) throw new Error(
-                    "Incorrect number of function arguments for function `" + token.str + "`");
-                stack.push(new EvalLatexObject(
-                    args.concat([token]), fun.subLatex(args), Infinity));
-            }
-            else {
-                var argsLatex = [];
-                for (var j = 0; j < numArgs; j++) argsLatex.push(args[j].latex);
-                stack.push(new EvalLatexObject(
-                    args.concat([token]),
-                    varnameToLatex(token.str) + "\\left(" + argsLatex.join(',') + "\\right)",
-                    Infinity
-                ));
-            }
-        }
-        else {
-            throw "Unrecognized token " + equ[i];
-        }
-    }
-    if (stack.length != 1) throw "Result stack length is not 1";
-    return stack[0].latex;
-}
-
-
-// Debug in node.js
-if (typeof window === "undefined") {
-    BuiltInMathFunctions.initMathFunctions(
-        BuiltInMathFunctions.rawMathFunctionsShared);
-    var input = "iTime(0)";
-    var result = parseInput(input);
-    // var result = MathParser.exprToPostfix(input, MathFunctions);
-    console.log(result.postfix);
-}
