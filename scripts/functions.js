@@ -484,7 +484,7 @@ BuiltInMathFunctions.rawMathFunctionsC = [
     }),
     new MathFunction(['loggamma', 'lgamma', 'lngamma'], 1, {
         latex: '\\ln\\Gamma\\left(%1\\right)',
-        glslc: 'mf_lngamma(%1)',
+        glslc: 'mc_lngamma(%1)',
     }),
     new MathFunction(['zeta'], 1, {
         latex: '\\zeta\\left(%1\\right)',
@@ -603,7 +603,8 @@ FunctionSubs.powEvalObjects = function (a, b, lang) {
     var n = b.range.x0 == b.range.x1 ? b.range.x0 : NaN;
     if (n >= -64 && n <= 65536 && n == Math.round(n)) {
         if (n == 0) return new EvalObject(
-            [new Token("number", '1.')], "1.",
+            [new Token("number", '1.0')],
+            MathFunctions['CONST'][1].langs[lang].replaceAll("%1", '1.0'),
             true, new Interval(1, 1), a.isCompatible
         );
         if (n == 1) return a;

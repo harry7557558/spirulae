@@ -15,7 +15,7 @@ const builtinFunctions = [
     ["CM Snowflower", "sqrt(ln(z^6)^5)*(-i-1)"],
     ["Trigonometric Spam", "sin(cos(tan(csc(sec(cot(sqrt(5(x+1)"],
     ["Mandelbrot Set", "f(x)=x^2+z;g=f(f(f(f(f(f(f(z;sin(ln(ln(1/|g|)-1))"],
-    ["Julie Eyes", "f(x)=x^3+(-0.45+0.65i;g(z)=f(f(f(f(f(z;sin(zln(ln(0.5/|g(z)|)))"],
+    ["Julia Eyes", "f(x)=x^3+(-0.45+0.65i;g(z)=f(f(f(f(f(z;sin(zln(ln(0.5/|g(z)|)))"],
     ["Fractal Stamens", "f(z)=z^3+|z|;v=f(f(f(f(f(f(f(f(1/z;e^(iarg(z))*v"],
     ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
     ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"],

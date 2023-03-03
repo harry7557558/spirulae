@@ -279,14 +279,14 @@ CodeGenerator._postfixToSource = function (queue, funname, lang, extensionMap) {
     var stack = [];  // EvalObject objects
     for (var i = 0; i < queue.length; i++) {
         var token = queue[i];
+        let constexpr = MathFunctions['CONST'][1].langs[lang];
         // number
         if (token.type == 'number') {
             var s = token.str;
             if (!/\./.test(s)) s += '.';
             var obj = new EvalObject([token],
-                s,
+                constexpr.replaceAll("%1", s),
                 true, new Interval(Number(s), Number(s)), true);
-            obj.code = MathFunctions['CONST']['1'].subSource([obj], lang).code;
             stack.push(obj);
         }
         // variable
@@ -294,7 +294,6 @@ CodeGenerator._postfixToSource = function (queue, funname, lang, extensionMap) {
             var s = token.str;
             var isNumeric = false;
             var interval = new Interval();
-            let constexpr = MathFunctions['CONST'][1].langs[lang];
             if (MathParser.isIndependentVariable(token.str)) {
                 s = MathParser.IndependentVariables[token.str];
             }
