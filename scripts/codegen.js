@@ -86,8 +86,8 @@ CodeGenerator.langs.glsl = {
             name: 'beta',
             source: "float mf_beta(float x, float y) {\n\
     const float pi = 3.14159265358979;\n\
-    if (x == round(x) && x <= 0.0) x += 1e-6;\n\
-    if (y == round(y) && y <= 0.0) y += 1e-6;\n\
+    if (x == round(x) && x <= 0.0) x += min(1e-6*(abs(x)+1.0), 1e-2);\n\
+    if (y == round(y) && y <= 0.0) y += min(1e-6*(abs(y)+1.0), 1e-2);\n\
     float c = mf_loggamma(x)+mf_loggamma(y)-mf_loggamma(x+y);\n\
     float s = sign(sin(pi*min(x,0.5)))*sign(sin(pi*min(y,0.5)))*sign(sin(pi*min(x+y,0.5)));\n\
     return s*exp(c);\n\
@@ -97,6 +97,8 @@ CodeGenerator.langs.glsl = {
             name: 'permutation',
             source: "float mf_permutation(float x, float y) {\n\
     const float pi = 3.14159265358979;\n\
+    if (x == round(x)) x += min(1e-6*(abs(x)+1.0), 1e-2);\n\
+    if (y == round(y)) y -= min(1e-6*(abs(y)+1.0), 1e-2);\n\
     float c = mf_loggamma(x+1.0)-mf_loggamma(x-y+1.0);\n\
     float s = sign(sin(pi*min(x+1.0,0.5)))*sign(sin(pi*min(x-y+1.0,0.5)));\n\
     return s*exp(c);\n\
