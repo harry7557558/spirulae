@@ -53,6 +53,54 @@ CodeGenerator.langs.glsl = {
     float c = 0.5*u+4.3307;\n\
     return sign(x)*sqrt(sqrt(c*c-u/0.147)-c);\n\
 }"
+        },
+        {
+            name: 'mf_lgamma_1',
+            source: "float mf_lgamma_1(float x) {\n\
+    return (x-0.48925102)*log(x)-x+0.05778111/x+0.97482605-0.06191856*log(log(x+1.0)+1.0);\n\
+}"
+        },
+        {
+            name: 'gamma',
+            source: "float mf_gamma(float x) {\n\
+    const float pi = 3.14159265358979;\n\
+    if (x >= 1.0) return exp(mf_lgamma_1(x));\n\
+    if (x < 0.0) return pi/sin(pi*x)*exp(-mf_lgamma_1(1.0-x));\n\
+    float s = min(1.0-x, 1.0);\n\
+    s = s*s*s*(10.0-s*(15.0-6.0*s));\n\
+    return exp(mix(mf_lgamma_1(x), log(pi/sin(pi*x))-mf_lgamma_1(1.0-x), s));\n\
+}"
+        },
+        {
+            name: 'loggamma',
+            source: "float mf_loggamma(float x) {\n\
+    const float pi = 3.14159265358979;\n\
+    if (x >= 1.0) return mf_lgamma_1(x);\n\
+    if (x < 0.0) return log(pi/abs(sin(pi*x)))-mf_lgamma_1(1.0-x);\n\
+    float s = min(1.0-x, 1.0);\n\
+    s = s*s*s*(10.0-s*(15.0-6.0*s));\n\
+    return mix(mf_lgamma_1(x), log(pi/abs(sin(pi*x)))-mf_lgamma_1(1.0-x), s);\n\
+}"
+        },
+        {
+            name: 'beta',
+            source: "float mf_beta(float x, float y) {\n\
+    const float pi = 3.14159265358979;\n\
+    if (x == round(x) && x <= 0.0) x += 1e-6;\n\
+    if (y == round(y) && y <= 0.0) y += 1e-6;\n\
+    float c = mf_loggamma(x)+mf_loggamma(y)-mf_loggamma(x+y);\n\
+    float s = sign(sin(pi*min(x,0.5)))*sign(sin(pi*min(y,0.5)))*sign(sin(pi*min(x+y,0.5)));\n\
+    return s*exp(c);\n\
+}"
+        },
+        {
+            name: 'permutation',
+            source: "float mf_permutation(float x, float y) {\n\
+    const float pi = 3.14159265358979;\n\
+    float c = mf_loggamma(x+1.0)-mf_loggamma(x-y+1.0);\n\
+    float s = sign(sin(pi*min(x+1.0,0.5)))*sign(sin(pi*min(x-y+1.0,0.5)));\n\
+    return s*exp(c);\n\
+}"
         }
     ],
 };

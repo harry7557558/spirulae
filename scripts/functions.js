@@ -450,6 +450,44 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppd: 'erfinv(%1)',
         cppdExt: ['erfinv'],
     }, new Interval(-1, 1), new Interval()),
+    new MathFunction(['gamma', 'Gamma'], 1, {
+        latex: '\\Gamma\\left(%1\\right)',
+        glsl: 'mf_gamma(%1)',
+        glslExt: ['mf_lgamma_1', 'gamma'],
+        cppf: 'tgamma(%1)',
+        cppd: 'tgamma(%1)',
+    }),
+    new MathFunction(['lgamma', 'lGamma', 'lngamma', 'lnGamma', 'loggamma', 'logGamma'], 1, {
+        latex: '\\mathrm{ln\\Gamma}\\left(%1\\right)',
+        glsl: 'mf_loggamma(%1)',
+        glslExt: ['mf_lgamma_1', 'loggamma'],
+        cppf: 'lgamma(%1)',
+        cppd: 'lgamma(%1)',
+    }),
+    new MathFunction(['Beta'], 2, {
+        latex: '\\mathrm{B}\\left(%1,%2\\right)',
+        glsl: 'mf_beta(%1,%2)',
+        glslExt: ['mf_lgamma_1', 'loggamma', 'beta'],
+        // cppf: 'std::beta(%1,%2)',
+        // cppd: 'std::beta(%1,%2)',
+        cppf: null, cppd: null
+    }),
+    new MathFunction(['nCr', 'nCk', 'combination'], 2, {
+        latex: '\\mathrm{nCr}\\left(%1,%2\\right)',
+        glsl: '1.0/((%1+1.0)*mf_beta(%1-%2+1.0,%2+1.0))',
+        glslExt: ['mf_lgamma_1', 'loggamma', 'beta'],
+        // cppf: '1.0f/((%1+1.0f)*std::beta(%1-%2+1.0f,%2+1.0f))',
+        // cppd: '1.0/((%1+1.0)*std::beta(%1-%2+1.0,%2+1.0))',
+        cppf: null, cppd: null
+    }),
+    new MathFunction(['nPr', 'nPk', 'permutation'], 2, {
+        latex: '\\mathrm{nPr}\\left(%1,%2\\right)',
+        glsl: 'mf_permutation(%1,%2)',
+        glslExt: ['mf_lgamma_1', 'loggamma', 'permutation'],
+        // cppf: 'tgamma(%1+1.0f)/tgamma(%1-%2+1.0f)',
+        // cppd: 'tgamma(%1+1.0)/tgamma(%1-%2+1.0)',
+        cppf: null, cppd: null
+    }),
 ];
 
 // Built-in complex-only functions
