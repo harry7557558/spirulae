@@ -4,7 +4,7 @@
 
 
 let MathParser = {
-    // independent variables, can be reassigned
+    // independent variables, one letter, can be reassigned
     IndependentVariables: {
         'x': "x",
         'y': "y",
@@ -12,6 +12,15 @@ let MathParser = {
     },
     isIndependentVariable: function (name) {
         return MathParser.IndependentVariables.hasOwnProperty(name);
+    },
+    // dependent variables, one letter
+    DependentVariables: {},  // name: bool required
+    DependentFunctions: {},
+    isDependentVariable: function (name) {
+        return MathParser.DependentVariables.hasOwnProperty(name);
+    },
+    isDependentFunction: function (name) {
+        return MathParser.DependentFunctions.hasOwnProperty(name);
     },
     // regex to match a variable/function name
     reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
@@ -373,8 +382,16 @@ MathParser.parseLine = function (line) {
             if (MathParser.isIndependentVariable(left)) {
                 res.type = "main";
                 res.main = {
-                    left: MathParser.balanceParenthesis(left),
-                    right: MathParser.balanceParenthesis(right)
+                    left: left,
+                    right: right
+                };
+            }
+            // assign main variable
+            else if (MathParser.isDependentVariable(left)) {
+                res.type = "mainVariable";
+                res.variable = {
+                    name: left,
+                    string: right
                 };
             }
             // definition
@@ -472,22 +489,32 @@ MathParser.parseInput = function (input) {
     var functions_str = {};
     var variables_str = {};
     var mainEqusLr = [];  // main equation left/right
+    var mainVariables = {};
     for (var i = 0; i < input.length; i++) {
         var res = MathParser.parseLine(input[i]);
         if (res.type == "main") {
             mainEqusLr.push(res.main);
+            continue;
         }
-        else if (res.type == "function") {
+        if (res.type == "mainVariable") {
+            var variable = res.variable;
+            if (mainVariables[variable.name] != undefined)
+                throw "Multiple definitions of variable `" + variable.name + "`";
+            mainVariables[variable.name] = variable.string;
+        }
+        if (/variable/.test(res.type.toLowerCase())) {
+            var variable = res.variable;
+            if (variables_str[variable.name] != undefined)
+                throw "Multiple definitions of variable `" + variable.name + "`";
+            variables_str[variable.name] = variable.string;
+            continue;
+        }
+        if (res.type == "function") {
             var fun = res.function;
             if (functions_str[fun.name] != undefined)
                 throw "Multiple definitions of function " + fun[0];
             functions_str[fun.name] = fun;
-        }
-        else if (res.type == "variable") {
-            var variable = res.variable;
-            if (variables_str[variable.name] != undefined)
-                throw "Multiple definitions of variable " + left;
-            variables_str[variable.name] = variable.string;
+            continue;
         }
     }
 
@@ -555,7 +582,7 @@ MathParser.parseInput = function (input) {
                 else {
                     if (variable.resolving) throw "Recursive variable definition is not supported.";
                     variable.resolving = true;
-                    var res = dfs(variable.postfix, variables)[0];
+                    var res = dfs(variable.postfix, variables);
                     stack.push(res);
                     variable.resolving = false;
                 }
@@ -580,7 +607,7 @@ MathParser.parseInput = function (input) {
                         stack.pop();
                     if (fun.resolving) throw "Recursive function definition is not supported.";
                     fun.resolving = true;
-                    var res = dfs(fun.postfix, variables1)[0];
+                    var res = dfs(fun.postfix, variables1);
                     fun.resolving = false;
                     stack.push(res);
                 }
@@ -612,10 +639,19 @@ MathParser.parseInput = function (input) {
             }
         }
         if (stack.length != 1) throw "Result stack size is not 1";
-        return stack;
+        return stack[0];
     }
     for (var i = 0; i < mainEqus.length; i++)
-        mainEqus[i] = dfs(mainEqus[i], variables)[0];
+        mainEqus[i] = dfs(mainEqus[i], variables);
+    var result = {
+        val: mainEqus,
+    };
+    for (var varname in MathParser.DependentVariables) {
+        if (mainVariables.hasOwnProperty(varname))
+            result[varname] = dfs(variables[varname].postfix, variables);
+        else if (MathParser.DependentVariables[varname])
+            throw "Definition for `" + varname + "` not found.";
+    }
 
     // latex
     var latexList = [];
@@ -646,9 +682,7 @@ MathParser.parseInput = function (input) {
         }
         latexList.push(line + comment);
     }
-    return {
-        postfix: mainEqus,
-        latex: latexList
-    }
+    result.latex = latexList;
+    return result;
 }
 

@@ -13,7 +13,15 @@ function Token(type, str) {
 }
 
 
-function Interval(x0 = -Infinity, x1 = Infinity) {
+let IntervalConfig = {
+    defaultX0: -Infinity,
+    defaultX1: Infinity
+};
+
+function Interval(
+    x0 = IntervalConfig.defaultX0,
+    x1 = IntervalConfig.defaultX1
+) {
     this.x0 = Math.min(x0, x1);
     this.x1 = Math.max(x0, x1);
     if (!isFinite(this.x0)) this.x0 = -Infinity;

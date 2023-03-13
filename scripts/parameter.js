@@ -223,7 +223,8 @@ document.getElementById("error-message").addEventListener("contextmenu", message
 
 var UpdateFunctionInputConfig = {
     complexMode: false,
-    equationMode: true,
+    implicitMode: true,  // add =0 to the end
+    valMode: true,  // requires a main equation
     warnNaN: true,
     warnNumerical: false,
 };
@@ -254,19 +255,22 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             throw e;
         }
         var errmsg = "";
-        if (parsed.postfix.length == 0) errmsg = "No function to graph.";
-        if (parsed.postfix.length > 1) errmsg = "Multiple main equations found.";
-        parsed.postfix.push([]);
-        parsed.postfix = parsed.postfix[0];
+        if (UpdateFunctionInputConfig.implicitMode && parsed.val.length == 0)
+            errmsg = "No function to graph.";
+        if (parsed.val.length > 1)
+            errmsg = "Multiple main equations found.";
+        parsed.val.push([]);
+        parsed.val = parsed.val[0];
         if (UpdateFunctionInputConfig.complexMode) {
-            var variables = MathParser.getVariables(parsed.postfix, false);
+            var variables = MathParser.getVariables(parsed.val, false);
             if (variables.has('x') && variables.has('z'))
                 errmsg = "Cannot have both x and z as the independent variable.";
         }
-        var extraVariables = MathParser.getVariables(parsed.postfix, true);
+        var extraVariables = MathParser.getVariables(parsed.val, true);
         extraVariables.delete('e');
         extraVariables.delete('π');
-        if (extraVariables.size != 0) errmsg = "Definition not found: " + Array.from(extraVariables);
+        if (extraVariables.size != 0)
+            errmsg = "Definition not found: " + Array.from(extraVariables);
         if (!UpdateFunctionInputConfig.equationMode) {
             for (var i = 0; i < parsed.latex.length; i++)
                 parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
@@ -302,8 +306,14 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex, "white");
         }
+        var expr = {};
+        if (UpdateFunctionInputConfig.valMode)
+            expr.val = parsed.val;
+        for (var varname in MathParser.DependentVariables)
+            if (parsed.hasOwnProperty(varname))
+                expr[varname] = parsed[varname];
         glsl = CodeGenerator.postfixToSource(
-            [parsed.postfix], ["funRaw"],
+            [expr], ["funRaw"],
             UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
         );
         var code = glsl.source;

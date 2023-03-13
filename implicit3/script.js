@@ -98,7 +98,7 @@ document.body.onload = function (event) {
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, Math.PI / 6.0),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
-    UpdateFunctionInputConfig.equationMode = true;
+    UpdateFunctionInputConfig.implicitMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
     UpdateFunctionInputConfig.warnNumerical = false;
 

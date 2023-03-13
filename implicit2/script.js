@@ -50,7 +50,7 @@ document.body.onload = function (event) {
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
-    UpdateFunctionInputConfig.equationMode = true;
+    UpdateFunctionInputConfig.implicitMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
     UpdateFunctionInputConfig.warnNumerical = false;
 

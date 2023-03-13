@@ -50,7 +50,7 @@ document.body.onload = function (event) {
         new UniformSlider("rBrightness", "slider-brightness", 0.01, 0.99, 0.6),
     ]);
     UpdateFunctionInputConfig.complexMode = true;
-    UpdateFunctionInputConfig.equationMode = false;
+    UpdateFunctionInputConfig.implicitMode = false;
     UpdateFunctionInputConfig.warnNaN = false;
     UpdateFunctionInputConfig.warnNumerical = true;
 
