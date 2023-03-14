@@ -159,6 +159,9 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     if (!countIndividualTime && timer != null)
         gl.endQuery(timer.TIME_ELAPSED_EXT);
 
+    gl.deleteBuffer(uvBuffer);
+    gl.deleteBuffer(indiceBuffer);
+
     // check timer
     function checkTime() {
         let fpsDisplay = document.getElementById("fps");

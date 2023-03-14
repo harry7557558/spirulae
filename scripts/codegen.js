@@ -327,6 +327,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
 
     // postfix evaluation
     var qmap = {};
+    var isCompatible = true;
     for (var qi in queues) {
         var queue = queues[qi];
         var stack = [];  // EvalObject objects
@@ -424,12 +425,13 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
         if (stack.length != 1)
             throw new Error("Result stack length is not 1");
         qmap[qi] = stack[0].code;
+        isCompatible = isCompatible && stack[0].isCompatible;
     }
 
     // get result
     var result = {
         code: '',
-        isCompatible: stack[0].isCompatible
+        isCompatible: isCompatible
     };
     var lines = [];
     for (var i = 0; i < intermediates.length; i++) {

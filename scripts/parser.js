@@ -449,7 +449,7 @@ MathParser.parseLine = function (line) {
 // Generate postfix expression and LaTeX
 MathParser.parseInput = function (input) {
     // accept different comments
-    input = input.replaceAll('%', '#').replaceAll('//', '#');
+    input = input.replaceAll('%', '#').replaceAll('//', '#').replaceAll('`', '#');
 
     // copypasta x²+y²+z²–1
     input = input.replace(/[\uff01-\uff5e]/g,

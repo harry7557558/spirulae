@@ -312,13 +312,13 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         for (var varname in MathParser.DependentVariables)
             if (parsed.hasOwnProperty(varname))
                 expr[varname] = parsed[varname];
-        glsl = CodeGenerator.postfixToSource(
+        result = CodeGenerator.postfixToSource(
             [expr], ["funRaw"],
             UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
         );
-        var code = glsl.source;
+        var code = result.source;
         console.log(code);
-        if (UpdateFunctionInputConfig.warnNaN && !glsl.isCompatible[0])
+        if (UpdateFunctionInputConfig.warnNaN && !result.isCompatible[0])
             console.warn("Graph may be incorrect on some devices.");
         if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(code))
             console.warn("Function evaluation involves numerical approximation and may be inconsistent across devices.");

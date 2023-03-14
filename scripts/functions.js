@@ -878,9 +878,9 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
         return FunctionSubs.divEvalObjects(args[0], args[1], lang);
     };
     funs['exp']['1'].subLatex = FunctionSubs.expLatex;
-    funs['pow']['2'].subSource = function (args) {
+    funs['pow']['2'].subSource = function (args, lang) {
         this.assertArgs(args);
-        return FunctionSubs.powEvalObjects(args[0], args[1]);
+        return FunctionSubs.powEvalObjects(args[0], args[1], lang);
     };
     if (funs['log'].hasOwnProperty('2'))
         funs['log']['2'].subSource = FunctionSubs.log2EvalObjects;

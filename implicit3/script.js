@@ -133,7 +133,7 @@ function exportAllFunctions(lang) {
         var str = funs[i][1].replaceAll("&#32;", ' ')
         var expr = MathParser.parseInput(str);
         names.push(name);
-        exprs.push(expr.postfix[0]);
+        exprs.push({ val: expr.val[0] });
     }
     var res = CodeGenerator.postfixToSource(exprs, names, lang);
     console.log(res.source);
@@ -141,7 +141,8 @@ function exportAllFunctions(lang) {
 
 function exportCurrentFunction(lang) {
     var str = document.getElementById("equation-input").value;
-    var expr = MathParser.parseInput(str).postfix[0];
-    var res = CodeGenerator.postfixToSource([expr], ["fun"], lang);
+    var expr = MathParser.parseInput(str).val[0];
+    var res = CodeGenerator.postfixToSource(
+        [{ val: expr }], ["fun"], lang);
     console.log(res.source);
 }
