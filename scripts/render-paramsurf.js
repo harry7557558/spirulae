@@ -93,7 +93,12 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.shaderProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0, 0, 0, 1.0);
+    var col = parameterToDict(RawParameters)['bLight'] ?
+        [0.82, 0.8, 0.78] : [4e-4, 5e-4, 6e-4];
+    gl.clearColor(
+        Math.pow(col[0], 1.0 / 2.2),
+        Math.pow(col[1], 1.0 / 2.2),
+        Math.pow(col[2], 1.0 / 2.2), 1.0);
     gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);

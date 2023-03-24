@@ -11,10 +11,19 @@ uniform float uScale;
 
 {%FUN%}
 
+
+vec3 F(float u, float v) {
+    vec3 p = funRaw(u, v);
+#if {%Y_UP%}
+    return vec3(p.x, -p.z, p.y);
+#endif
+    return p;
+}
+
 void main() {
     float u = vertexPosition.x, v = vertexPosition.y;
     vUv = vec2(u, v);
-    vXyz = funRaw(u, v);
+    vXyz = F(u, v);
     gl_Position = transformMatrix * vec4(vXyz,1);
     gl_Position += vec4(screenCenter, 0, 0) * gl_Position.w;
 }

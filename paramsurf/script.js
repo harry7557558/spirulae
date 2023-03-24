@@ -44,8 +44,8 @@ document.body.onload = function (event) {
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("sColor", "select-color"),
-        new GraphingParameter("bTransparency", "checkbox-transparency"),
-        new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
+        // new GraphingParameter("bTransparency", "checkbox-transparency"),
+        // new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, Math.PI / 6.0),
@@ -61,7 +61,7 @@ document.body.onload = function (event) {
     CodeGenerator.langs.glsl.fun = "vec3 {%funname%}(float u, float v) {\n\
 {%funbody%}\n\
     return vec3({%x%}, {%y%}, {%z%});\n\
-}"
+}";
 
     // init viewport
     resetState({

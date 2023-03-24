@@ -20,7 +20,11 @@ uniform float ZERO;  // used in loops to reduce compilation time
 
 
 vec3 F(float u, float v) {
-    return funRaw(u, v);
+    vec3 p = funRaw(u, v);
+#if {%Y_UP%}
+    return vec3(p.x, -p.z, p.y);
+#endif
+    return p;
 }
 vec3 dFdu(float u, float v) {
     float h = 1e-3;
@@ -29,6 +33,34 @@ vec3 dFdu(float u, float v) {
 vec3 dFdv(float u, float v) {
     float h = 1e-3;
     return (F(u,v+h)-F(u,v-h))/(2.0*h);
+}
+
+// u, v => f
+// https://en.wikipedia.org/wiki/Parametric_surface#Local_differential_geometry
+// https://en.wikipedia.org/wiki/First_fundamental_form
+// https://en.wikipedia.org/wiki/Second_fundamental_form
+void dF(float u, float v,
+    out vec3 f, out vec3 fu, out vec3 fv, out mat2 I1, out mat2 I2
+) {
+    float h = 0.005;
+    vec3 f00 = F(u-h, v-h);
+    vec3 f01 = F(u-h, v);
+    vec3 f02 = F(u-h, v+h);
+    vec3 f10 = F(u, v-h);
+    vec3 f11 = F(u, v);
+    vec3 f12 = F(u, v+h);
+    vec3 f20 = F(u+h, v-h);
+    vec3 f21 = F(u+h, v);
+    vec3 f22 = F(u+h, v+h);
+    f = f11;
+    fu = (f21-f01)/(2.0*h);
+    fv = (f12-f10)/(2.0*h);
+    I1 = mat2(dot(fu,fu), dot(fu,fv), dot(fu,fv), dot(fv,fv));
+    vec3 n = normalize(cross(fu, fv));
+    vec3 ruu = (f21+f01-2.0*f11)/(h*h);
+    vec3 rvv = (f12+f10-2.0*f11)/(h*h);
+    vec3 ruv = (f00+f22-f02-f20)/(4.0*h*h);
+    I2 = mat2(dot(ruu,n), dot(ruv,n), dot(ruv,n), dot(rvv,n));
 }
 
 
@@ -78,7 +110,12 @@ float fade(float t) {
     t = pow(t, 1.2);
     return exp(-t);
 }
-vec4 calcColor(vec3 p, vec3 rd, vec3 n0, float t) {
+vec3 colormap(float t) {
+    t = 0.5-0.5*cos(PI*log(t)/log(10.));
+    return vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*t
+        + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*t-vec3(2.52,1.96,-2.88));
+}
+vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0, mat2 I1, mat2 I2) {
     n0 = dot(n0,rd)>0. ? -n0 : n0;
     vec3 n = normalize(n0);
 #if {%Y_UP%}
@@ -100,9 +137,11 @@ vec4 calcColor(vec3 p, vec3 rd, vec3 n0, float t) {
     albedo /= 1.2*pow(dot(albedo, vec3(0.299,0.587,0.114)), 0.4);
 #elif {%COLOR%} == 2
     // heatmap color based on gradient magnitude
-    float grad = 0.5-0.5*cos(PI*log(length(n0))/log(10.));
-    vec3 albedo = vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*grad
-        + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
+    vec3 albedo = colormap(length(n0));
+#elif {%COLOR%} == 3
+    // heatmap color based on curvature
+    float k = determinant(I2)/determinant(I1);
+    vec3 albedo = k>0. ? colormap(sqrt(k)) : colormap(sqrt(-k));
 #endif // {%COLOR%} == 1
     albedo *= g;
     albedo = pow(albedo, vec3(2.2));
@@ -123,13 +162,14 @@ vec4 calcColor(vec3 p, vec3 rd, vec3 n0, float t) {
 
 void main() {
     float u = vUv.x, v = vUv.y;
-    vec3 p = F(u, v);
-    vec3 n0 = cross(dFdu(u, v), dFdv(u, v));
+    vec3 p, dFdu, dFdv; mat2 I1, I2;
+    dF(u, v, p, dFdu, dFdv, I1, I2);
+    vec3 n0 = cross(dFdu, dFdv);
     vec4 pt_ = transformMatrix * vec4(p,1);
     vec3 pt = pt_.xyz / pt_.w;
     vec3 rd = normalize(screenToWorld(pt+vec3(0,0,0.001))-screenToWorld(pt));
     float t = clamp(pt.z, 0., 1.);
-    vec3 col = calcColor(p, rd, n0, t).xyz;
+    vec3 col = calcColor(p, rd, t, n0, I1, I2).xyz;
     col = pow(col, vec3(1./2.2));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     fragColor = vec4(clamp(col,0.,1.), 1.0);
