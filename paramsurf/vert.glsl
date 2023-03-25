@@ -9,6 +9,8 @@ uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
 uniform float uScale;
 
+uniform vec4 uvRange;  // u0, v0, u1, v1
+
 {%FUN%}
 
 
@@ -21,9 +23,8 @@ vec3 F(float u, float v) {
 }
 
 void main() {
-    float u = vertexPosition.x, v = vertexPosition.y;
-    vUv = vec2(u, v);
-    vXyz = F(u, v);
+    vUv = mix(uvRange.xy, uvRange.zw, vertexPosition);
+    vXyz = F(vUv.x, vUv.y);
     gl_Position = transformMatrix * vec4(vXyz,1);
     gl_Position += vec4(screenCenter, 0, 0) * gl_Position.w;
 }

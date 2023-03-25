@@ -47,11 +47,12 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span><select id="select-step">
-                <option value="0.04">low</option>
-                <option value="0.01" selected>medium</option>
-                <option value="0.004">high</option>
-                <option value="0.001">ultra high</option>
+        <span><select id="select-quality">
+                <option value="1">1×</option>
+                <option value="2">2×</option>
+                <option value="4" selected>4×</option>
+                <option value="8">8×</option>
+                <option value="16">16×</option>
             </select>quality</span>&ensp;
         <span title="Use y-up coordinate system convension"><input type="checkbox"
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
@@ -59,9 +60,10 @@
         <br />
         <span title="Surface color mode"><select id="select-color">
                 <option value="0">default</option>
-                <option value="1">normal</option>
-                <option value="2" selected>gradient</option>
-                <option value="3">curvature</option>
+                <option value="1">uv</option>
+                <option value="2">normal</option>
+                <option value="3" selected>gradient</option>
+                <option value="4">curvature</option>
             </select>color</span>&ensp;
         <!-- <span title="Display the surface as semi-transparent"><input type="checkbox"
                 id="checkbox-transparency" />transparency</span> -->

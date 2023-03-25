@@ -6,6 +6,7 @@ const builtinFunctions = [
     ["Unit Sphere", "x=cos(2piu)sin(piv);y=sin(2piu)sin(piv);z=cos(piv)"],
     ["Bouquet", "r=(2-sin(piv^2))cos(5piu)^2sin(5piv);x=rcos(2piu)sin(piv);y=rsin(2piu)sin(piv);z=-rcos(piv)"],
     ["Torus", "r=0.5+0.05pow(1-pow((sin(10piv)-0.5sin(32piu))/1.5,2),20);x=cos(2piu)(1+rcos(2piv));y=sin(2piu)(1+rcos(2piv));z=rsin(2piv)"],
+    ["Flower", "r(u)=0.5asin(0.99sin(10piu))+0.4;x=r(u)cos(2piu)(2+0.2r(u)^2cos(2piv));y=r(u)sin(2piu)(2+0.2r(u)^2cos(2piv));z=0.3|r(u)|^0.5sin(2piv)"],
     ["Conch 1", "n=1+0.02exp(sin(40piln(v)+10piu));x=v^2.2sin(4piln(v))(0.95+cos(2piu))n;y=v^2.2cos(4piln(v))(0.95+cos(2piu))n;z=v^2.2(sin(2piu)n-1.5)+1"],
     ["Conch 2", "t=1-|ln(u)|^3;n=0.005ucos(100piv)+0.015exp(1.5sin(8pit));c1=cos(2piv)+.2sin(2piv)*sin(2piv);c2=-1.3*sin(2piv)+cos(2piv)*cos(2piv);b=.37;r=(1+n)(.5+.8*c1+.3*c2)/(.7+.7e^-.4z);x=exp(bt)rsin(pi*t);y=exp(bt)rcos(pi*t);z=exp(bt)(2.5*(exp(-bt)-1)+.8c2-.2*c1)"],
     ["Trefoil", "y=sin(6piu)/(4+2cos(2piv));x=-(cos(2piu)-2cos(4piu))(2+cos(2piv))(2+cos(2piv+2pi/3))/16;z=-(sin(2piu)+2sin(4piu))/(4+2cos(2piv+2pi/3))"],
@@ -39,7 +40,7 @@ document.body.onload = function (event) {
 
     // init parameters
     initParameters([
-        new GraphingParameter("sStep", "select-step"),
+        new GraphingParameter("sQuality", "select-quality"),
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("bGrid", "checkbox-grid"),

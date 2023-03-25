@@ -8,6 +8,10 @@ var renderer = {
     imgGradSource: "",
     aaSource: "",
     positionBuffer: null,
+    uN: 241,
+    vN: 241,
+    uvBuffer: null,
+    indiceBuffer: null,
     shaderProgram: null,
     antiAliaser: null,
     timerExt: null,
@@ -59,36 +63,6 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
     }
 
-    // uv buffer
-    const uvBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-    let uN = 256, vN = 256;
-    var uvs = new Array(uN * vN * 2);
-    for (var ui = 0; ui < uN; ui++) {
-        for (var vi = 0; vi < vN; vi++) {
-            uvs[2 * ui * vN + 2 * vi] = ui / (uN - 1);
-            uvs[2 * ui * vN + 2 * vi + 1] = vi / (vN - 1);
-        }
-    }
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    // indice buffer
-    const indiceBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiceBuffer);
-    var indices = new Array(6 * (uN - 1) * (vN - 1));
-    for (var ui = 0; ui < uN - 1; ui++) {
-        for (var vi = 0; vi < vN - 1; vi++) {
-            var i = 6 * (ui * (vN - 1) + vi);
-            indices[i + 0] = ui * vN + vi;
-            indices[i + 1] = ui * vN + ((vi + 1) % vN);
-            indices[i + 2] = ((ui + 1) % uN) * vN + vi;
-            indices[i + 3] = ui * vN + ((vi + 1) % vN);
-            indices[i + 4] = ((ui + 1) % uN) * vN + ((vi + 1) % vN);
-            indices[i + 5] = ((ui + 1) % uN) * vN + vi;
-        }
-    }
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
     // render image
     gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.shaderProgram);
@@ -110,7 +84,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         const normalize = false;
         const stride = 0;
         const offset = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, renderer.uvBuffer);
         let vertexPosition = gl.getAttribLocation(renderer.shaderProgram, "vertexPosition");
         gl.vertexAttribPointer(
             vertexPosition,
@@ -130,12 +104,17 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "rBrightness"), state.rBrightness);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indiceBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, renderer.indiceBuffer);
     {
-        const vertexCount = (uN - 1) * (vN - 1) * 6;
+        const vertexCount = (renderer.uN - 1) * (renderer.vN - 1) * 6;
         const type = gl.UNSIGNED_SHORT;
         const offset = 0;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+        const N = Number(parameterToDict(RawParameters)['sQuality']);
+        for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
+            gl.uniform4f(gl.getUniformLocation(renderer.shaderProgram, "uvRange"),
+                i / N, j / N, (i + 1) / N, (j + 1) / N);
+            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+        }
     }
 
     gl.disable(gl.DEPTH_TEST);
@@ -163,9 +142,6 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
 
     if (!countIndividualTime && timer != null)
         gl.endQuery(timer.TIME_ELAPSED_EXT);
-
-    gl.deleteBuffer(uvBuffer);
-    gl.deleteBuffer(indiceBuffer);
 
     // check timer
     function checkTime() {
@@ -267,6 +243,39 @@ function initWebGL() {
     renderer.gl.bindBuffer(renderer.gl.ARRAY_BUFFER, renderer.positionBuffer);
     var positions = [-1, 1, 1, 1, -1, -1, 1, -1];
     renderer.gl.bufferData(renderer.gl.ARRAY_BUFFER, new Float32Array(positions), renderer.gl.STATIC_DRAW);
+
+    // uv buffer
+    renderer.uvBuffer = renderer.gl.createBuffer();
+    renderer.gl.bindBuffer(renderer.gl.ARRAY_BUFFER, renderer.uvBuffer);
+    let uN = renderer.uN, vN = renderer.vN;
+    var uvs = new Array(uN * vN * 2);
+    for (var ui = 0; ui < uN; ui++) {
+        for (var vi = 0; vi < vN; vi++) {
+            uvs[2 * ui * vN + 2 * vi] = ui / (uN - 1);
+            uvs[2 * ui * vN + 2 * vi + 1] = vi / (vN - 1);
+        }
+    }
+    renderer.gl.bufferData(renderer.gl.ARRAY_BUFFER,
+        new Float32Array(uvs), renderer.gl.STATIC_DRAW);
+    
+    // indice buffer
+    renderer.indiceBuffer = renderer.gl.createBuffer();
+    renderer.gl.bindBuffer(renderer.gl.ELEMENT_ARRAY_BUFFER, renderer.indiceBuffer);
+    var indices = new Array(6 * (uN - 1) * (vN - 1));
+    for (var ui = 0; ui < uN - 1; ui++) {
+        for (var vi = 0; vi < vN - 1; vi++) {
+            var i = 6 * (ui * (vN - 1) + vi);
+            indices[i + 0] = ui * vN + vi;
+            indices[i + 1] = ui * vN + ((vi + 1) % vN);
+            indices[i + 2] = ((ui + 1) % uN) * vN + vi;
+            indices[i + 3] = ui * vN + ((vi + 1) % vN);
+            indices[i + 4] = ((ui + 1) % uN) * vN + ((vi + 1) % vN);
+            indices[i + 5] = ((ui + 1) % uN) * vN + vi;
+        }
+    }
+    renderer.gl.bufferData(renderer.gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(indices), renderer.gl.STATIC_DRAW);
+
 
     // timer
     renderer.timerExt = renderer.gl.getExtension('EXT_disjoint_timer_query_webgl2');

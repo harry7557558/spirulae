@@ -53,8 +53,9 @@ void dF(float u, float v,
     vec3 f21 = F(u+h, v);
     vec3 f22 = F(u+h, v+h);
     f = f11;
-    fu = (f21-f01)/(2.0*h);
-    fv = (f12-f10)/(2.0*h);
+    // fu = (f21-f01)/(2.0*h);
+    // fv = (f12-f10)/(2.0*h);
+    fu = dFdu(u, v), fv = dFdv(u, v);
     I1 = mat2(dot(fu,fu), dot(fu,fv), dot(fu,fv), dot(fv,fv));
     vec3 n = normalize(cross(fu, fv));
     vec3 ruu = (f21+f01-2.0*f11)/(h*h);
@@ -88,6 +89,11 @@ float grid1(vec3 p, vec3 n, float w) {
     // return min(min(a.x,a.y),a.z);
     return ((a.x+1.)*(a.y+1.)*(a.z+1.)-1.)/7.;
 }
+float grid1(vec2 uv, vec2 w) {
+    vec2 a = 1.0-abs(1.0-2.0*fract(uv));
+    a = clamp(2.0*a/w, 0.0, 1.0);
+    return ((a.x+1.)*(a.y+1.)-1.)/5.;
+}
 float grid(vec3 p, vec3 n) {
     float ls = log(uScale) / log(10.);
     float fs = pow(ls - floor(ls), 1.0);
@@ -95,11 +101,25 @@ float grid(vec3 p, vec3 n) {
     vec3 q0 = es*p;
     vec3 q1 = 10.*q0;
     vec3 q2 = 10.*q1;
-    float w0 = .05*es/uScale;
+    float w0 = .1*es/uScale;
     float w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, n, w0);
     float g1 = grid1(q1, n, w1);
     float g2 = grid1(q2, n, w1);
+    return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
+}
+float grid(vec2 uv, vec3 fu, vec3 fv, vec3 n0) {
+    float ls = log(20. * uScale) / log(10.);
+    float fs = pow(ls - floor(ls), 1.0);
+    float es = pow(10., floor(ls));
+    vec2 q0 = es*uv;
+    vec2 q1 = 10.*q0;
+    vec2 q2 = 10.*q1;
+    vec2 w0 = .05*es/(uScale*vec2(length(fu),length(fv)));
+    vec2 w1 = mix(1.,10.,fs)*w0;
+    float g0 = grid1(q0, w0);
+    float g1 = grid1(q1, w1);
+    float g2 = grid1(q2, w1);
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
 float fade(float t) {
@@ -115,13 +135,16 @@ vec3 colormap(float t) {
     return vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*t
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*t-vec3(2.52,1.96,-2.88));
 }
-vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0, mat2 I1, mat2 I2) {
+vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
+    float u, float v, vec3 fu, vec3 fv, mat2 I1, mat2 I2
+) {
     n0 = dot(n0,rd)>0. ? -n0 : n0;
     vec3 n = normalize(n0);
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
-    float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
+    // float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
+    float g = bool({%GRID%}) ? 1.1*grid(vec2(u,v), fu, fv, n0) : 1.0;
 #if {%COLOR%} == 0
     // porcelain-like shading
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
@@ -132,13 +155,19 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0, mat2 I1, mat2 I2) {
     vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
 #else // {%COLOR%} == 0
 #if {%COLOR%} == 1
+    vec3 albedo = vec3(u, v, 0.5);
+    const vec3 ak = vec3(0.7);
+    // albedo = pow(albedo, ak) / (pow(albedo, ak) + pow(1.0-albedo, ak));
+    // albedo = pow(albedo, vec3(0.8));
+    albedo = 0.2 + 0.8 * albedo;
+#elif {%COLOR%} == 2
     // color based on normal
     vec3 albedo = mix(vec3(1.0), normalize(n0), 0.45);
     albedo /= 1.2*pow(dot(albedo, vec3(0.299,0.587,0.114)), 0.4);
-#elif {%COLOR%} == 2
+#elif {%COLOR%} == 3
     // heatmap color based on gradient magnitude
     vec3 albedo = colormap(length(n0));
-#elif {%COLOR%} == 3
+#elif {%COLOR%} == 4
     // heatmap color based on curvature
     float k = determinant(I2)/determinant(I1);
     vec3 albedo = k>0. ? colormap(sqrt(k)) : colormap(sqrt(-k));
@@ -162,14 +191,14 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0, mat2 I1, mat2 I2) {
 
 void main() {
     float u = vUv.x, v = vUv.y;
-    vec3 p, dFdu, dFdv; mat2 I1, I2;
-    dF(u, v, p, dFdu, dFdv, I1, I2);
-    vec3 n0 = cross(dFdu, dFdv);
+    vec3 p, fu, fv; mat2 I1, I2;
+    dF(u, v, p, fu, fv, I1, I2);
+    vec3 n0 = cross(fu, fv);
     vec4 pt_ = transformMatrix * vec4(p,1);
     vec3 pt = pt_.xyz / pt_.w;
     vec3 rd = normalize(screenToWorld(pt+vec3(0,0,0.001))-screenToWorld(pt));
     float t = clamp(pt.z, 0., 1.);
-    vec3 col = calcColor(p, rd, t, n0, I1, I2).xyz;
+    vec3 col = calcColor(p, rd, t, n0, u, v, fu, fv, I1, I2).xyz;
     col = pow(col, vec3(1./2.2));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     fragColor = vec4(clamp(col,0.,1.), 1.0);
