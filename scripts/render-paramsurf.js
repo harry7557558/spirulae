@@ -26,6 +26,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     else renderer.canvas.style.cursor = "default";
     let gl = renderer.gl;
     let antiAliaser = renderer.antiAliaser;
+    let parameters = parameterToDict(RawParameters);
 
     // set position buffer for vertex shader
     function setPositionBuffer(program) {
@@ -66,8 +67,8 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     // render image
     gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.shaderProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    var col = parameterToDict(RawParameters)['bLight'] ?
+    gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.renderFramebuffer);
+    var col = parameters.bLight ?
         [0.82, 0.8, 0.78] : [4e-4, 5e-4, 6e-4];
     gl.clearColor(
         Math.pow(col[0], 1.0 / 2.2),
@@ -104,18 +105,25 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "rBrightness"), state.rBrightness);
 
+    if (countIndividualTime && timer != null) {
+        let query = gl.createQuery();
+        timerQueries.push(query);
+        gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
+    }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, renderer.indiceBuffer);
     {
         const vertexCount = (renderer.uN - 1) * (renderer.vN - 1) * 6;
         const type = gl.UNSIGNED_SHORT;
         const offset = 0;
-        const N = Number(parameterToDict(RawParameters)['sQuality']);
+        const N = Number(parameters.sQuality);
         for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
             gl.uniform4f(gl.getUniformLocation(renderer.shaderProgram, "uvRange"),
                 i / N, j / N, (i + 1) / N, (j + 1) / N);
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
         }
     }
+    if (countIndividualTime && timer != null)
+        gl.endQuery(timer.TIME_ELAPSED_EXT);
 
     gl.disable(gl.DEPTH_TEST);
 
@@ -126,7 +134,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
     gl.uniform1i(gl.getUniformLocation(antiAliaser.imgGradProgram, "iChannel0"), 0);
-    // renderPass();
+    renderPass();
 
     // render anti-aliasing
     gl.useProgram(antiAliaser.aaProgram);
@@ -138,7 +146,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, antiAliaser.imgGradTexture);
     gl.uniform1i(gl.getUniformLocation(antiAliaser.aaProgram, "iChannel1"), 1);
-    // renderPass();
+    renderPass();
 
     if (!countIndividualTime && timer != null)
         gl.endQuery(timer.TIME_ELAPSED_EXT);
@@ -224,7 +232,8 @@ function calcZScale() {
 function initWebGL() {
     // get context
     renderer.canvas = document.getElementById("canvas");
-    renderer.gl = canvas.getContext("webgl2") || canvas.getContext("experimental-webgl2");
+    renderer.gl = canvas.getContext("webgl2", { antialias: false })
+        || canvas.getContext("experimental-webgl2", { antialias: false });
     if (renderer.gl == null)
         throw ("Error: Your browser may not support WebGL2, which is required to run this tool.<br/>It is recommended to use a Chrome-based browser on a desktop device with an updated graphics driver.");
     canvas.addEventListener("webglcontextlost", function (event) {
@@ -257,7 +266,7 @@ function initWebGL() {
     }
     renderer.gl.bufferData(renderer.gl.ARRAY_BUFFER,
         new Float32Array(uvs), renderer.gl.STATIC_DRAW);
-    
+
     // indice buffer
     renderer.indiceBuffer = renderer.gl.createBuffer();
     renderer.gl.bindBuffer(renderer.gl.ELEMENT_ARRAY_BUFFER, renderer.indiceBuffer);
@@ -303,7 +312,7 @@ function updateBuffers() {
     state.height = canvas.height = canvas.style.height = window.innerHeight;
 
     var oldAntiAliaser = renderer.antiAliaser;
-    renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height);
+    renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height, true);
     if (oldAntiAliaser) destroyAntiAliaser(gl, oldAntiAliaser);
 
     state.renderNeeded = true;

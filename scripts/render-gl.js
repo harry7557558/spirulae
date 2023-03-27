@@ -207,24 +207,34 @@ function createSampleTexture(gl, width, height) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return tex;
 }
-function createRenderTarget(gl, width, height) {
-    const tex = createSampleTexture(gl, width, height);
-    const framebuffer = gl.createFramebuffer();
+function createRenderTarget(gl, width, height, requireDepth = false) {
+    let tex = createSampleTexture(gl, width, height);
+    let framebuffer = gl.createFramebuffer();
+    var depthbuffer = null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    if (requireDepth) {
+        depthbuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depthbuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthbuffer);
+    }
     return {
         texture: tex,
-        framebuffer: framebuffer
+        framebuffer: framebuffer,
+        depthbuffer: depthbuffer
     };
 }
 function destroyRenderTarget(gl, target) {
     gl.deleteTexture(target.texture);
     gl.deleteFramebuffer(target.framebuffer);
+    if (target.depthbuffer != null)
+        gl.deleteRenderbuffer(target.depthbuffer);
 }
 
 // create anti-aliasing object
-function createAntiAliaser(gl, width, height) {
-    var renderTarget = createRenderTarget(gl, width, height);
+function createAntiAliaser(gl, width, height, requireDepth) {
+    var renderTarget = createRenderTarget(gl, width, height, requireDepth);
     var imgGradProgram = createShaderProgram(gl,
         getShaderSource("../shaders/vert-pixel.glsl"), getShaderSource("../shaders/frag-imggrad.glsl"));
     var imgGradTarget = createRenderTarget(gl, width, height);

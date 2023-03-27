@@ -266,7 +266,8 @@ async function drawScene(state) {
 function initWebGL() {
     // get context
     renderer.canvas = document.getElementById("canvas");
-    renderer.gl = canvas.getContext("webgl2") || canvas.getContext("experimental-webgl2");
+    renderer.gl = canvas.getContext("webgl2", { antialias: false })
+        || canvas.getContext("experimental-webgl2",  { antialias: false });
     if (renderer.gl == null)
         throw ("Error: Your browser may not support WebGL2, which is required to run this tool.<br/>It is recommended to use a Chrome-based browser on a desktop device with an updated graphics driver.");
     canvas.addEventListener("webglcontextlost", function (event) {
@@ -313,7 +314,7 @@ function updateBuffers() {
 
     let gl = renderer.gl;
     var oldAntiAliaser = renderer.antiAliaser;
-    renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height);
+    renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height, false);
     if (oldAntiAliaser) destroyAntiAliaser(gl, oldAntiAliaser);
 
     state.renderNeeded = true;

@@ -60,7 +60,7 @@ vec3 antialias(ivec2 p0, int r) {
 
 void main(void) {
     ivec2 p = ivec2(gl_FragCoord.xy);
-    vec3 col = antialias(p, 3);
+    vec3 col = antialias(p, 2);
     //col = sv(p).xyz;
     //col = vec3(sg(p).x);
     fragColor = vec4(col,1.0);
