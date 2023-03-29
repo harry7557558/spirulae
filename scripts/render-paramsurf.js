@@ -450,7 +450,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
         shaderSource = shaderSource.replaceAll("{%COLOR%}", params.sColor);
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
-        shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.bGrid));
+        shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.sGrid));
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
         return shaderSource;
     }

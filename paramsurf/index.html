@@ -4,10 +4,8 @@
 <head>
     <meta charset="utf-8" />
     <title>3D Parametric Surface Grapher | Spirula</title>
-    <meta name="description"
-        content="description" />
-    <meta name="keywords"
-        content="keywords" />
+    <meta name="description" content="description" />
+    <meta name="keywords" content="keywords" />
     <meta name="robots" content="none" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -68,7 +66,11 @@
         <!-- <span title="Display the surface as semi-transparent"><input type="checkbox"
                 id="checkbox-transparency" />transparency</span> -->
         <br />
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
+        <span title="Show grid on the surface"><select id="select-grid">
+                <option value="0" selected>no</option>
+                <option value="1">uv</option>
+                <option value="2">xyz</option>
+            </select>grid</span>&ensp;
         <!-- <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
                 id="checkbox-discontinuity" checked />highlight discontinuity</span> -->
         <br />

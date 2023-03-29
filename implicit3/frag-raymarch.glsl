@@ -71,13 +71,14 @@ float grid1(vec3 p, vec3 n, float w) {
     return ((a.x+1.)*(a.y+1.)*(a.z+1.)-1.)/7.;
 }
 float grid(vec3 p, vec3 n) {
-    float ls = log(uScale) / log(10.);
+    float scale = 2.5 / dot(inverse(transpose(transformMatrix))[3], vec4(p, 1));
+    float ls = log(scale) / log(10.);
     float fs = pow(ls - floor(ls), 1.0);
     float es = pow(10., floor(ls));
     vec3 q0 = es*p;
     vec3 q1 = 10.*q0;
     vec3 q2 = 10.*q1;
-    float w0 = .05*es/uScale;
+    float w0 = .05*es/scale;
     float w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, n, w0);
     float g1 = grid1(q1, n, w1);

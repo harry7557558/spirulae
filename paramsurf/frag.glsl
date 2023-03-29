@@ -91,36 +91,40 @@ float grid1(vec3 p, vec3 n, float w) {
 }
 float grid1(vec2 uv, vec2 w) {
     vec2 a = 1.0-abs(1.0-2.0*fract(uv));
-    a = clamp(2.0*a/w, 0.0, 1.0);
-    return ((a.x+1.)*(a.y+1.)-1.)/5.;
+    a = clamp(2.*a/w-0.1, 0.0, 1.0);
+    return min(a.x,a.y);
+    // return ((a.x+1.)*(a.y+1.)-1.)/4.;
 }
 float grid(vec3 p, vec3 n) {
-    float ls = log(uScale) / log(10.);
+    float scale = 2.5 / dot(transpose(transformMatrix)[3], vec4(p, 1));
+    float ls = log(scale) / log(10.);
     float fs = pow(ls - floor(ls), 1.0);
     float es = pow(10., floor(ls));
     vec3 q0 = es*p;
     vec3 q1 = 10.*q0;
     vec3 q2 = 10.*q1;
-    float w0 = .1*es/uScale;
+    float w0 = .05*es/scale;
     float w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, n, w0);
     float g1 = grid1(q1, n, w1);
     float g2 = grid1(q2, n, w1);
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
-float grid(vec2 uv, vec3 fu, vec3 fv, vec3 n0) {
-    float ls = log(20. * uScale) / log(10.);
+float grid(vec2 uv, vec3 fu, vec3 fv, vec3 p, vec3 n0) {
+    float scale = 10.0 * sqrt(length(n0)) / dot(transpose(transformMatrix)[3], vec4(p, 1));
+    float ls = log(scale) / log(10.);
     float fs = pow(ls - floor(ls), 1.0);
     float es = pow(10., floor(ls));
     vec2 q0 = es*uv;
     vec2 q1 = 10.*q0;
     vec2 q2 = 10.*q1;
-    vec2 w0 = .05*es/(uScale*vec2(length(fu),length(fv)));
+    vec2 w0 = 0.2*es/(scale*vec2(length(fu),length(fv))/sqrt(length(n0)));
     vec2 w1 = mix(1.,10.,fs)*w0;
     float g0 = grid1(q0, w0);
     float g1 = grid1(q1, w1);
     float g2 = grid1(q2, w1);
-    return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
+    float g = min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
+    return clamp(1.2*g-0.1, 0.8, 0.95);
 }
 float fade(float t) {
     t = smoothstep(0.7, 1., t);
@@ -143,8 +147,12 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
-    // float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
-    float g = bool({%GRID%}) ? 1.1*grid(vec2(u,v), fu, fv, n0) : 1.0;
+    float g = 1.0;
+#if {%GRID%} == 1
+    g = 1.1*grid(vec2(u,v), fu, fv, p, n0);
+#elif {%GRID%} == 2
+    g = 1.1*grid(p, n);
+#endif // {%GRID%}
 #if {%COLOR%} == 0
     // porcelain-like shading
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
