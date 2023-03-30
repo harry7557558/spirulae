@@ -14,6 +14,7 @@ const builtinFunctions = [
     ["Trefoil", "y=sin(6piu)/(4+2cos(2piv));x=-(cos(2piu)-2cos(4piu))(2+cos(2piv))(2+cos(2piv+2pi/3))/16;z=-(sin(2piu)+2sin(4piu))/(4+2cos(2piv+2pi/3))"],
     ["Arc Clam", "c1=1.4u^1.5(1+0.01sin(60piv))sin(piv);c2=2u^1.5(1+0.01sin(60piv))(1-.2exp(-10sin(piv)))u^1.5(-cos(piv)+0.2cos(3piv)-0.1sin(2piv)+0.2sin(piv));x=(1+0.05u^2-exp(-5u))^2cos(2piu)c1-0.5;z=-sin(2piu)c1;y=(2u-1.4u^2)c2"],
     ["Jellyfish", "r=(v(1-v)+sin(piv))(1+0.05(1-v^2)exp(2sin(48piu))+0.1sin(7piu));x=cos(2piu)r;z=sin(2piu)r;y=1-cos(piv)-4v(1-v)sin(iTime(0))^2-0.5/(1-v)^0.5"],
+    ["Parametric Curve", "x0(t)=t(cos(4pit)-cos(4pit)cos(60pit);y0(t)=t(sin(4pit)-sin(4pit)cos(60pit);z0(t)=t(sin(60pit)-1)+0.5;h=0.005;x1(t)=(x0(t+h)-x0(t-h))/(2h);y1(t)=(y0(t+h)-y0(t-h))/(2h);z1(t)=(z0(t+h)-z0(t-h))/(2h);x2(t)=(x0(t+h)+x0(t-h)-2x0(t))/h^2;y2(t)=(y0(t+h)+y0(t-h)-2y0(t))/h^2;z2(t)=(z0(t+h)+z0(t-h)-2z0(t))/h^2;l2(t)=hypot(x2(t),y2(t),z2(t));x3(t)=y1(t)z2(t)-y2(t)z1(t);y3(t)=z1(t)x2(t)-z2(t)x1(t);z3(t)=x1(t)y2(t)-x2(t)y1(t);l3(t)=hypot(x3(t),y3(t),z3(t));r=0.025;x=x0(u)+r(x2(u)/l2(u)cos(2piv)+x3(u)/l3(u)sin(2piv));y=y0(u)+r(y2(u)/l2(u)cos(2piv)+y3(u)/l3(u)sin(2piv));z=z0(u)+r(z2(u)/l2(u)cos(2piv)+z3(u)/l3(u)sin(2piv))"],
 ];
 
 

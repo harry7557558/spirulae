@@ -95,8 +95,8 @@ float grid1(vec2 uv, vec2 w) {
     return min(a.x,a.y);
     // return ((a.x+1.)*(a.y+1.)-1.)/4.;
 }
-float grid(vec3 p, vec3 n) {
-    float scale = 2.5 / dot(transpose(transformMatrix)[3], vec4(p, 1));
+float gridXyz(vec3 p, vec3 n) {
+    float scale = 4.0 / dot(transpose(transformMatrix)[3], vec4(p, 1));
     float ls = log(scale) / log(10.);
     float fs = pow(ls - floor(ls), 1.0);
     float es = pow(10., floor(ls));
@@ -110,20 +110,22 @@ float grid(vec3 p, vec3 n) {
     float g2 = grid1(q2, n, w1);
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
-float grid(vec2 uv, vec3 fu, vec3 fv, vec3 p, vec3 n0) {
-    float scale = 10.0 * sqrt(length(n0)) / dot(transpose(transformMatrix)[3], vec4(p, 1));
-    float ls = log(scale) / log(10.);
-    float fs = pow(ls - floor(ls), 1.0);
-    float es = pow(10., floor(ls));
+float gridUv(vec2 uv, vec3 fu, vec3 fv, vec3 p, vec3 n0) {
+    vec2 luv = vec2(length(fu), length(fv));
+    vec2 scale = 6.0 * luv / dot(transpose(transformMatrix)[3], vec4(p, 1));
+    vec2 ls = log(scale) / log(10.);
+    vec2 fs = pow(ls - floor(ls), vec2(1.0));
+    vec2 es = pow(vec2(10.), floor(ls));
     vec2 q0 = es*uv;
     vec2 q1 = 10.*q0;
     vec2 q2 = 10.*q1;
-    vec2 w0 = 0.2*es/(scale*vec2(length(fu),length(fv))/sqrt(length(n0)));
-    vec2 w1 = mix(1.,10.,fs)*w0;
+    vec2 w0 = 0.2*es/scale;
+    vec2 w1 = mix(vec2(1.),vec2(10.),fs)*w0;
     float g0 = grid1(q0, w0);
     float g1 = grid1(q1, w1);
     float g2 = grid1(q2, w1);
-    float g = min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
+    float f = length(fs);
+    float g = min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,f), 1.0, g1)), mix(mix(1.0,0.8,f), 1.0, g2));
     return clamp(1.2*g-0.1, 0.8, 0.95);
 }
 float fade(float t) {
@@ -149,9 +151,9 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
 #endif // {%Y_UP%}
     float g = 1.0;
 #if {%GRID%} == 1
-    g = 1.1*grid(vec2(u,v), fu, fv, p, n0);
+    g = 1.2*gridUv(vec2(u,v), fu, fv, p, n0);
 #elif {%GRID%} == 2
-    g = 1.1*grid(p, n);
+    g = 1.1*gridXyz(p, n);
 #endif // {%GRID%}
 #if {%COLOR%} == 0
     // porcelain-like shading

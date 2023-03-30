@@ -17,6 +17,18 @@ var renderer = {
     timerExt: null,
 };
 
+function setWidthHeight() {
+    let control = document.getElementById("control");
+    var width = window.innerWidth, height = window.innerHeight;
+    canvas.style.width = width, canvas.style.height = height;
+    var s = Math.max(512.0 / Math.max(
+        width - control.clientWidth,
+        height - control.clientHeight
+    ), 1.0);
+    state.width = canvas.width = s * width;
+    state.height = canvas.height = s * height;
+}
+
 // call this function to re-render
 async function drawScene(screenCenter, transformMatrix, lightDir) {
     if (renderer.shaderProgram == null) {
@@ -307,10 +319,9 @@ function initWebGL() {
 }
 
 function updateBuffers() {
-    let gl = renderer.gl;
-    state.width = canvas.width = canvas.style.width = window.innerWidth;
-    state.height = canvas.height = canvas.style.height = window.innerHeight;
+    setWidthHeight();
 
+    let gl = renderer.gl;
     var oldAntiAliaser = renderer.antiAliaser;
     renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height, true);
     if (oldAntiAliaser) destroyAntiAliaser(gl, oldAntiAliaser);
@@ -339,8 +350,7 @@ function initRenderer() {
         state.screenCenter = screenCenter;
         if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
             || state.renderNeeded) {
-            state.width = canvas.width = canvas.style.width = window.innerWidth;
-            state.height = canvas.height = canvas.style.height = window.innerHeight;
+            setWidthHeight();
             try {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
