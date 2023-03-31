@@ -80,7 +80,6 @@ vec3 screenToWorld(vec3 p) {
 #endif
 
 uniform vec3 LDIR;
-#define OPACITY 0.6
 
 // calculate the color at one point, parameters are in screen space
 float grid1(vec3 p, vec3 n, float w) {
@@ -89,11 +88,10 @@ float grid1(vec3 p, vec3 n, float w) {
     // return min(min(a.x,a.y),a.z);
     return ((a.x+1.)*(a.y+1.)*(a.z+1.)-1.)/7.;
 }
-float grid1(vec2 uv, vec2 w) {
+vec2 grid1(vec2 uv, vec2 w) {
     vec2 a = 1.0-abs(1.0-2.0*fract(uv));
     a = clamp(2.*a/w-0.1, 0.0, 1.0);
-    return min(a.x,a.y);
-    // return ((a.x+1.)*(a.y+1.)-1.)/4.;
+    return a;
 }
 float gridXyz(vec3 p, vec3 n) {
     float scale = 4.0 / dot(transpose(transformMatrix)[3], vec4(p, 1));
@@ -112,7 +110,7 @@ float gridXyz(vec3 p, vec3 n) {
 }
 float gridUv(vec2 uv, vec3 fu, vec3 fv, vec3 p, vec3 n0) {
     vec2 luv = vec2(length(fu), length(fv));
-    vec2 scale = 6.0 * luv / dot(transpose(transformMatrix)[3], vec4(p, 1));
+    vec2 scale = 8.0 * luv / dot(transpose(transformMatrix)[3], vec4(p, 1));
     vec2 ls = log(scale) / log(10.);
     vec2 fs = pow(ls - floor(ls), vec2(1.0));
     vec2 es = pow(vec2(10.), floor(ls));
@@ -121,12 +119,15 @@ float gridUv(vec2 uv, vec3 fu, vec3 fv, vec3 p, vec3 n0) {
     vec2 q2 = 10.*q1;
     vec2 w0 = 0.2*es/scale;
     vec2 w1 = mix(vec2(1.),vec2(10.),fs)*w0;
-    float g0 = grid1(q0, w0);
-    float g1 = grid1(q1, w1);
-    float g2 = grid1(q2, w1);
-    float f = length(fs);
-    float g = min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,f), 1.0, g1)), mix(mix(1.0,0.8,f), 1.0, g2));
-    return clamp(1.2*g-0.1, 0.8, 0.95);
+    vec2 g0 = grid1(q0, w0);
+    vec2 g1 = grid1(q1, w1);
+    vec2 g2 = grid1(q2, w1);
+    vec2 g = min(min(
+        vec2(mix(vec2(0.65), vec2(1.0), g0)),
+        mix(mix(vec2(0.8),vec2(0.65),fs), vec2(1.0), g1)),
+        mix(mix(vec2(1.0),vec2(0.8),fs), vec2(1.0), g2)
+    );
+    return clamp(1.2*min(g.x,g.y)-0.1, 0.8, 0.95);
 }
 float fade(float t) {
     t = smoothstep(0.7, 1., t);
@@ -134,6 +135,7 @@ float fade(float t) {
     t = mix(pow(0.8*t, 0.8), pow(0.2*t, 1.5),
         smoothstep(0., 0.8, dot(BACKGROUND_COLOR,vec3(1./3.))));
     t = pow(t, 1.2);
+    t *= bool({%XRAY%}) ? 1.0/2.2 : 1.0;
     return exp(-t);
 }
 vec3 colormap(float t) {
@@ -149,21 +151,36 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
+
+    // grid
     float g = 1.0;
 #if {%GRID%} == 1
     g = 1.2*gridUv(vec2(u,v), fu, fv, p, n0);
 #elif {%GRID%} == 2
     g = 1.1*gridXyz(p, n);
 #endif // {%GRID%}
+#if {%XRAY%}&&!{%LIGHT_THEME%}
+    g = 1.8 * exp(-0.5*smoothstep(0.95, 1.15, g));
+#endif
+
 #if {%COLOR%} == 0
-    // porcelain-like shading
+
+    // default color
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+#if {%XRAY%}
+    vec3 col = albedo;
+#else // {%XRAY%}
+    // porcelain-like shading
     vec3 amb = (0.1+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
     vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(20.);
     vec3 rfl = mix(vec3(1.), vec3(4.), clamp(5.*dot(reflect(rd,n),LDIR),0.,1.));
     vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
+#endif // {%XRAY%}
+
 #else // {%COLOR%} == 0
+
+    // colors
 #if {%COLOR%} == 1
     vec3 albedo = vec3(u, v, 0.5);
     const vec3 ak = vec3(0.7);
@@ -183,18 +200,24 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
     vec3 albedo = k>0. ? colormap(sqrt(k)) : colormap(sqrt(-k));
 #endif // {%COLOR%} == 1
     albedo *= g;
-    albedo = pow(albedo, vec3(2.2));
+#if {%XRAY%}
+    vec3 col = albedo;
+#else // {%XRAY%}
     // phong shading
+    albedo = pow(albedo, vec3(2.2));
     vec3 amb = (0.05+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*pow(max(dot(n,LDIR),0.0),1.5) * albedo;
     vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.06) * pow(albedo,vec3(0.2));
     vec3 col = amb + dif + spc;
+#endif // {%XRAY%}
+
 #endif // {%COLOR%} == 0
+
     if (isnan(dot(col, vec3(1))))
         return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0)*g, fade(t)), 1.0);
     return vec4(
         mix(BACKGROUND_COLOR, col, fade(t)),
-        1.0-pow(1.0-OPACITY,abs(1.0/dot(rd,n)))
+        1.0-pow(0.9,abs(1.0/dot(rd,n)))
     );
 }
 
@@ -208,8 +231,18 @@ void main() {
     vec3 pt = pt_.xyz / pt_.w;
     vec3 rd = normalize(screenToWorld(pt+vec3(0,0,0.001))-screenToWorld(pt));
     float t = clamp(pt.z, 0., 1.);
-    vec3 col = calcColor(p, rd, t, n0, u, v, fu, fv, I1, I2).xyz;
+    vec4 col0 = calcColor(p, rd, t, n0, u, v, fu, fv, I1, I2);
+#if {%XRAY%}
+#if {%LIGHT_THEME%}
+    vec3 col = col0.xyz * (1.0-0.5*pow(col0.w,1.0));
+    col = 0.9 * pow(col, vec3(0.4));
+#else
+    vec3 col = col0.xyz * col0.w;
+#endif
+#else // {%XRAY%}
+    vec3 col = col0.xyz;
     col = pow(col, vec3(1./2.2));
+#endif // {%XRAY%}
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
     fragColor = vec4(clamp(col,0.,1.), 1.0);
 }

@@ -82,13 +82,25 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.renderFramebuffer);
     var col = parameters.bLight ?
         [0.82, 0.8, 0.78] : [4e-4, 5e-4, 6e-4];
+    var gamma = 1.0 / 2.2;
     gl.clearColor(
-        Math.pow(col[0], 1.0 / 2.2),
-        Math.pow(col[1], 1.0 / 2.2),
-        Math.pow(col[2], 1.0 / 2.2), 1.0);
-    gl.clearDepth(1.0);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+        Math.pow(col[0], gamma),
+        Math.pow(col[1], gamma),
+        Math.pow(col[2], gamma), 1.0);
+    if (parameters.bXray) {
+        gl.disable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
+        if (parameters.bLight)
+            gl.blendFunc(gl.ZERO, gl.SRC_COLOR);  // multiply
+        else
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR); // 1-(1-s)(1-d)
+    }
+    else {
+        gl.clearDepth(1.0);
+        gl.enable(gl.DEPTH_TEST);
+        gl.disable(gl.BLEND);
+        gl.depthFunc(gl.LEQUAL);
+    }
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     {
@@ -138,6 +150,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         gl.endQuery(timer.TIME_ELAPSED_EXT);
 
     gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
 
     // render image gradient
     gl.useProgram(antiAliaser.imgGradProgram);
@@ -459,6 +472,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
         shaderSource = shaderSource.replaceAll("{%COLOR%}", params.sColor);
+        shaderSource = shaderSource.replaceAll("{%XRAY%}", Number(params.bXray));
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
         shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.sGrid));
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
