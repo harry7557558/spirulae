@@ -26,10 +26,6 @@ CodeGenerator.langs.glsl = {
     inherit: [],
     extensions: [
         {
-            name: 'iTime',
-            source: "uniform float iTime;"
-        },
-        {
             name: 'erf',
             source: "float mf_erf(float x) {\n\
     float t = 1.0/(1.0+0.3275911*abs(x));\n\
@@ -120,9 +116,21 @@ CodeGenerator.langs.glslc = {
     inherit: [],
     extensions: [
         {
-            name: 'iTime',
-            source: "uniform float iTime;"
+            name: 'mc_gamma',
+            source: ""
         },
+        {
+            name: 'mc_lgamma',
+            source: ""
+        },
+        {
+            name: 'mc_zeta',
+            source: ""
+        },
+        {
+            name: 'mc_lzeta',
+            source: ""
+        }
     ],
 };
 
@@ -488,6 +496,7 @@ CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
         exts[i] = exts[i].source;
     return {
         source: exts.concat(functions).join('\n\n').trim(),
+        exts: exts,
         isCompatible: isCompatible,
     };
 }

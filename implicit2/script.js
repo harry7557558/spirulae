@@ -52,7 +52,6 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
-    UpdateFunctionInputConfig.warnNumerical = false;
 
     // main
     initMain([

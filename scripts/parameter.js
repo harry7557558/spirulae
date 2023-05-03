@@ -224,9 +224,8 @@ document.getElementById("error-message").addEventListener("contextmenu", message
 var UpdateFunctionInputConfig = {
     complexMode: false,
     implicitMode: true,  // add =0 to the end
-    valMode: true,  // requires a main equation
+    enableMain: true,  // requires a main equation
     warnNaN: true,
-    warnNumerical: false,
 };
 
 var WarningStack = [];
@@ -279,11 +278,11 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             messageError(errmsg);
             updateShaderFunction(null);
             if (checkboxLatex.checked)
-                updateLatex(parsed.latex, "white");
+                updateLatex(parsed.latex);
             return;
         }
         if (checkboxLatex.checked)
-            updateLatex(parsed.latex, "white");
+            updateLatex(parsed.latex);
     }
     catch (e) {
         console.error(e);
@@ -304,10 +303,10 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         console.log(expr.trim().replace(/\r?\n/g, ';').replace(/\s/g, "&#32;"));
         if (checkboxLatex.checked) {
             console.log(parsed.latex.join(' \\\\\n'));
-            updateLatex(parsed.latex, "white");
+            updateLatex(parsed.latex);
         }
         var expr = {};
-        if (UpdateFunctionInputConfig.valMode)
+        if (UpdateFunctionInputConfig.enableMain)
             expr.val = parsed.val;
         for (var varname in MathParser.DependentVariables)
             if (parsed.hasOwnProperty(varname))
@@ -318,10 +317,11 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         );
         var code = result.source;
         console.log(code);
+        code = "uniform float iTime;\n\n" + code;
         if (UpdateFunctionInputConfig.warnNaN && !result.isCompatible[0])
-            console.warn("Graph may be incorrect on some devices.");
-        if (UpdateFunctionInputConfig.warnNumerical && /m[fc]g?_(ln)?((gamma)|(zeta))/.test(code))
-            console.warn("Function evaluation involves numerical approximation and may be inconsistent across devices.");
+            console.warn("Graph may be incorrect due to undefined values.");
+        if (result.exts.length != 0)
+            console.warn("Function evaluation involves numerical approximation.");
         if (WarningStack.length != 0)
             messageWarning(WarningStack.join('\n'));
         updateShaderFunction(code, null, parameters);

@@ -216,7 +216,7 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             j++;
         }
         if (/\s/.test(expr[i])) {
-            if (/[A-Za-zΑ-Ωα-ω_\d]{2}/.test(expr1[expr1.length - 1] + expr[i + 1]))
+            if (/[A-Za-zΑ-Ωα-ω_\d\)][A-Za-zΑ-Ωα-ω_\d\(]/.test(expr1[expr1.length - 1] + expr[i + 1]))
                 expr1 += "*";
             i++;
         }
@@ -226,6 +226,10 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         }
     }
     expr = expr1;
+    
+    // unwanted plus sign
+    expr = expr.replace(/\(\+/g, "(");
+    expr = expr.replace(/^\+/g, "");
 
     // operators
     expr = expr.replace(/\*\*/g, "^");
@@ -458,6 +462,7 @@ MathParser.parseInput = function (input) {
     input = input.replace(/[⁎∗·•‧∙⋅⸱]/g, '*');
     input = input.replace(/[⁄∕⟋÷]/g, '/');
     input = input.replace(/[ˆ]/g, '^');
+    input = input.replace(/[ℯ]/g, 'e');
     input = input.replace(/[^\^](⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, function (_, s) {
         const a = "⁻⁰¹²³⁴⁵⁶⁷⁸⁹", b = "-0123456789";
         var res = _[0] + '^';

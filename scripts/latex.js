@@ -48,7 +48,8 @@ function initMathjax() {
         svg: {
             fontCache: 'global'
         },
-        options: { enableMenu: false }
+        options: { enableMenu: false },
+        latexList: []
     };
     let mjx = document.createElement("script");
     mjx.id = "MathJax-script";
@@ -56,9 +57,13 @@ function initMathjax() {
     mjx.onload = setMathjaxDrag;
     mjx.onerror = function () { alert("Failed to load MathJax."); };
     document.head.appendChild(mjx);
+    window.addEventListener("resize", function () {
+        updateLatex(window.MathJax.latexList);
+    });
 }
 
-function updateLatex(latexList, color) {
+function updateLatex(latexList, color = null) {
+    window.MathJax.latexList = latexList;
     if (MathJax.typeset == undefined) {
         setTimeout(function () {
             updateLatex(latexList, color);
@@ -67,7 +72,12 @@ function updateLatex(latexList, color) {
     }
     let texContainer = document.getElementById("mathjax-preview");
     texContainer.innerHTML = "";
-    texContainer.style.color = color;
+    var lightTheme = parameterToDict(RawParameters).bLight;
+    texContainer.style.color = lightTheme ? "black" : "white";
+    if (color != null)
+        texContainer.style.color = color;
+    texContainer.style.fontSize = Math.min(1.1,
+        Math.min(window.innerWidth / 480, window.innerHeight / 400)) + "em";
     for (var i = 0; i < latexList.length; i++) {
         var container = document.createElement("div");
         var line = document.createElement("span");
@@ -83,5 +93,22 @@ function updateLatex(latexList, color) {
         texPreviewPositionDelta(0, 0);
     } catch (e) {
         console.error(e);
+    }
+
+    // kinda
+    let stylesheets = document.styleSheets;
+    for (var _ = 0; _ < stylesheets.length; _++) {
+        let sheet = stylesheets[_];
+        var rules = sheet.cssRules;
+        for (var i = 0; i < rules.length; i++) {
+            var rule = rules[i];
+            if (rule.selectorText == "#mathjax-preview span") {
+                var text = rule.cssText.replace(/rgba?\([\d\.\,\s]+\)/g,
+                    lightTheme ? "rgba(233, 230, 228, 0.65)" : "rgba(0, 0, 0, 0.6)");
+                sheet.deleteRule(i);
+                sheet.insertRule(text, sheet.cssRules.length);
+                break;
+            }
+        }
     }
 }

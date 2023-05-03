@@ -28,6 +28,10 @@ document.body.onload = function (event) {
             .concat(BuiltInMathFunctions.rawMathFunctionsC)
     );
     MathFunctions['zeta'][1].langs.glslc = "mc_zeta_fast(%1)";
+    for (var i = 0; i < 3; i++) {
+        var funname = ['logzeta', 'lnzeta', 'lzeta'][i];
+        MathFunctions[funname][1].langs.glslc = "mc_lnzeta_fast(%1)";
+    }
     MathParser.IndependentVariables = {
         'x': "z",
         'z': "z",
@@ -52,7 +56,6 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.implicitMode = false;
     UpdateFunctionInputConfig.warnNaN = false;
-    UpdateFunctionInputConfig.warnNumerical = true;
 
     // init viewport
     resetState({

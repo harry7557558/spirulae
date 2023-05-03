@@ -147,9 +147,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     new MathFunction(['iTime'], 1, {
         latex: '\\mathrm{iTime}',
         glsl: '(iTime)',
-        glslExt: ['iTime'],
         glslc: 'vec2((iTime),0)',
-        glslcExt: ['iTime'],
         cppf: 'iTime',
         cppfExt: ['iTime'],
         cppd: 'iTime',
@@ -335,6 +333,24 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         glslc: 'mc_arccsch(%1)',
         cppf: 'asinh(1.0f/%1)',
     }, new Interval(), new Interval()),
+    new MathFunction(['gamma', 'Gamma'], 1, {
+        latex: '\\Gamma\\left(%1\\right)',
+        glsl: 'mf_gamma(%1)',
+        glslExt: ['mf_lgamma_1', 'gamma'],
+        glslc: 'mc_gamma(%1)',
+        glslcExt: ['mc_gamma'],
+        cppf: 'tgamma(%1)',
+        cppd: 'tgamma(%1)',
+    }),
+    new MathFunction(['lgamma', 'lGamma', 'lngamma', 'lnGamma', 'loggamma', 'logGamma'], 1, {
+        latex: '\\mathrm{ln\\Gamma}\\left(%1\\right)',
+        glsl: 'mf_loggamma(%1)',
+        glslExt: ['mf_lgamma_1', 'loggamma'],
+        glslc: 'mc_lngamma(%1)',
+        glslcExt: ['mc_lgamma'],
+        cppf: 'lgamma(%1)',
+        cppd: 'lgamma(%1)',
+    }),
 ];
 
 // Built-in real-only functions
@@ -458,20 +474,6 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppd: 'erfinv(%1)',
         cppdExt: ['erfinv'],
     }, new Interval(-1, 1), new Interval()),
-    new MathFunction(['gamma', 'Gamma'], 1, {
-        latex: '\\Gamma\\left(%1\\right)',
-        glsl: 'mf_gamma(%1)',
-        glslExt: ['mf_lgamma_1', 'gamma'],
-        cppf: 'tgamma(%1)',
-        cppd: 'tgamma(%1)',
-    }),
-    new MathFunction(['lgamma', 'lGamma', 'lngamma', 'lnGamma', 'loggamma', 'logGamma'], 1, {
-        latex: '\\mathrm{ln\\Gamma}\\left(%1\\right)',
-        glsl: 'mf_loggamma(%1)',
-        glslExt: ['mf_lgamma_1', 'loggamma'],
-        cppf: 'lgamma(%1)',
-        cppd: 'lgamma(%1)',
-    }),
     new MathFunction(['Beta'], 2, {
         latex: '\\mathrm{B}\\left(%1,%2\\right)',
         glsl: 'mf_beta(%1,%2)',
@@ -524,21 +526,15 @@ BuiltInMathFunctions.rawMathFunctionsC = [
         latex: '\\left(%1\\right)^{-1}',
         glslc: 'vec2(%1.x,-%1.y)/dot(%1,%1)',
     }),
-    new MathFunction(['gamma'], 1, {
-        latex: '\\Gamma\\left(%1\\right)',
-        glslc: 'mc_gamma(%1)',
-    }),
-    new MathFunction(['loggamma', 'lgamma', 'lngamma'], 1, {
-        latex: '\\ln\\Gamma\\left(%1\\right)',
-        glslc: 'mc_lngamma(%1)',
-    }),
     new MathFunction(['zeta'], 1, {
         latex: '\\zeta\\left(%1\\right)',
-        glslc: 'mf_zeta(%1)',
+        glslc: 'mc_zeta(%1)',
+        glslcExt: ["mc_zeta"],
     }),
     new MathFunction(['logzeta', 'lnzeta', 'lzeta'], 1, {
         latex: '\\ln\\zeta\\left(%1\\right)',
-        glslc: 'mf_lnzeta(%1)',
+        glslc: 'mc_lnzeta(%1)',
+        glslcExt: ["mc_lzeta"],
     }),
 ];
 
