@@ -91,6 +91,9 @@ document.body.onload = function (event) {
         new GraphingParameter("sStep", "select-step"),
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
+        new GraphingParameter("bClip", "checkbox-clip"),
+        new GraphingParameter("bClipFixed", "checkbox-clip-fixed"),
+        new GraphingParameter("bField", "checkbox-field"),
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("sColor", "select-color"),
         new GraphingParameter("bTransparency", "checkbox-transparency"),
@@ -108,7 +111,8 @@ document.body.onload = function (event) {
     resetState({
         rz: -0.9 * Math.PI,
         rx: -0.4 * Math.PI,
-        scale: 0.5
+        scale: 0.5,
+        clipSize: 2.0
     }, false);
 
     // main

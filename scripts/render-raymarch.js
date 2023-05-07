@@ -20,7 +20,7 @@ var renderer = {
 };
 
 // call this function to re-render
-async function drawScene(screenCenter, transformMatrix, lightDir) {
+async function drawScene(state, transformMatrix, lightDir) {
     if (renderer.raymarchProgram == null) {
         renderer.canvas.style.cursor = "not-allowed";
         return;
@@ -81,8 +81,10 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.premarchProgram, "screenCenter"),
-        screenCenter[0], screenCenter[1]);
+        state.screenCenter[0], state.screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "rZScale"), calcZScale());
+    gl.uniform3f(gl.getUniformLocation(renderer.premarchProgram, "uClipBox"),
+        state.clipSize, state.clipSize, state.clipSize);
     renderPass();
 
     // pooling
@@ -111,8 +113,10 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "screenCenter"),
-        screenCenter[0], screenCenter[1]);
+        state.screenCenter[0], state.screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
+    gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "uClipBox"),
+        state.clipSize, state.clipSize, state.clipSize);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
@@ -189,6 +193,7 @@ var state = {
     rz: null,
     rx: null,
     scale: null,
+    clipSize: null,
     rTheta: null,
     rPhi: null,
     renderNeeded: true
@@ -205,10 +210,11 @@ function resetState(loaded_state = {}, overwrite = true) {
         rz: resetState.defaultState.rz,
         rx: resetState.defaultState.rx,
         scale: resetState.defaultState.scale,
+        clipSize: resetState.defaultState.clipSize,
         renderNeeded: true
     };
     for (var key in state1) {
-        if (overwrite || !loaded_state.hasOwnProperty(key))
+        if (overwrite || !loaded_state.hasOwnProperty(key) || loaded_state[key] == null)
             loaded_state[key] = state1[key];
         if (state.hasOwnProperty(key) && !/^r[A-Z]/.test(key))
             state[key] = loaded_state[key];
@@ -321,7 +327,7 @@ function initRenderer() {
             } catch (e) { console.error(e); }
             var transformMatrix = calcTransformMatrix(state);
             var lightDir = calcLightDirection(transformMatrix, state.rTheta, state.rPhi);
-            drawScene(screenCenter, transformMatrix, lightDir);
+            drawScene(state, transformMatrix, lightDir);
             renderLegend(state);
             if (timeDependent) {
                 state.renderNeeded = true;
@@ -345,6 +351,9 @@ function initRenderer() {
             return;
         var sc = Math.exp(0.0002 * event.wheelDeltaY);
         state.scale *= sc;
+        var params = parameterToDict(RawParameters);
+        if (params.hasOwnProperty("bClipFixed") && !params.bClipFixed)
+            state.clipSize /= sc;
         state.renderNeeded = true;
     }, { passive: true });
     var mouseDown = false;
@@ -403,7 +412,11 @@ function initRenderer() {
             var newFingerDist = Math.hypot(fingerPos1[0] - fingerPos0[0], fingerPos1[1] - fingerPos0[1]);
             if (fingerDist > 0. && newFingerDist > 0.) {
                 var sc = newFingerDist / fingerDist;
-                state.scale *= Math.max(Math.min(sc, 2.0), 0.5);
+                sc = Math.max(Math.min(sc, 2.0), 0.5);
+                state.scale *= sc;
+                var params = parameterToDict(RawParameters);
+                if (params.hasOwnProperty("bClipFixed") && !params.bClipFixed)
+                    state.clipSize /= sc;
             }
             fingerDist = newFingerDist;
             state.renderNeeded = true;
@@ -422,6 +435,8 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
+        shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.bClip));
+        shaderSource = shaderSource.replaceAll("{%FIELD%}", Number(params.bField));
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
