@@ -58,7 +58,11 @@
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
         <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <br />
-        <span title="Clip the shape inside a box"><input type="checkbox" id="checkbox-clip" />box clip</span>
+        <span title="Clip the shape inside a box"><select id="select-clip">
+            <option value="0" selected>no</option>
+            <option value="1">box</option>
+            <option value="2">sphere</option>
+        </select>clip</span>
         (<span title="Fixed box size independent of zooming"><input type="checkbox"
                 id="checkbox-clip-fixed" />fixed</span>)&ensp;
             <span title="Visualize scalar field with volume contour lines"><input type="checkbox"
@@ -72,7 +76,7 @@
         <span title="Display the surface as semi-transparent"><input type="checkbox"
                 id="checkbox-transparency" />transparency</span>
         <br />
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
+        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
                 id="checkbox-discontinuity" checked />highlight discontinuity</span>
         <br />

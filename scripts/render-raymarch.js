@@ -84,7 +84,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         state.screenCenter[0], state.screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "rZScale"), calcZScale());
     gl.uniform3f(gl.getUniformLocation(renderer.premarchProgram, "uClipBox"),
-        state.clipSize, state.clipSize, state.clipSize);
+        state.clipSize[0], state.clipSize[1], state.clipSize[2]);
     renderPass();
 
     // pooling
@@ -116,7 +116,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         state.screenCenter[0], state.screenCenter[1]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "uClipBox"),
-        state.clipSize, state.clipSize, state.clipSize);
+        state.clipSize[0], state.clipSize[1], state.clipSize[2]);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
@@ -210,7 +210,7 @@ function resetState(loaded_state = {}, overwrite = true) {
         rz: resetState.defaultState.rz,
         rx: resetState.defaultState.rx,
         scale: resetState.defaultState.scale,
-        clipSize: resetState.defaultState.clipSize,
+        clipSize: resetState.defaultState.clipSize.slice(),
         renderNeeded: true
     };
     for (var key in state1) {
@@ -269,7 +269,7 @@ function initWebGL() {
             var new_state = JSON.parse(initialState);
             resetState(new_state, false);
         }
-        new_state.iTime = 0.0;
+        state.iTime = 0.0;
     }
     catch (e) {
         console.error(e);
@@ -353,7 +353,7 @@ function initRenderer() {
         state.scale *= sc;
         var params = parameterToDict(RawParameters);
         if (params.hasOwnProperty("bClipFixed") && !params.bClipFixed)
-            state.clipSize /= sc;
+            for (var _ = 0; _ < 3; _++) state.clipSize[_] /= sc;
         state.renderNeeded = true;
     }, { passive: true });
     var mouseDown = false;
@@ -416,7 +416,7 @@ function initRenderer() {
                 state.scale *= sc;
                 var params = parameterToDict(RawParameters);
                 if (params.hasOwnProperty("bClipFixed") && !params.bClipFixed)
-                    state.clipSize /= sc;
+                    for (var _ = 0; _ < 3; _++) state.clipSize[_] /= sc;
             }
             fingerDist = newFingerDist;
             state.renderNeeded = true;
@@ -435,7 +435,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
-        shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.bClip));
+        shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.sClip));
         shaderSource = shaderSource.replaceAll("{%FIELD%}", Number(params.bField));
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));

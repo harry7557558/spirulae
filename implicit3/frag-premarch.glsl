@@ -21,16 +21,30 @@ vec3 worldToScreen(vec3 p) {
     return q.xyz / q.w;
 }
 
-bool boxIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
+#if {%CLIP%}==1
+bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
     vec3 inv_rd = 1.0 / rd;
     vec3 n = inv_rd*(ro);
-    vec3 k = abs(inv_rd)*abs(uClipBox);
+    vec3 k = abs(inv_rd)*0.8*uClipBox;
     vec3 t1 = -n - k, t2 = -n + k;
     tn = max(max(t1.x, t1.y), t1.z);
     tf = min(min(t2.x, t2.y), t2.z);
     if (tn > tf) return false;
     return true;
 }
+#elif {%CLIP%}==2
+bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
+	float a = dot(rd/uClipBox,rd/uClipBox);
+	float b = -dot(rd/uClipBox,ro/uClipBox);
+	float c = dot(ro/uClipBox,ro/uClipBox)-1.0;
+	float delta = b*b-a*c;
+	if (delta < 0.0) return false;
+	delta = sqrt(delta);
+	t1 = (b-delta)/a, t2 = (b+delta)/a;
+	if (t1>t2) { float t=t1; t1=t2; t2=t;}
+	return true;
+}
+#endif
 
 
 // function and its gradient in world space
@@ -99,7 +113,7 @@ void main(void) {
     vec3 ro_w = screenToWorld(ro_s);
     vec3 rd_w = screenToWorld(ro_s+rd_s)-ro_w;
     float t0, t1;
-    if (boxIntersection(ro_w, rd_w, t0, t1)) {
+    if (clipIntersection(ro_w, rd_w, t0, t1)) {
         t0 = dot(worldToScreen(ro_w+t0*rd_w)-ro_s, rd_s);
         vec3 p1 = worldToScreen(ro_w+t1*rd_w);
         t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);

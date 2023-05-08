@@ -19,16 +19,30 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
 #endif
 
-bool boxIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
+#if {%CLIP%}==1
+bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
     vec3 inv_rd = 1.0 / rd;
     vec3 n = inv_rd*(ro);
-    vec3 k = abs(inv_rd)*abs(uClipBox);
+    vec3 k = abs(inv_rd)*0.8*uClipBox;
     vec3 t1 = -n - k, t2 = -n + k;
     tn = max(max(t1.x, t1.y), t1.z);
     tf = min(min(t2.x, t2.y), t2.z);
     if (tn > tf) return false;
     return true;
 }
+#elif {%CLIP%}==2
+bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
+	float a = dot(rd/uClipBox,rd/uClipBox);
+	float b = -dot(rd/uClipBox,ro/uClipBox);
+	float c = dot(ro/uClipBox,ro/uClipBox)-1.0;
+	float delta = b*b-a*c;
+	if (delta < 0.0) return false;
+	delta = sqrt(delta);
+	t1 = (b-delta)/a, t2 = (b+delta)/a;
+	if (t1>t2) { float t=t1; t1=t2; t2=t;}
+	return true;
+}
+#endif
 
 vec3 screenToWorld(vec3 p) {
     vec4 q = transformMatrix * vec4(p, 1);
@@ -155,7 +169,7 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     );
 }
 
-#define FIELD_EMISSION 0.25
+#define FIELD_EMISSION (0.25*(bool({%CLIP%}) ? clamp(4.0/(uScale*length(uClipBox)),1.0,10.0) : 1.0))
 #define ISOSURFACE_FREQUENCY 10.0
 #define DISCONTINUITY_OPACITY 10.0
 #define SURFACE_GRADIENT 10.0
@@ -175,7 +189,6 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
     float t = t0, dt = STEP_SIZE;
     float v = 0.0, v0 = v, v00 = v, v1;
-    float g = 0.0, g0 = g, g00 = g;
     float dt0 = 0.0, dt00 = 0.0;
     float dvdt, old_dvdt;  // discontinuity checking
     bool isBisecting = false;
@@ -212,36 +225,16 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
         }
         else {  // raymarching
             if (isnan(dt0) || dt0 <= 0.0) v00 = v, v0 = v, dt0 = dt00 = 0.0;
-            g = dt0 > 0.0 ? ( // estimate gradient
+            float g = dt0 > 0.0 ? ( // estimate gradient
                 dt00 > 0.0 ? // quadratic fit
                     v00*dt0/(dt00*(dt0+dt00))-v0*(dt0+dt00)/(dt0*dt00)+v*(2.*dt0+dt00)/(dt0*(dt0+dt00))
                     : (v-v0)/dt0  // finite difference
-            ) : 0.;
-            float a = dt0 > 0.0 ? ( // estimate second derivative
-                dt00 > 0.0 ? // quadratic fit
-                    g00*dt0/(dt00*(dt0+dt00))-g0*(dt0+dt00)/(dt0*dt00)+g*(2.*dt0+dt00)/(dt0*(dt0+dt00))
-                    : (g-g0)/dt0  // finite difference
             ) : 0.;
 #if {%FIELD%}
             // field
             vec3 col = colorSdf(0.5+0.5*sin(ISOSURFACE_FREQUENCY*PI*0.5*
                 log(abs(v))/log(10.) ));
             float absorb = FIELD_EMISSION;
-#if {%DISCONTINUITY%} && 0
-            // try to highlight discontinuity, terrible
-            if (dt >= 0.99*STEP_SIZE && dt00 != 0.0) {
-                vec3 dpdt = (screenToWorld(ro+rd*(t+0.01))-screenToWorld(ro+rd*(t-0.01)))/0.02;
-                float dt_ = length(dpdt)/length(rd)*dt;
-                a *= (dt*dt) / (dt_*dt_);
-                float discon0 = (abs(v0-v00)/dt00) / (abs(v-v00)/(dt00+dt0));
-                float discon1 = (abs(v-v0)/dt0) / (abs(v-v00)/(dt00+dt0));
-                float k = discon1 / discon0 * (0.02) - 1.0;
-                if (k > 0.) {
-                    col = mix(vec3(1,0,0), col, clamp(exp(-1.0*k),0.0,1.0));
-                    absorb += DISCONTINUITY_OPACITY*max(10.0*k,0.0);
-                }
-            }
-#endif
             if (isnan(v) || isinf(v) || isnan(absorb) || isinf(absorb)) {
                 col = vec3(0,1,0);
                 absorb = 0.1;
@@ -251,9 +244,9 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             totemi += col*absorb*totabs*dt;
 #endif
             // update
-            dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v, g00 = g0, g0 = g;
+            dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             dt = (isnan(g) || g==0.) ? STEP_SIZE :
-                clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
+                clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
             t += dt;
         }
     }
@@ -290,7 +283,7 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
         ) : 0.;
         if (isnan(g0) || g0 <= 0.0) g0 = g;
         dt = (isnan(g) || g==0.) ? STEP_SIZE :
-            clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
+            clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
         dt00 = dt0, dt0 = dt, v00 = v0, v0 = v, g0 = g;
 #if {%FIELD%}
         // field
@@ -322,7 +315,7 @@ void main(void) {
     vec3 ro_w = screenToWorld(ro_s);
     vec3 rd_w = screenToWorld(ro_s+rd_s)-ro_w;
     float t0, t1;
-    if (boxIntersection(ro_w, rd_w, t0, t1)) {
+    if (clipIntersection(ro_w, rd_w, t0, t1)) {
         t0 = dot(worldToScreen(ro_w+t0*rd_w)-ro_s, rd_s);
         vec3 p1 = worldToScreen(ro_w+t1*rd_w);
         t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
@@ -335,8 +328,8 @@ void main(void) {
     else col = clamp(mix(col, vec3(0.5), -0.2), 0.0, 1.0);
 #else
     col = render(ro_s, rd_s,
-        tt.z>=254./255.?1.: max(tt.z-pad, max(tt.z, 0.0)),
-        min(tt.w+pad, min(tt.w, 1.0))
+        tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
+        min(tt.y+pad, min(tt.w, 1.0))
     );
 #endif
     col = pow(col, vec3(1./2.2));

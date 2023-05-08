@@ -61,10 +61,18 @@
             </select>graph</span>&ensp;
         <span><select id="select-step">
                 <option value="0.04">low</option>
-                <option value="0.01" selected>medium</option>
-                <option value="0.004">high</option>
+                <option value="0.01">medium</option>
+                <option value="0.004" selected>high</option>
                 <option value="0.001">ex-high</option>
             </select>quality</span>
+        <br />
+        <span title="Clip the shape inside a box"><select id="select-clip">
+            <option value="0">no</option>
+            <option value="1" selected>box</option>
+            <option value="2">sphere</option>
+        </select>clip</span>
+        (<span title="Fixed box size independent of zooming"><input type="checkbox"
+                id="checkbox-clip-fixed" />fixed</span>)
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"

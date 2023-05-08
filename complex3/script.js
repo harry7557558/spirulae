@@ -11,7 +11,7 @@ const builtinFunctions = [
     ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
     ["Three Forks", "1/lngamma(sqrt(4z^3))"],
     ["Five Needles", "csc(root(5,z^5)e^(iln(|z|)))"],
-    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/2)+1"],
+    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/4)+1"],
     ["Rainbow Mandelbrot", "#&#32;mathy&#32;part;f(x)=x^2+z;g(z)=f(f(f(f(f(f(f(z;s=ln(ln(1/|g(z/3-0.6)|)-1);#&#32;artistic&#32;part;tanh(1/|re(s)|)exp(iarg(sin(s)))"],
 ];
 
@@ -41,6 +41,8 @@ document.body.onload = function (event) {
 
     // init parameters
     initParameters([
+        new GraphingParameter("sClip", "select-clip"),
+        new GraphingParameter("bClipFixed", "checkbox-clip-fixed"),
         new GraphingParameter("sHz", "select-hz"),
         new GraphingParameter("sStep", "select-step"),
         new GraphingParameter("bLight", "checkbox-light"),
@@ -51,7 +53,7 @@ document.body.onload = function (event) {
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, Math.PI / 6.0),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, Math.PI / 6.0),
         new UniformSlider("rZScale", "slider-zscale", 0.01, 0.99, 0.5),
-        new UniformSlider("rBrightness", "slider-brightness", 0.01, 0.99, 0.6),
+        new UniformSlider("rBrightness", "slider-brightness", 0.01, 0.99, 0.7),
     ]);
     UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.implicitMode = false;
@@ -61,7 +63,8 @@ document.body.onload = function (event) {
     resetState({
         rz: 0.15 * Math.PI,
         rx: -0.35 * Math.PI,
-        scale: 0.2
+        scale: 0.15,
+        clipSize: [8.0, 8.0, 8.0]
     }, false);
 
     // main

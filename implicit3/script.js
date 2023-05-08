@@ -91,7 +91,7 @@ document.body.onload = function (event) {
         new GraphingParameter("sStep", "select-step"),
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
-        new GraphingParameter("bClip", "checkbox-clip"),
+        new GraphingParameter("sClip", "select-clip"),
         new GraphingParameter("bClipFixed", "checkbox-clip-fixed"),
         new GraphingParameter("bField", "checkbox-field"),
         new GraphingParameter("bGrid", "checkbox-grid"),
@@ -112,7 +112,7 @@ document.body.onload = function (event) {
         rz: -0.9 * Math.PI,
         rx: -0.4 * Math.PI,
         scale: 0.5,
-        clipSize: 2.0
+        clipSize: [2.0, 2.0, 2.0]
     }, false);
 
     // main

@@ -323,7 +323,7 @@ function initWebGL() {
             var new_state = JSON.parse(initialState);
             resetState(new_state, false);
         }
-        new_state.iTime = 0.0;
+        state.iTime = 0.0;
     }
     catch (e) {
         console.error(e);

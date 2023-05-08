@@ -58,7 +58,8 @@ function initMathjax() {
     mjx.onerror = function () { alert("Failed to load MathJax."); };
     document.head.appendChild(mjx);
     window.addEventListener("resize", function () {
-        updateLatex(window.MathJax.latexList);
+        if (parameterToDict(RawParameters).cLatex)
+            updateLatex(window.MathJax.latexList);
     });
 }
 

@@ -29,13 +29,13 @@ The equation parser implements the following features:
  - Special functions
 
 The 3D graphers implements the following parameters/features:
- - Multiple shading modes
- - Dark and light color themes
+ - Multiple shading and grid modes
+ - Scalar field visualization
  - Speed vs. quality control
- - Lighting control
- - Axes and grid
  - Red highlight discontinuity
+ - Dark and light color themes
  - Semi-transparent surface shading
+ - Lighting control
  - Anti-aliasing
 
 Experimental features (subject to change):
@@ -100,4 +100,4 @@ Complex 3D plots of the Gamma function and the Riemann Zeta function
 
 [![](./src/gallery-complex3-zeta.jpg)](./complex3/index.html)
 
-This page was updated on 2023/05/03.
+This page was updated on 2023/05/07.

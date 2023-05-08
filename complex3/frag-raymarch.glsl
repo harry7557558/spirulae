@@ -8,6 +8,7 @@ uniform sampler2D iChannel0;
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
 uniform float uScale;
+uniform vec3 uClipBox;
 
 uniform float rBrightness;
 uniform float rZScale;
@@ -25,12 +26,43 @@ vec3 screenToWorld(vec3 p) {
     vec4 q = transformMatrix * vec4(p, 1);
     return q.xyz / q.w;
 }
+vec3 worldToScreen(vec3 p) {
+    vec4 q = inverse(transformMatrix) * vec4(p, 1);
+    if (q.w < 0.0) return vec3(-1);
+    return q.xyz / q.w;
+}
+
+#if {%CLIP%}==1
+bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
+    vec3 inv_rd = 1.0 / rd;
+    vec3 n = inv_rd*(ro);
+    vec3 k = abs(inv_rd)*0.8*uClipBox;
+    vec3 t1 = -n - k, t2 = -n + k;
+    tn = max(max(t1.x, t1.y), t1.z);
+    tf = min(min(t2.x, t2.y), t2.z);
+    if (tn > tf) return false;
+    return true;
+}
+#elif {%CLIP%}==2
+bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
+	float a = dot(rd/uClipBox,rd/uClipBox);
+	float b = -dot(rd/uClipBox,ro/uClipBox);
+	float c = dot(ro/uClipBox,ro/uClipBox)-1.0;
+	float delta = b*b-a*c;
+	if (delta < 0.0) return false;
+	delta = sqrt(delta);
+	t1 = (b-delta)/a, t2 = (b+delta)/a;
+	if (t1>t2) { float t=t1; t1=t2; t2=t;}
+	return true;
+}
+#endif
 
 
 // function and its gradient in world space
 #include "../shaders/complex.glsl"
 
 {%FUN%}
+#line 65
 
 int callCount = 0;
 vec2 funz(vec2 z) {  // function
@@ -192,7 +224,7 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
                     : (v-v0)/dt0  // finite difference
             ) : 0.;
             dt = (isnan(g) || g==0.) ? STEP_SIZE :
-                clamp(abs(v/g)-STEP_SIZE, 0.05*STEP_SIZE, STEP_SIZE);
+                clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             t += dt;
         }
@@ -202,11 +234,33 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
 }
 
 void main(void) {
-    vec3 ro = vec3(vXy-screenCenter, 0);
-    vec3 rd = vec3(0, 0, 1);
-    vec2 t01 = texture(iChannel0, 0.5+0.5*vXy).xy;
+    vec3 ro_s = vec3(vXy-screenCenter,0);
+    vec3 rd_s = vec3(0,0,1);
+    vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
     float pad = max(STEP_SIZE, 1./255.);
-    vec3 col = vSolid(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
+    vec3 col = BACKGROUND_COLOR;
+#if {%CLIP%}
+    vec3 ro_w = screenToWorld(ro_s);
+    vec3 rd_w = screenToWorld(ro_s+rd_s)-ro_w;
+    float t0, t1;
+    if (clipIntersection(ro_w, rd_w, t0, t1)) {
+        t0 = dot(worldToScreen(ro_w+t0*rd_w)-ro_s, rd_s);
+        vec3 p1 = worldToScreen(ro_w+t1*rd_w);
+        t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
+        tt.z = max(t0, 0.0); tt.w = min(t1, 1.0);
+        col = vSolid(ro_s, rd_s,
+            tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
+            min(tt.y+pad, min(tt.w, 1.0))
+        );
+    }
+    else col = clamp(mix(col, vec3(0.5), -10.0), 0.0, 1.0);
+#else
+    col = vSolid(ro_s, rd_s,
+        tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
+        min(tt.y+pad, min(tt.w, 1.0))
+    );
+#endif
+    // vec3 col = vSolid(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));
     col = (col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14);
     col = pow(col, vec3(1.0/2.2));
     col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
