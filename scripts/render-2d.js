@@ -24,9 +24,12 @@ function resetState(loaded_state = {}, overwrite = true) {
     var xym = calcXyMinMax();
     for (var key in xym) state1[key] = xym[key];
     for (var key in state1) {
-        if (overwrite || loaded_state[key] == undefined)
-            loaded_state[key] = state1[key];
-        state[key] = loaded_state[key];
+        if (overwrite || !loaded_state.hasOwnProperty(key) || loaded_state[key] == null
+            || typeof(loaded_state[key]) != typeof(state1[key])
+            || (typeof(state1[key]) == "object" && loaded_state[key].length != state1[key].length)
+        ) loaded_state[key] = state1[key];
+        if (state.hasOwnProperty(key) && !/^r[A-Z]/.test(key))
+            state[key] = loaded_state[key];
     }
     state.iTime = 0.0;
 }

@@ -214,8 +214,10 @@ function resetState(loaded_state = {}, overwrite = true) {
         renderNeeded: true
     };
     for (var key in state1) {
-        if (overwrite || !loaded_state.hasOwnProperty(key) || loaded_state[key] == null)
-            loaded_state[key] = state1[key];
+        if (overwrite || !loaded_state.hasOwnProperty(key) || loaded_state[key] == null
+            || typeof(loaded_state[key]) != typeof(state1[key])
+            || (typeof(state1[key]) == "object" && loaded_state[key].length != state1[key].length)
+        ) loaded_state[key] = state1[key];
         if (state.hasOwnProperty(key) && !/^r[A-Z]/.test(key))
             state[key] = loaded_state[key];
     }
