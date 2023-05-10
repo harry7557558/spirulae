@@ -93,7 +93,7 @@ document.body.onload = function (event) {
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("sClip", "select-clip"),
         new GraphingParameter("bClipFixed", "checkbox-clip-fixed"),
-        new GraphingParameter("bField", "checkbox-field"),
+        new GraphingParameter("sField", "select-field"),
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("sColor", "select-color"),
         new GraphingParameter("bTransparency", "checkbox-transparency"),

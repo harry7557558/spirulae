@@ -438,7 +438,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
         shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.sClip));
-        shaderSource = shaderSource.replaceAll("{%FIELD%}", Number(params.bField));
+        shaderSource = shaderSource.replaceAll("{%FIELD%}", params.sField);
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));

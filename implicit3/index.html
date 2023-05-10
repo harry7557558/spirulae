@@ -65,8 +65,11 @@
         </select>clip</span>
         (<span title="Fixed box size independent of zooming"><input type="checkbox"
                 id="checkbox-clip-fixed" />fixed</span>)&ensp;
-            <span title="Visualize scalar field with volume contour lines"><input type="checkbox"
-                    id="checkbox-field" />field</span>
+            <span title="Visualize scalar field with volume contour lines"><select id="select-field">
+                <option value="0" selected>no</option>
+                <option value="1">linear</option>
+                <option value="2">log</option>
+            </select>field</span>
         <br />
         <span title="Surface color mode"><select id="select-color">
                 <option value="0">default</option>

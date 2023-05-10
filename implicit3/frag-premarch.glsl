@@ -119,14 +119,14 @@ void main(void) {
         t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
         t0 = max(t0, 0.0); t1 = min(t1, 1.0);
         fragColor.xy = fragColor.zw = vec2(t0, t1);
-#if !{%FIELD%}
+#if {%FIELD%}==0
         fragColor.xy = premarch(ro_s, rd_s, t0, t1);
 #endif
     }
     else fragColor = vec4(1, 1, 1, 1);
 #else // {%CLIP%}
     fragColor.xy = fragColor.zw = vec2(0, 1);
-#if !{%FIELD%}
+#if {%FIELD%}==0
     fragColor.xy = premarch(ro_s, rd_s, 0.0, 1.0);
 #endif
 #endif // {%CLIP%}

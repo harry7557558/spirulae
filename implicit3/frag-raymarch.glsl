@@ -13,7 +13,7 @@ uniform vec3 uClipBox;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
-#if {%LIGHT_THEME%} && !{%FIELD%}
+#if {%LIGHT_THEME%} && {%FIELD%}==0
 #define BACKGROUND_COLOR vec3(0.82,0.8,0.78)
 #else
 #define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
@@ -59,6 +59,7 @@ vec3 worldToScreen(vec3 p) {
 #include "../shaders/functions.glsl"
 
 {%FUN%}
+#line 63
 
 int callCount = 0;
 float fun(vec3 p) {  // function
@@ -79,7 +80,6 @@ vec3 funGrad(vec3 p) {  // numerical gradient
         fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
     ) / (2.0*h);
 }
-#line 50
 
 // function and its gradient in screen space
 
@@ -174,11 +174,24 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
 #define DISCONTINUITY_OPACITY 10.0
 #define SURFACE_GRADIENT 10.0
 
-vec3 colorSdf(float t) {
+vec3 colorField(float v) {
+    float t = 0.5+0.5*sin(ISOSURFACE_FREQUENCY*PI*0.5*v);
     float r = .385+.619*t+.238*cos(4.903*t-2.61);
     float g = -5.491+.959*t+6.089*cos(.968*t-.329);
     float b = 1.107-.734*t+.172*cos(6.07*t-2.741);
     return clamp(vec3(r, g, b), 0.0, 1.0);
+}
+
+void integrateField(float v0, float v1, vec3 c0, vec3 c1, out vec3 col, out float absorb) {
+    if (isnan(v0+v1) || isinf(v0+v1)) {
+        col = vec3(0,1,0);
+        absorb = 0.1;
+        return;
+    }
+    absorb = FIELD_EMISSION;
+    vec3 cm = colorField(0.5*(v0+v1));
+    col = (c0+c1+4.0*cm)/6.0;
+    col = pow(col, vec3(6));
 }
 
 
@@ -195,6 +208,7 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     int i = int(ZERO);
     vec3 totemi = vec3(0.0);
     float totabs = 1.0;
+    float prevField = 0.0; vec3 prevFieldCol;
     while (true) {
         if (++i >= MAX_STEP || t > t1) {
             return BACKGROUND_COLOR*totabs + totemi;
@@ -232,21 +246,21 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             ) : 0.;
 #if {%FIELD%}
             // field
-            vec3 col = colorSdf(0.5+0.5*sin(ISOSURFACE_FREQUENCY*PI*0.5*
-                log(abs(v))/log(10.) ));
-            float absorb = FIELD_EMISSION;
-            if (isnan(v) || isinf(v) || isnan(absorb) || isinf(absorb)) {
-                col = vec3(0,1,0);
-                absorb = 0.1;
+            float field = {%FIELD%}==1 ? 2.0*v*uScale : log(abs(v))/log(10.);
+            vec3 fieldCol = colorField(field);
+            if (i > 1) {
+                vec3 col; float absorb;
+                integrateField(prevField, field, prevFieldCol, fieldCol, col, absorb);
+                totabs *= exp(-absorb*dt);
+                totemi += col*absorb*totabs*dt;
             }
-            col = pow(col, vec3(6));
-            totabs *= exp(-absorb*dt);
-            totemi += col*absorb*totabs*dt;
+            prevField = field, prevFieldCol = fieldCol;
 #endif
             // update
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
-            dt = (isnan(g) || g==0.) ? STEP_SIZE :
-                clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
+            float ddt = abs(v/g);
+            dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
+                clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
             t += dt;
         }
     }
@@ -265,6 +279,7 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     float mcol = 1.0;
     vec3 totemi = vec3(0.0);
     float totabs = 1.0;
+    float prevField; vec3 prevFieldCol;
     for (; i < MAX_STEP && t < t1; t += dt, i++) {
         v = funS(ro+rd*t);
         if (v*v0 < 0.0 && mcol > 0.01) {  // intersection
@@ -282,21 +297,21 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
                 : (v-v0)/dt0  // finite difference
         ) : 0.;
         if (isnan(g0) || g0 <= 0.0) g0 = g;
-        dt = (isnan(g) || g==0.) ? STEP_SIZE :
-            clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
+        float ddt = abs(v/g);
+        dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
+            clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
         dt00 = dt0, dt0 = dt, v00 = v0, v0 = v, g0 = g;
 #if {%FIELD%}
         // field
-        vec3 col = colorSdf(0.5+0.5*sin(ISOSURFACE_FREQUENCY*PI*0.5*
-            log(abs(v))/log(10.) ));
-        float absorb = FIELD_EMISSION;
-        if (isnan(v) || isinf(v) || isnan(absorb) || isinf(absorb)) {
-            col = vec3(0,1,0);
-            absorb = 0.1;
+        float field = {%FIELD%}==1 ? 2.0*v*uScale : log(abs(v))/log(10.);
+        vec3 fieldCol = colorField(field);
+        if (i > 0) {
+            vec3 col; float absorb;
+            integrateField(prevField, field, prevFieldCol, fieldCol, col, absorb);
+            totabs *= exp(-absorb*dt);
+            totemi += col*mcol*absorb*totabs*dt;
         }
-        col = pow(col, vec3(6));
-        totabs *= exp(-absorb*dt);
-        totemi += col*mcol*absorb*totabs*dt;
+        prevField = field, prevFieldCol = fieldCol;
 #endif
     }
     return tcol + totemi + mcol * BACKGROUND_COLOR;
