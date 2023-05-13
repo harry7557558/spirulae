@@ -189,6 +189,24 @@ CodeGenerator.langs.cppd = {
 };
 
 
+CodeGenerator.initFunctionGradients = function () {
+    for (var name in MathFunctions) {
+        for (var nparam in MathFunctions[name]) {
+            var fun = MathFunctions[name][nparam];
+            fun.grad = null;
+            if (!fun.langs.hasOwnProperty("D"))
+                continue;
+            var parsed = MathParser.exprToPostfix(fun.langs.D, MathFunctions);
+            for (var i = 0; i < parsed.length; i++)
+                if (parsed[i].type == 'variable')
+                    parsed[i].str = parsed[i].str.replace("_", "@");
+            // console.log(name, nparam, parsed);
+            fun.grad = parsed;
+        }
+    }
+}
+
+
 // Convert a postfix math expression to LaTeX code
 CodeGenerator.postfixToLatex = function (queue) {
     const operators = {
@@ -308,16 +326,36 @@ CodeGenerator.postfixToLatex = function (queue) {
 CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) {
     let langpack = this.langs[lang];
 
+    let requireGrad = {
+        'x': true,
+        'y': true,
+        'z': true
+    };
+
     // handle repeated evaluations
     var subtreesLength = 0;
     var subtrees = {};
     var intermediates = [];
-    function addSubtree(evalobj) {
-        let postfix = evalobj.postfix;
-        var key = [];
-        for (var i = 0; i < postfix.length; i++) key.push(postfix[i].str);
+    function addSubtree(evalobj, evalobjAlt = null) {
+        let postfix = evalobj.postfix, postfixAlt = null;
+        var key = [], keyAlt = [];
+        for (var i = 0; i < postfix.length; i++)
+            key.push(postfix[i].str);
         key = key.join(',');
-        if (!subtrees.hasOwnProperty(key)) {
+        if (evalobjAlt != null) {
+            postfixAlt = evalobjAlt.postfix;
+            for (var i = 0; i < postfixAlt.length; i++)
+                keyAlt.push(postfixAlt[i].str);
+            keyAlt = keyAlt.join(',');
+        }
+        if (!subtrees.hasOwnProperty(key) &&
+            (evalobjAlt == null || !subtrees.hasOwnProperty(keyAlt))
+        ) {
+            if (evalobj.code[0] == langpack.prefixes[0]
+                && /\d+/.test(evalobj.code.slice(1))) {
+                    if (Number(evalobj.code.slice(1)) < intermediates.length)
+                        return '$' + evalobj.code.slice(1);
+                }
             var id = '$' + subtreesLength;
             subtrees[key] = {
                 id: id,
@@ -326,11 +364,182 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             };
             intermediates.push({
                 id: id,
-                code: evalobj.code,
+                obj: { ...evalobj }
             });
             subtreesLength += 1;
         }
-        return subtrees[key].id;
+        return subtrees.hasOwnProperty(key) ?
+            subtrees[key].id : subtrees[keyAlt].id;
+    }
+
+    function addToken(stack, token, gradOrders = [], args = null) {
+        let constexpr = MathFunctions['CONST'][1].langs[lang];
+        var obj = null, fun = null;
+        var funArgs = [];
+        // ??
+        if (token.type == "variable" && /@/.test(token.str)) {
+            throw new Error();
+        }
+        // number
+        else if (token.type == 'number') {
+            var s = token.str;
+            if (!/\./.test(s)) s += '.';
+            obj = new EvalObject([token],
+                constexpr.replaceAll("%1", s),
+                true, new Interval(Number(s), Number(s)), true);
+            // grad
+            for (var vi = 0; vi < gradOrders.length; vi++) {
+                var gradname = gradOrders.slice(0, vi + 1).join(',');
+                obj.grad[gradname] = new EvalObject(
+                    [new Token("number", '0.0')],
+                    constexpr.replaceAll("%1", "0"),
+                    true, new Interval(0, 0), true);
+            }
+            stack.push(obj);
+            return;
+        }
+        // variable
+        else if (token.type == "variable") {
+            var s = token.str;
+            var isNumeric = false;
+            var interval = new Interval();
+            if (MathParser.isIndependentVariable(s)) {
+                s = MathParser.IndependentVariables[s];
+            }
+            else if (s == "e") {
+                s = constexpr.replaceAll("%1", Math.E);
+                isNumeric = true;
+                interval.x0 = interval.x1 = Math.E;
+            }
+            else if (s == "π") {
+                s = constexpr.replaceAll("%1", Math.PI);
+                isNumeric = true;
+                interval.x0 = interval.x1 = Math.PI;
+            }
+            else {
+                throw "Undeclared variable " + s;
+            }
+            obj = new EvalObject(
+                [token], s, isNumeric, interval, true);
+            // grad
+            var sofar = 2.0;
+            for (var vi = 0; vi < gradOrders.length; vi++) {
+                var gradname = gradOrders.slice(0, vi + 1).join(',');
+                var v = gradOrders[vi];
+                if (v == s) sofar = Math.max(sofar - 1.0, 0.0);
+                else sofar = 0.0;
+                obj.grad[gradname] = new EvalObject(
+                    [new Token("number", sofar.toFixed(1))],
+                    constexpr.replaceAll("%1", sofar.toFixed(1)),
+                    true, new Interval(1, 1), true);
+            }
+            stack.push(obj);
+            return;
+        }
+        // operators
+        else if (token.type == "operator") {
+            var objAlt = null;
+            var v1 = stack[stack.length - 2];
+            var v2 = stack[stack.length - 1];
+            stack.pop(); stack.pop();
+            funArgs = [v1, v2];
+            // get object
+            if (token.str == "^")
+                obj = FunctionSubs.powEvalObjects(v1, v2, lang);
+            else if (token.str == "+") {
+                obj = FunctionSubs.addEvalObjects(v1, v2, lang);
+                objAlt = FunctionSubs.addEvalObjects(v2, v1, lang);
+            }
+            else if (token.str == "-")
+                obj = FunctionSubs.subEvalObjects(v1, v2, lang);
+                else if (token.str == "*") {
+                obj = FunctionSubs.mulEvalObjects(v1, v2, lang);
+                objAlt = FunctionSubs.mulEvalObjects(v2, v1, lang);
+            }
+            else if (token.str == "/")
+                obj = FunctionSubs.divEvalObjects(v1, v2, lang);
+            // get gradient expression
+            fun = MathFunctions[
+                { '+': "ADD", '-': "SUB", '*': "MUL", '/': "DIV", '^': "pow" }[token.str]
+            ][2];
+            var id = addSubtree(obj, objAlt);
+            // var idn = Number(id.slice(1));
+            // console.log(intermediates[idn].obj, obj, objAlt);
+            // obj = intermediates[idn].obj.code == obj.code ? obj :
+            //     intermediates[idn].obj.code == objAlt.code ? objAlt :
+            //     null;
+            obj.postfix = [new Token('variable', id)];
+            obj.code = langpack.prefixes[0] + id.slice(1);
+            // addExpression(stack, obj, funArgs);
+        }
+        // function
+        else if (token.type == 'function') {
+            fun = MathFunctions[token.str];
+            var numArgs = token.numArgs;
+            for (var j = numArgs; j > 0; j--)
+                funArgs.push(stack[stack.length - j]);
+            for (var j = 0; j < numArgs; j++)
+                stack.pop();
+            if (fun['' + numArgs] == undefined) fun = fun['0'];
+            else fun = fun['' + numArgs];
+            if (fun == undefined) throw new Error(
+                "Incorrect number of arguments for function `" + token.str + "`");
+            if (fun.langs.hasOwnProperty(lang + 'Ext')) {
+                let exts = fun.langs[lang + 'Ext'];
+                for (var _ = 0; _ < exts.length; _++)
+                    extensionMap[exts[_]].used = true;
+            }
+            obj = fun.subSource(funArgs, lang);
+            var id = addSubtree(obj);
+            obj.postfix = [new Token('variable', id)];
+            obj.code = langpack.prefixes[0] + id.slice(1);
+        }
+        else {
+            throw new Error("Unrecognized token `" + token + "`");
+        }
+
+        if (gradOrders.length == 0) {
+            stack.push(obj);
+            return;
+        }
+
+        // handle function gradient
+        var diffs = [];
+        // first time differentiate
+        for (var vi = 0; vi <= gradOrders.length; vi++) {
+            var gradname = gradOrders.slice(0, vi).join(',');
+            var args1 = [];
+            for (var i = 0; i < funArgs.length; i++) {
+                args1.push(vi == 0 ? funArgs[i] : funArgs[i].grad[gradname]);
+            }
+            diffs.push(args1);
+        }
+        console.log(diffs.slice());
+        var diffs1 = [];
+        for (var vi = 0; vi + 1 < diffs.length; vi++) {
+            var v = gradOrders[vi];
+            var gradname = gradOrders.slice(0, vi + 1).join(',');
+            var grad = fun.grad.slice();
+            var stack1 = [];
+            for (var i = 0; i < grad.length; i++) {
+                if (grad[i].type == "variable" && /@/.test(grad[i].str)) {
+                    var parts = grad[i].str.split('@');
+                    var parami = Number(parts[1]) - 1;
+                    stack1.push(diffs[vi + (parts[0] == 'g')][parami]);
+                }
+                else addToken(stack1, grad[i], [], args1);
+            }
+            if (stack1.length != 1)
+                throw new Error("Result1 stack length is not 1");
+            obj.grad[gradname] = stack1[0];
+            diffs1.push(stack1[0]);
+        }
+        console.log(diffs1.slice());
+        if (gradOrders.length > 0)
+            console.log(token.str, obj.code);
+        stack.push(obj);
+        for (var ui = 0; ui < gradOrders.length; ui++) {
+        }
     }
 
     // postfix evaluation
@@ -340,101 +549,16 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
         var queue = queues[qi];
         var stack = [];  // EvalObject objects
         for (var i = 0; i < queue.length; i++) {
-            var token = queue[i];
-            let constexpr = MathFunctions['CONST'][1].langs[lang];
-            // number
-            if (token.type == 'number') {
-                var s = token.str;
-                if (!/\./.test(s)) s += '.';
-                var obj = new EvalObject([token],
-                    constexpr.replaceAll("%1", s),
-                    true, new Interval(Number(s), Number(s)), true);
-                stack.push(obj);
-            }
-            // variable
-            else if (token.type == "variable") {
-                var s = token.str;
-                var isNumeric = false;
-                var interval = new Interval();
-                if (MathParser.isIndependentVariable(token.str)) {
-                    s = MathParser.IndependentVariables[token.str];
-                }
-                else if (token.str == "e") {
-                    s = constexpr.replaceAll("%1", Math.E);
-                    isNumeric = true;
-                    interval.x0 = interval.x1 = Math.E;
-                }
-                else if (token.str == "π") {
-                    s = constexpr.replaceAll("%1", Math.PI);
-                    isNumeric = true;
-                    interval.x0 = interval.x1 = Math.PI;
-                }
-                else {
-                    throw "Undeclared variable " + token.str;
-                }
-                stack.push(new EvalObject(
-                    [token], s, isNumeric, interval, true));
-            }
-            // operators
-            else if (token.type == "operator") {
-                var v = null;
-                if (token.str == "^") {
-                    var v1 = stack[stack.length - 2];
-                    var v2 = stack[stack.length - 1];
-                    stack.pop(); stack.pop();
-                    v = FunctionSubs.powEvalObjects(v1, v2, lang);
-                }
-                else {
-                    var v1 = stack[stack.length - 2];
-                    var v2 = stack[stack.length - 1];
-                    stack.pop(); stack.pop();
-                    if (token.str == "+")
-                        v = FunctionSubs.addEvalObjects(v1, v2, lang);
-                    if (token.str == "-")
-                        v = FunctionSubs.subEvalObjects(v1, v2, lang);
-                    if (token.str == "*")
-                        v = FunctionSubs.mulEvalObjects(v1, v2, lang);
-                    if (token.str == "/")
-                        v = FunctionSubs.divEvalObjects(v1, v2, lang);
-                }
-                var id = addSubtree(v);
-                v.postfix = [new Token('variable', id)];
-                v.code = langpack.prefixes[0] + id.slice(1);
-                stack.push(v);
-            }
-            // function
-            else if (token.type == 'function') {
-                var fun = MathFunctions[token.str];
-                var numArgs = token.numArgs;
-                var args = [];
-                for (var j = numArgs; j > 0; j--)
-                    args.push(stack[stack.length - j]);
-                for (var j = 0; j < numArgs; j++)
-                    stack.pop();
-                if (fun['' + numArgs] == undefined) fun = fun['0'];
-                else fun = fun['' + numArgs];
-                if (fun == undefined) throw new Error(
-                    "Incorrect number of arguments for function `" + token.str + "`");
-                if (fun.langs.hasOwnProperty(lang + 'Ext')) {
-                    let exts = fun.langs[lang + 'Ext'];
-                    for (var _ = 0; _ < exts.length; _++)
-                        extensionMap[exts[_]].used = true;
-                }
-                var v = fun.subSource(args, lang);
-                var id = addSubtree(v);
-                v.postfix = [new Token('variable', id)];
-                v.code = langpack.prefixes[0] + id.slice(1);
-                stack.push(v);
-            }
-            else {
-                throw new Error("Unrecognized token `" + token + "`");
-            }
+            // addToken(stack, queue[i], ['x', 'x'], null);
+            addToken(stack, queue[i], [], null);
         }
         if (stack.length != 1)
             throw new Error("Result stack length is not 1");
+        // console.log(stack[0]);
         qmap[qi] = stack[0].code;
         isCompatible = isCompatible && stack[0].isCompatible;
     }
+    // console.log(subtrees);
 
     // get result
     var result = {
@@ -443,11 +567,10 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
     };
     var lines = [];
     for (var i = 0; i < intermediates.length; i++) {
-        let intermediate = intermediates[i];
-        var varname = langpack.prefixes[0] + intermediate.id.slice(1);
+        var varname = langpack.prefixes[0] + i;
         var v = langpack.defs[0]
             .replaceAll("{%varname%}", varname)
-            .replaceAll("{%expr%}", intermediate.code);
+            .replaceAll("{%expr%}", intermediates[i].obj.code);
         lines.push(v);
     }
     result.code = langpack.fun

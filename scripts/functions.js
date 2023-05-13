@@ -26,6 +26,9 @@ function Interval(
     this.x1 = Math.max(x0, x1);
     if (!isFinite(this.x0)) this.x0 = -Infinity;
     if (!isFinite(this.x1)) this.x1 = Infinity;
+    this.isConstant = function () {
+        this.x0 == this.x1;
+    };
     this.isPositive = function () {
         return this.x0 >= 0.;
     };
@@ -47,6 +50,7 @@ function EvalObject(
     this.isNumeric = isNumeric;  // zero gradient
     this.range = range;  // non-negative
     this.isCompatible = isCompatible;  // has no NAN
+    this.grad = {};  // { varname: EvalObject }
 }
 
 function EvalLatexObject(postfix, latex, precedence) {
@@ -80,7 +84,33 @@ function MathFunction(
             throw new Error("Incorrect number of arguments for function " + this.names[0]);
     };
 
-    // Generate GLSL code, with NaN check
+    // gradOrders: { varname: int }
+    this.subGrad = function(args, gradOrders) {
+        var postfix = {};
+        for (var v in gradOrders) {
+            if (gradOrders[v] > 0)
+                postfix[v] = [];
+        }
+        if (postfix != {} && this.grad == null)
+            throw new Error("Function " + this.names[0] + "(" +
+                this.numArgs + ") does not support differentiation.");
+        for (var i = 0; i < this.grad.length; i++) {
+            for (var v in postfix) {
+                if (this.postfix.type == "variable") {
+                    var fd = this.grad[i].str.split('_');
+                    var argi = Number(fd[1]) - 1;
+                    if (fd[0] == 'f') postfix[v].push(args[argi]);
+                    else if (fd[0] == 'g') postfix[v].push(args[argi].grad[v]);
+                    else throw new Error();
+                }
+                else postfix[v].push(this.grad[i]);
+            }
+        }
+        return postfix;
+    }
+
+    // Generate code, with NaN check
+    // args: list[EvalObject]
     this.subSource = function (args, lang) {
         this.assertArgs(args);
         var code = this.langs[lang];
@@ -139,12 +169,14 @@ var BuiltInMathFunctions = {};
 
 BuiltInMathFunctions.rawMathFunctionsShared = [
     new MathFunction(['CONST'], 1, {
+        D: "0",
         latex: '%1',
         glsl: '%1',
         glslc: 'vec2(%1,0)',
         cppf: '%1f',
     }),
     new MathFunction(['iTime'], 1, {
+        D: "0",
         latex: '\\mathrm{iTime}',
         glsl: '(iTime)',
         glslc: 'vec2((iTime),0)',
@@ -154,26 +186,31 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         cppdExt: ['iTime'],
     }),
     new MathFunction(['ADD'], 2, {
+        D: "g1+g2",
         latex: '%1+%2',
         glsl: '%1+%2',
         glslc: '%1+%2',
     }),
     new MathFunction(['SUB'], 2, {
+        D: "g1-g2",
         latex: '%1-%2',
         glsl: '%1-%2',
         glslc: '%1-%2',
     }),
     new MathFunction(['MUL'], 2, {
+        D: "g1*f2+f1*g2",
         latex: '%1\\cdot %2',
         glsl: '%1*%2',
         glslc: 'vec2(%1.x*%2.x-%1.y*%2.y,%1.x*%2.y+%1.y*%2.x)',
     }),
     new MathFunction(['DIV'], 2, {
+        D: "(g1*f2-f1*g2)/(f2*f2)",
         latex: '\\frac{%1}{%2}',
         glsl: '%1/%2',
         glslc: 'vec2(%1.x*%2.x+%1.y*%2.y, %1.y*%2.x-%1.x*%2.y)/dot(%2,%2)',
     }),
     new MathFunction(['sqrt'], 1, {
+        D: "g1/(2sqrt(f1))",
         latex: '\\sqrt{%1}',
         glsl: 'sqrt(%1)',
         glslc: 'mc_sqrt(%1)',
@@ -195,21 +232,25 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         glslc: 'mc_pow(%1, %2)',
     }),
     new MathFunction(['exp'], 1, {
+        D: "g1*exp(f1)",
         latex: '\\exp\\left(%1\\right)',
         glsl: 'exp(%1)',
         glslc: 'mc_exp(%1)',
     }, new Interval(), new Interval(0, Infinity), Math.exp),
     new MathFunction(['log', 'ln'], 1, {
+        D: "g1/f1",
         latex: '\\ln\\left(%1\\right)',
         glsl: 'log(%1)',
         glslc: 'mc_ln(%1)',
     }, new Interval(0, Infinity), new Interval(), Math.log),
     new MathFunction(['sin'], 1, {
+        D: "g1*cos(f1)",
         latex: '\\sin\\left(%1\\right)',
         glsl: 'sin(%1)',
         glslc: 'mc_sin(%1)',
     }, new Interval(), new Interval(-1, 1)),
     new MathFunction(['cos'], 1, {
+        D: "-g1*sin(f1)",
         latex: '\\cos\\left(%1\\right)',
         glsl: 'cos(%1)',
         glslc: 'mc_cos(%1)',
@@ -237,11 +278,13 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         glslc: 'mc_cot(%1)',
     }),
     new MathFunction(['sinh'], 1, {
+        D: "g1*cosh(f1)",
         latex: '\\sinh\\left(%1\\right)',
         glsl: 'sinh(%1)',
         glslc: 'mc_sinh(%1)',
     }, new Interval(), new Interval(), Math.sinh),
     new MathFunction(['cosh'], 1, {
+        D: "g1*sinh(f1)",
         latex: '\\cosh\\left(%1\\right)',
         glsl: 'cosh(%1)',
         glslc: 'mc_cosh(%1)',
@@ -548,6 +591,10 @@ let MathFunctions = {};
 let FunctionSubs = {};
 
 FunctionSubs.addEvalObjects = function (a, b, lang) {
+    if (a.isNumeric && a.range.x0 == 0.0)
+        return b;
+    if (b.isNumeric && b.range.x0 == 0.0)
+        return a;
     return new EvalObject(
         a.postfix.concat(b.postfix.concat([new Token('operator', '+')])),
         MathFunctions['ADD'][2].langs[lang]
@@ -574,6 +621,14 @@ FunctionSubs.subEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.mulEvalObjects = function (a, b, lang) {
+    if (a.isNumeric && a.range.x0 == 0.0)
+        return a;
+    if (b.isNumeric && b.range.x0 == 0.0)
+        return b;
+    if (a.isNumeric && a.range.x0 == 1.0)
+        return b;
+    if (b.isNumeric && b.range.x0 == 1.0)
+        return a;
     var boundaries = [
         a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
         a.range.x1 * b.range.x0, a.range.x1 * b.range.x1
@@ -855,6 +910,9 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
             }
         }
     }
+
+    // gradients
+    CodeGenerator.initFunctionGradients();
 
     // special substitutions
     funs['ADD']['2'].subSource = function (args, lang) {
