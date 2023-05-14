@@ -56,10 +56,9 @@ vec3 worldToScreen(vec3 p) {
 
 
 // function and its gradient in world space
-#include "../shaders/functions.glsl"
 
 {%FUN%}
-#line 63
+#line 62
 
 int callCount = 0;
 float fun(vec3 p) {  // function

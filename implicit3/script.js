@@ -86,10 +86,7 @@ document.body.onload = function (event) {
         'z': "z"
     };
 
-//     CodeGenerator.langs.glsl.fun = "vec4 {%funname%}(float x, float y, float z) {\n\
-// {%funbody%}\n\
-//     return vec4({%val;x%}, {%val;y%}, {%val;z%}, {%val%});\n\
-// }";
+    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit3_compact;
 
     // init parameters
     initParameters([
@@ -123,7 +120,6 @@ document.body.onload = function (event) {
     // main
     initMain([
         "../shaders/vert-pixel.glsl",
-        "../shaders/functions.glsl",
         "frag-premarch.glsl",
         "../shaders/frag-pool.glsl",
         "frag-raymarch.glsl",
@@ -135,7 +131,10 @@ document.body.onload = function (event) {
 
 // for local testing
 
-function exportAllFunctions(lang) {
+function exportAllFunctions(lang, grad = false) {
+    let langpack = CodeGenerator.langs[lang];
+    let oldConfig = langpack.config;
+    langpack.config = langpack.presets[grad ? 'implicit3g_compact' : 'implicit3_compact'];
     var funs = builtinFunctions;
     var names = [], exprs = [];
     for (var i = 0; i < funs.length; i++) {
@@ -148,12 +147,17 @@ function exportAllFunctions(lang) {
     }
     var res = CodeGenerator.postfixToSource(exprs, names, lang);
     console.log(res.source);
+    langpack.config = oldConfig;
 }
 
-function exportCurrentFunction(lang) {
+function exportCurrentFunction(lang, grad = false) {
+    let langpack = CodeGenerator.langs[lang];
+    let oldConfig = langpack.config;
+    langpack.config = langpack.presets[grad ? 'implicit3g' : 'implicit3'];
     var str = document.getElementById("equation-input").value;
     var expr = MathParser.parseInput(str).val[0];
     var res = CodeGenerator.postfixToSource(
         [{ val: expr }], ["fun"], lang);
     console.log(res.source);
+    langpack.config = oldConfig;
 }

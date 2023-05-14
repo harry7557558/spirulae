@@ -45,6 +45,7 @@ document.body.onload = function (event) {
         'y': true,
         'z': true
     };
+    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.paramsurf_compact;
 
     // init parameters
     initParameters([
@@ -65,12 +66,6 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.enableMain = false;
     UpdateFunctionInputConfig.warnNaN = true;
 
-    // config code generator
-    CodeGenerator.langs.glsl.fun = "vec3 {%funname%}(float u, float v) {\n\
-{%funbody%}\n\
-    return vec3({%x%}, {%y%}, {%z%});\n\
-}";
-
     // init viewport
     resetState({
         rz: -0.9 * Math.PI,
@@ -81,7 +76,6 @@ document.body.onload = function (event) {
     // main
     initMain([
         "../shaders/vert-pixel.glsl",
-        "../shaders/functions.glsl",
         "../shaders/frag-pool.glsl",
         "vert.glsl",
         "frag.glsl",

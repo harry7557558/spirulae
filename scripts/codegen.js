@@ -15,15 +15,64 @@ let CodeGenerator = {
 
 // scalar-valued GLSL
 CodeGenerator.langs.glsl = {
-    fun: "float {%funname%}(float x, float y, float z) {\n\
+    inherit: [],
+    config: null,
+    presets: {
+        implicit3: {
+            fun: "float {%funname%}(float x, float y, float z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",
-    prefixes: ['v'],
-    defs: [
-        "    float {%varname%} = {%expr%};"
-    ],
-    inherit: [],
+            prefix: 'v',
+            def: "    float {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3_compact: {
+            fun: "float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+        implicit3g: {
+            fun: "vec4 {%funname%}(float x, float y, float z) {\n\
+{%funbody%}\n\
+    return vec4({%val;x%}, {%val;y%}, {%val;z%}, {%val%});\n\
+}",
+            prefix: 'v',
+            def: "    float {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3g_compact: {
+            fun: "vec4 {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%val;x%}, {%val;y%}, {%val;z%}, {%val%});\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+        paramsurf: {
+            fun: "vec3 {%funname%}(float u, float v) {\n\
+{%funbody%}\n\
+    return vec3({%x%}, {%y%}, {%z%});\n\
+}",
+            prefix: 'v',
+            def: "    float {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        paramsurf_compact: {
+            fun: "vec3 {%funname%}(float u, float v) {\n\
+    float {%funbody%};\n\
+    return vec3({%x%}, {%y%}, {%z%});\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+    },
     extensions: [
         {
             name: 'erf',
@@ -105,15 +154,19 @@ CodeGenerator.langs.glsl = {
 
 // complex-valued GLSL
 CodeGenerator.langs.glslc = {
-    fun: "vec2 {%funname%}(vec2 z) {\n\
+    inherit: [],
+    config: null,
+    presets: {
+        complex: {
+            fun: "vec2 {%funname%}(vec2 z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",
-    prefixes: ['v'],
-    defs: [
-        "    vec2 {%varname%} = {%expr%};"
-    ],
-    inherit: [],
+            prefix: 'v',
+            def: "    vec2 {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+    },
     extensions: [
         {
             name: 'mc_gamma',
@@ -136,15 +189,48 @@ CodeGenerator.langs.glslc = {
 
 // scalar-valued C++, float
 CodeGenerator.langs.cppf = {
-    fun: "float {%funname%}(float x, float y, float z) {\n\
+    inherit: ['glsl'],
+    config: null,
+    presets: {
+        implicit3: {
+        fun: "float {%funname%}(float x, float y, float z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",
-    prefixes: ['v'],
-    defs: [
-        "    float {%varname%} = {%expr%};"
-    ],
-    inherit: ['glsl'],
+            prefix: 'v',
+            def: "    float {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3_compact: {
+            fun: "float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+        implicit3g: {
+            fun: "float {%funname%}(float x, float y, float z, float *gx, float *gy, float *gz) {\n\
+{%funbody%}\n\
+    *gx = {%val;x%}, *gy = {%val;y%}, *gz = {%val;z%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "    float {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3g_compact: {
+            fun: "float {%funname%}(float x, float y, float z, float *gx, float *gy, float *gz) {\n\
+    float {%funbody%};\n\
+    *gx = {%val;x%}, *gy = {%val;y%}, *gz = {%val;z%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+    },
     extensions: [
         {
             name: 'iTime',
@@ -163,15 +249,48 @@ CodeGenerator.langs.cppf = {
 
 // scalar-valued C++, double
 CodeGenerator.langs.cppd = {
-    fun: "double {%funname%}(double x, double y, double z) {\n\
+    inherit: ['glsl', 'cppf'],
+    config: null,
+    presets: {
+        implicit3: {
+        fun: "double {%funname%}(double x, double y, double z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",
-    prefixes: ['v'],
-    defs: [
-        "    double {%varname%} = {%expr%};"
-    ],
-    inherit: ['glsl', 'cppf'],
+            prefix: 'v',
+            def: "    double {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3_compact: {
+            fun: "double {%funname%}(double x, double y, double z) {\n\
+    double {%funbody%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+        implicit3g: {
+            fun: "double {%funname%}(double x, double y, double z, double *gx, double *gy, double *gz) {\n\
+{%funbody%}\n\
+    *gx = {%val;x%}, *gy = {%val;y%}, *gz = {%val;z%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "    double {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+        implicit3g_compact: {
+            fun: "double {%funname%}(double x, double y, double z, double *gx, double *gy, double *gz) {\n\
+    double {%funbody%};\n\
+    *gx = {%val;x%}, *gy = {%val;y%}, *gz = {%val;z%};\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "{%varname%}={%expr%}",
+            joiner: ", "
+        },
+    },
     extensions: [
         {
             name: 'iTime',
@@ -341,14 +460,16 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         // returns object
         if (MathParser.isIndependentVariable(evalobj.code))
             return evalobj;
-        if (evalobj.isNumeric) {
-            var dx = evalobj.range.x1 - evalobj.range.x0;
-            if (isFinite(dx)) {
-                if (dx != 0.0) throw new Error("Assertion fail.");
-                var x = evalobj.range.x0;
-                evalobj.code = (x == Math.round(x) ? x.toFixed(1) : new String(x));
-                return evalobj;
-            }
+        if (evalobj.isNumeric && evalobj.range.x0 == evalobj.range.x1) {
+            let constexpr = MathFunctions['CONST'][1].langs[lang];
+            var x = evalobj.range.x0;
+            var xr = 1e-8 * Math.round(1e8 * x);
+            if (Math.abs(x - xr) < 1e-12) x = xr;
+            evalobj.code = constexpr.replaceAll("%1",
+                x == Math.round(x) ? x.toFixed(1) : new String(x));
+            if (evalobj.code[0] == '-')
+                evalobj.code = '(' + evalobj.code + ')';
+            return evalobj;
         }
         // returns id
         let postfix = evalobj.postfix, postfixAlt = null;
@@ -365,7 +486,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         if (!subtrees.hasOwnProperty(key) &&
             (evalobjAlt == null || !subtrees.hasOwnProperty(keyAlt))
         ) {
-            if (evalobj.code[0] == langpack.prefixes[0]
+            if (evalobj.code[0] == '$'
                 && /\d+/.test(evalobj.code.slice(1))) {
                     if (Number(evalobj.code.slice(1)) < intermediates.length)
                         return '$' + evalobj.code.slice(1);
@@ -458,35 +579,36 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             stack.pop(); stack.pop();
             funArgs = [v1, v2];
             // get object
-            if (token.str == "^")
+            if (token.str == "^") {
                 obj = FunctionSubs.powEvalObjects(v1, v2, lang);
+                fun = MathFunctions[v2.isNumeric ? "powconst" : "pow"][2];
+            }
             else if (token.str == "+") {
                 obj = FunctionSubs.addEvalObjects(v1, v2, lang);
                 objAlt = FunctionSubs.addEvalObjects(v2, v1, lang);
+                fun = MathFunctions["ADD"][2];
             }
-            else if (token.str == "-")
+            else if (token.str == "-") {
                 obj = FunctionSubs.subEvalObjects(v1, v2, lang);
+                fun = MathFunctions["SUB"][2];
+            }
             else if (token.str == "*") {
                 obj = FunctionSubs.mulEvalObjects(v1, v2, lang);
                 objAlt = FunctionSubs.mulEvalObjects(v2, v1, lang);
+                fun = MathFunctions["MUL"][2];
             }
-            else if (token.str == "/")
+            else if (token.str == "/") {
                 obj = FunctionSubs.divEvalObjects(v1, v2, lang);
+                fun = MathFunctions[v2.isNumeric ? "divconst" : "DIV"][2];
+            }
             // get gradient expression
-            fun = MathFunctions[
-                { '+': "ADD", '-': "SUB", '*': "MUL", '/': "DIV", '^': "pow" }[token.str]
-            ][2];
             var id = addSubtree(obj, objAlt);
-            // var idn = Number(id.slice(1));
-            // console.log(intermediates[idn].obj, obj, objAlt);
-            // obj = intermediates[idn].obj.code == obj.code ? obj :
-            //     intermediates[idn].obj.code == objAlt.code ? objAlt :
-            //     null;
             if (typeof(id) == "string") {
                 obj.postfix = [new Token('variable', id)];
-                obj.code = langpack.prefixes[0] + id.slice(1);
+                obj.code = id;
                 obj.grad = intermediates[Number(id.slice(1))].obj.grad;
             }
+            else obj = id;
         }
         // function
         else if (token.type == 'function') {
@@ -509,9 +631,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             var id = addSubtree(obj);
             if (typeof(id) == "string") {
                 obj.postfix = [new Token('variable', id)];
-                obj.code = langpack.prefixes[0] + id.slice(1);
+                obj.code = id;
                 obj.grad = intermediates[Number(id.slice(1))].obj.grad;
             }
+            if (fun.names[0] == "iTime")
+                obj.isNumeric = false;
         }
         else {
             throw new Error("Unrecognized token `" + token + "`");
@@ -577,17 +701,69 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             var queue = queues[qi];
             var stack = [];  // EvalObject objects
             for (var i = 0; i < queue.length; i++) {
-                // addToken(stack, queue[i], ['x', 'x'], null);
                 addToken(stack, { ...queue[i] }, grad, null);
             }
             if (stack.length != 1)
                 throw new Error("Result stack length is not 1");
-            console.log(stack[0]);
+            // console.log(stack[0]);
             qmap[qi] = stack[0];
             isCompatible = isCompatible && stack[0].isCompatible;
         }
     }
-    console.log(subtrees);
+    // console.log(subtrees);
+
+    // check what intermediates are used
+    var used = new Array(intermediates.length).fill(false);
+    var rescode = [];
+    for (var qi in queues) {
+        rescode.push(qmap[qi].code);
+        for (var j = 1; j < grads.length; j++) {
+            var gv = grads[j].join(',');
+            rescode.push(qmap[qi].grad[gv].code);
+        }
+    }
+    var visited = [];
+    for (var i = 0; i < rescode.length; i++) {
+        var matches = rescode[i].match(/\$\d+/g);
+        if (matches == null) continue;
+        for (var c = 0; c < matches.length; c++) {
+            var id = Number(matches[c].slice(1));
+            used[id] = true;
+            visited.push(id);
+        }
+    }
+    var i0 = 0, i1 = visited.length;
+    while (i0 < i1) {
+        for (var i = i0; i < i1; i++) {
+            var s = intermediates[visited[i]].obj.code;
+            var matches = s.match(/\$\d+/g);
+            if (matches == null) continue;
+            for (var c = 0; c < matches.length; c++) {
+                var id = Number(matches[c].slice(1));
+                if (!used[id]) {
+                    used[id] = true;
+                    visited.push(id);
+                }
+            }
+        }
+        i0 = i1, i1 = visited.length;
+    }
+    var nused = 0;
+    var usedPsa = new Array(used.length);
+    for (var i = 0; i < used.length; i++) {
+        usedPsa[i] = nused;
+        nused += Number(used[i]);
+    }
+    function replaceUsed(s) {
+        var matches = s.match(/\$\d+/g);
+        if (matches == null) return s;
+        matches.sort((a, b) => b.length - a.length);
+        for (var c = 0; c < matches.length; c++) {
+            var t = usedPsa[Number(matches[c].slice(1))];
+            s = s.replaceAll(matches[c], langpack.config.prefix + t);
+        }
+        return s;
+    }
 
     // get result
     var result = {
@@ -596,37 +772,49 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
     };
     var lines = [];
     for (var i = 0; i < intermediates.length; i++) {
-        var varname = langpack.prefixes[0] + i;
-        var v = langpack.defs[0]
+        if (!used[i]) continue;
+        var varname = langpack.config.prefix + usedPsa[i];
+        var v = langpack.config.def
             .replaceAll("{%varname%}", varname)
-            .replaceAll("{%expr%}", intermediates[i].obj.code);
+            .replaceAll("{%expr%}", replaceUsed(intermediates[i].obj.code));
         lines.push(v);
     }
-    result.code = langpack.fun
+    result.code = langpack.config.fun
         .replaceAll("{%funname%}", funname)
-        .replaceAll("{%funbody%}", lines.join('\n'));
+        .replaceAll("{%funbody%}", lines.join(langpack.config.joiner));
     for (var qi in queues) {
-        result.code = result.code.replaceAll("{%" + qi + "%}", qmap[qi].code);
+        result.code = result.code.replaceAll("{%" + qi + "%}",
+            replaceUsed(qmap[qi].code));
         for (var j = 1; j < grads.length; j++) {
             var gv = grads[j].join(',');
             var s = "{%" + qi + ";" + gv + "%}";
-            result.code = result.code.replaceAll(s, qmap[qi].grad[gv].code);
+            result.code = result.code.replaceAll(s,
+                replaceUsed(qmap[qi].grad[gv].code));
         }
     }
     return result;
 }
 
 // Convert a postfix expressions to source code
-CodeGenerator.postfixToSource = function (
-    exprs, funnames, lang,
-    grads = []
-    // grads = [['x'], ['y'], ['z']]
-) {
+CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
     if (exprs.length != funnames.length)
         throw new Error("`exprs` and `funnames` have different lengths.");
     let langpack = this.langs[lang];
     if (langpack == undefined)
         throw new Error("Unsupported language `" + lang + "`");
+
+    // get required gradients
+    var grads = [];
+    var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
+    if (matches != null) {
+        for (var i = 0; i < matches.length; i++) {
+            var mi = matches[i];
+            mi = mi.slice(2, mi.length - 2);
+            if (/;/.test(mi)) {
+                grads.push(mi.split(';')[1].split(','));
+            }
+        }
+    }
 
     // extension counter
     var extensionMap = {};

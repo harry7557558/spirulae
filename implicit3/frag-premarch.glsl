@@ -48,9 +48,9 @@ bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
 
 
 // function and its gradient in world space
-#include "../shaders/functions.glsl"
 
 {%FUN%}
+#line 54
 
 int callCount = 0;
 float fun(vec3 p) {  // function

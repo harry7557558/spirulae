@@ -43,6 +43,7 @@ document.body.onload = function (event) {
         'i': "mc_i()",
         'j': "mc_i()"
     };
+    CodeGenerator.langs.glslc.config = CodeGenerator.langs.glslc.presets.complex;
 
     // init parameters
     initParameters([

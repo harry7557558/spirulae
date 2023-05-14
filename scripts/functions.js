@@ -184,7 +184,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         cppfExt: ['iTime'],
         cppd: 'iTime',
         cppdExt: ['iTime'],
-    }),
+    }, new Interval(), new Interval(0, Infinity)),
     new MathFunction(['ADD'], 2, {
         D: "g1+g2",
         latex: '%1+%2',
@@ -206,6 +206,11 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     new MathFunction(['DIV'], 2, {
         D: "(g1*f2-f1*g2)/(f2*f2)",
         latex: '\\frac{%1}{%2}',
+        glsl: '%1/%2',
+        glslc: 'vec2(%1.x*%2.x+%1.y*%2.y, %1.y*%2.x-%1.x*%2.y)/dot(%2,%2)',
+    }),
+    new MathFunction(['divconst'], 2, {
+        D: "g1/f2",
         glsl: '%1/%2',
         glslc: 'vec2(%1.x*%2.x+%1.y*%2.y, %1.y*%2.x-%1.x*%2.y)/dot(%2,%2)',
     }),
@@ -231,6 +236,11 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     new MathFunction(['pow'], 2, {
         D: "f1^f2*(g2ln(f1)+g1f2/f1)",
         latex: '\\left(%1\\right)^{%2}',
+        glsl: 'pow(%1,%2)',
+        glslc: 'mc_pow(%1, %2)',
+    }),
+    new MathFunction(['powconst'], 2, {
+        D: "g1*f2*f1^(f2-1)",
         glsl: 'pow(%1,%2)',
         glslc: 'mc_pow(%1, %2)',
     }),
@@ -677,6 +687,8 @@ FunctionSubs.addEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.subEvalObjects = function (a, b, lang) {
+    if (b.isNumeric && b.range.x0 == 0.0)
+        return a;
     var interval = new Interval(
         a.range.x0 - b.range.x1,
         a.range.x1 - b.range.x0);
@@ -954,6 +966,30 @@ FunctionSubs.log2EvalObjects = function (args, lang) {
         lang);
 };
 
+FunctionSubs.ifEvalObjects = function (args, lang) {
+    if (args.length != 3)
+        throw "Incorrect number of arguments for function " + this.names[0];
+    var code = this.langs[lang];
+    var postfix = [];
+    var isNumeric = true;
+    var isCompatible = true;
+    for (var i = 0; i < args.length; i++) {
+        var rep = "%" + (i + 1);
+        postfix = postfix.concat(args[i].postfix);
+        code = code.replaceAll(rep, args[i].code);
+        isNumeric = isNumeric && args[i].isNumeric;
+        isCompatible = isCompatible && args[i].isCompatible;
+    }
+    var range = new Interval(
+        Math.min(args[1].range.x0, args[2].range.x0),
+        Math.max(args[1].range.x1, args[2].range.x1)
+    );
+    return new EvalObject(
+        postfix.concat([new Token('function', 'if')]),
+        code, isNumeric || (range.x0 == range.x1),
+        range, isCompatible);
+};
+
 
 // Initialize MathFunctions
 // Example: initMathFunctions(rawMathFunctionsShared.concat(rawMathFunctionsC))
@@ -1026,5 +1062,7 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
         funs['atan2']['2'].subSource = funs['arctan']['2'].subSource =
             funs['artan']['2'].subSource = funs['atan']['2'].subSource =
             FunctionSubs.atan2EvalObjects;
+    if (funs.hasOwnProperty('if'))
+        funs['if']['3'].subSource = FunctionSubs.ifEvalObjects;
 }
 
