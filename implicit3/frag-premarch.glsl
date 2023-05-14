@@ -61,6 +61,7 @@ float fun(vec3 p) {  // function
     float x=p.x, y=p.y, z=p.z;
 #endif
     return funRaw(x, y, z);
+    // return funRaw(x, y, z).w;
 }
 
 

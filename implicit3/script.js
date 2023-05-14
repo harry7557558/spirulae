@@ -86,6 +86,11 @@ document.body.onload = function (event) {
         'z': "z"
     };
 
+//     CodeGenerator.langs.glsl.fun = "vec4 {%funname%}(float x, float y, float z) {\n\
+// {%funbody%}\n\
+//     return vec4({%val;x%}, {%val;y%}, {%val;z%}, {%val%});\n\
+// }";
+
     // init parameters
     initParameters([
         new GraphingParameter("sStep", "select-step"),

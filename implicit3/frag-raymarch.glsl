@@ -70,6 +70,7 @@ float fun(vec3 p) {  // function
     float x=p.x, y=p.y, z=p.z;
 #endif
     return funRaw(x, y, z);
+    // return funRaw(x, y, z).w;
 }
 
 vec3 funGrad(vec3 p) {  // numerical gradient
@@ -127,6 +128,8 @@ float fade(float t) {
 vec4 calcColor(vec3 ro, vec3 rd, float t) {
     vec3 p = screenToWorld(ro+rd*t);
     vec3 n0 = funGrad(p).xyz;
+    // vec3 ncalc = funRaw(p.x,p.y,p.z).xyz;
+    // vec3 ndiff = vec3(1) * length(n0-ncalc);
     rd = normalize(screenToWorld(ro+rd)-screenToWorld(ro));
     n0 = dot(n0,rd)>0. ? -n0 : n0;
     vec3 n = normalize(n0);
@@ -137,10 +140,12 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
 #if {%COLOR%} == 0
     // porcelain-like shading
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+    // albedo = vec3(1) * ndiff;
     vec3 amb = (0.1+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
     vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(20.);
     vec3 rfl = mix(vec3(1.), vec3(4.), clamp(5.*dot(reflect(rd,n),LDIR),0.,1.));
+    // spc *= albedo, rfl *= albedo;
     vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
 #else // {%COLOR%} == 0
 #if {%COLOR%} == 1

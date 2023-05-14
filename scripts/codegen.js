@@ -189,6 +189,14 @@ CodeGenerator.langs.cppd = {
 };
 
 
+CodeGenerator.parseGradient = function(s) {
+    var parsed = MathParser.exprToPostfix(s, MathFunctions);
+    for (var i = 0; i < parsed.length; i++)
+        if (parsed[i].type == 'variable')
+            parsed[i].str = parsed[i].str.replace("_", "@");
+    return parsed;
+}
+
 CodeGenerator.initFunctionGradients = function () {
     for (var name in MathFunctions) {
         for (var nparam in MathFunctions[name]) {
@@ -196,12 +204,11 @@ CodeGenerator.initFunctionGradients = function () {
             fun.grad = null;
             if (!fun.langs.hasOwnProperty("D"))
                 continue;
-            var parsed = MathParser.exprToPostfix(fun.langs.D, MathFunctions);
-            for (var i = 0; i < parsed.length; i++)
-                if (parsed[i].type == 'variable')
-                    parsed[i].str = parsed[i].str.replace("_", "@");
-            // console.log(name, nparam, parsed);
-            fun.grad = parsed;
+            if (typeof(fun.langs.D) == "function") {
+                fun.grad = fun.langs.D;
+                continue;
+            }
+            fun.grad = CodeGenerator.parseGradient(fun.langs.D);
         }
     }
 }
@@ -323,20 +330,27 @@ CodeGenerator.postfixToLatex = function (queue) {
 
 
 // Convert a single postfix math expression to source code, used by `postfixToSource`
-CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) {
+CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensionMap) {
     let langpack = this.langs[lang];
-
-    let requireGrad = {
-        'x': true,
-        'y': true,
-        'z': true
-    };
 
     // handle repeated evaluations
     var subtreesLength = 0;
     var subtrees = {};
     var intermediates = [];
     function addSubtree(evalobj, evalobjAlt = null) {
+        // returns object
+        if (MathParser.isIndependentVariable(evalobj.code))
+            return evalobj;
+        if (evalobj.isNumeric) {
+            var dx = evalobj.range.x1 - evalobj.range.x0;
+            if (isFinite(dx)) {
+                if (dx != 0.0) throw new Error("Assertion fail.");
+                var x = evalobj.range.x0;
+                evalobj.code = (x == Math.round(x) ? x.toFixed(1) : new String(x));
+                return evalobj;
+            }
+        }
+        // returns id
         let postfix = evalobj.postfix, postfixAlt = null;
         var key = [], keyAlt = [];
         for (var i = 0; i < postfix.length; i++)
@@ -392,7 +406,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
                 var gradname = gradOrders.slice(0, vi + 1).join(',');
                 obj.grad[gradname] = new EvalObject(
                     [new Token("number", '0.0')],
-                    constexpr.replaceAll("%1", "0"),
+                    constexpr.replaceAll("%1", "0.0"),
                     true, new Interval(0, 0), true);
             }
             stack.push(obj);
@@ -431,7 +445,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
                 obj.grad[gradname] = new EvalObject(
                     [new Token("number", sofar.toFixed(1))],
                     constexpr.replaceAll("%1", sofar.toFixed(1)),
-                    true, new Interval(1, 1), true);
+                    true, new Interval(sofar, sofar), true);
             }
             stack.push(obj);
             return;
@@ -452,7 +466,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             }
             else if (token.str == "-")
                 obj = FunctionSubs.subEvalObjects(v1, v2, lang);
-                else if (token.str == "*") {
+            else if (token.str == "*") {
                 obj = FunctionSubs.mulEvalObjects(v1, v2, lang);
                 objAlt = FunctionSubs.mulEvalObjects(v2, v1, lang);
             }
@@ -468,9 +482,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             // obj = intermediates[idn].obj.code == obj.code ? obj :
             //     intermediates[idn].obj.code == objAlt.code ? objAlt :
             //     null;
-            obj.postfix = [new Token('variable', id)];
-            obj.code = langpack.prefixes[0] + id.slice(1);
-            // addExpression(stack, obj, funArgs);
+            if (typeof(id) == "string") {
+                obj.postfix = [new Token('variable', id)];
+                obj.code = langpack.prefixes[0] + id.slice(1);
+                obj.grad = intermediates[Number(id.slice(1))].obj.grad;
+            }
         }
         // function
         else if (token.type == 'function') {
@@ -491,8 +507,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             }
             obj = fun.subSource(funArgs, lang);
             var id = addSubtree(obj);
-            obj.postfix = [new Token('variable', id)];
-            obj.code = langpack.prefixes[0] + id.slice(1);
+            if (typeof(id) == "string") {
+                obj.postfix = [new Token('variable', id)];
+                obj.code = langpack.prefixes[0] + id.slice(1);
+                obj.grad = intermediates[Number(id.slice(1))].obj.grad;
+            }
         }
         else {
             throw new Error("Unrecognized token `" + token + "`");
@@ -502,6 +521,12 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             stack.push(obj);
             return;
         }
+        if (fun.grad == null) {
+            throw new Error("Function `" + fun.names[0] + "` does not support differentiation.");
+        }
+        var fungrad = typeof(fun.grad) == "function" ?
+            CodeGenerator.parseGradient(fun.grad(funArgs.length)) :
+            fun.grad.slice();
 
         // handle function gradient
         var diffs = [];
@@ -514,12 +539,12 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             }
             diffs.push(args1);
         }
-        console.log(diffs.slice());
+        // console.log(diffs.slice());
         var diffs1 = [];
         for (var vi = 0; vi + 1 < diffs.length; vi++) {
             var v = gradOrders[vi];
             var gradname = gradOrders.slice(0, vi + 1).join(',');
-            var grad = fun.grad.slice();
+            var grad = fungrad.slice();
             var stack1 = [];
             for (var i = 0; i < grad.length; i++) {
                 if (grad[i].type == "variable" && /@/.test(grad[i].str)) {
@@ -534,9 +559,9 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
             obj.grad[gradname] = stack1[0];
             diffs1.push(stack1[0]);
         }
-        console.log(diffs1.slice());
-        if (gradOrders.length > 0)
-            console.log(token.str, obj.code);
+        // console.log(diffs1.slice());
+        // if (gradOrders.length > 0)
+        //     console.log(token.str, obj.code);
         stack.push(obj);
         for (var ui = 0; ui < gradOrders.length; ui++) {
         }
@@ -545,20 +570,24 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
     // postfix evaluation
     var qmap = {};
     var isCompatible = true;
-    for (var qi in queues) {
-        var queue = queues[qi];
-        var stack = [];  // EvalObject objects
-        for (var i = 0; i < queue.length; i++) {
-            // addToken(stack, queue[i], ['x', 'x'], null);
-            addToken(stack, queue[i], [], null);
+    grads = [[]].concat(grads);
+    for (var gi in grads) {
+        var grad = grads[gi];
+        for (var qi in queues) {
+            var queue = queues[qi];
+            var stack = [];  // EvalObject objects
+            for (var i = 0; i < queue.length; i++) {
+                // addToken(stack, queue[i], ['x', 'x'], null);
+                addToken(stack, { ...queue[i] }, grad, null);
+            }
+            if (stack.length != 1)
+                throw new Error("Result stack length is not 1");
+            console.log(stack[0]);
+            qmap[qi] = stack[0];
+            isCompatible = isCompatible && stack[0].isCompatible;
         }
-        if (stack.length != 1)
-            throw new Error("Result stack length is not 1");
-        // console.log(stack[0]);
-        qmap[qi] = stack[0].code;
-        isCompatible = isCompatible && stack[0].isCompatible;
     }
-    // console.log(subtrees);
+    console.log(subtrees);
 
     // get result
     var result = {
@@ -576,13 +605,23 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, extensionMap) 
     result.code = langpack.fun
         .replaceAll("{%funname%}", funname)
         .replaceAll("{%funbody%}", lines.join('\n'));
-    for (var qi in queues)
-        result.code = result.code.replaceAll("{%" + qi + "%}", qmap[qi]);
+    for (var qi in queues) {
+        result.code = result.code.replaceAll("{%" + qi + "%}", qmap[qi].code);
+        for (var j = 1; j < grads.length; j++) {
+            var gv = grads[j].join(',');
+            var s = "{%" + qi + ";" + gv + "%}";
+            result.code = result.code.replaceAll(s, qmap[qi].grad[gv].code);
+        }
+    }
     return result;
 }
 
 // Convert a postfix expressions to source code
-CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
+CodeGenerator.postfixToSource = function (
+    exprs, funnames, lang,
+    grads = []
+    // grads = [['x'], ['y'], ['z']]
+) {
     if (exprs.length != funnames.length)
         throw new Error("`exprs` and `funnames` have different lengths.");
     let langpack = this.langs[lang];
@@ -603,7 +642,7 @@ CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
     // generate a function for each expression
     var functions = [], isCompatible = [];
     for (var i = 0; i < exprs.length; i++) {
-        var r = this._postfixToSource(exprs[i], funnames[i], lang, extensionMap);
+        var r = this._postfixToSource(exprs[i], funnames[i], lang, grads, extensionMap);
         functions.push(r.code);
         isCompatible.push(r.isCompatible);
     }
