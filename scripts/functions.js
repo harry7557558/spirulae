@@ -29,6 +29,9 @@ function Interval(
     this.isConstant = function () {
         this.x0 == this.x1;
     };
+    this.equals = function (x) {
+        return this.x0 == x && this.x1 == x;
+    };
     this.isPositive = function () {
         return this.x0 >= 0.;
     };
@@ -672,9 +675,9 @@ let MathFunctions = {};
 let FunctionSubs = {};
 
 FunctionSubs.addEvalObjects = function (a, b, lang) {
-    if (a.isNumeric && a.range.x0 == 0.0)
+    if (a.range.equals(0.0))
         return b;
-    if (b.isNumeric && b.range.x0 == 0.0)
+    if (b.range.equals(0.0))
         return a;
     return new EvalObject(
         a.postfix.concat(b.postfix.concat([new Token('operator', '+')])),
@@ -687,7 +690,7 @@ FunctionSubs.addEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.subEvalObjects = function (a, b, lang) {
-    if (b.isNumeric && b.range.x0 == 0.0)
+    if (b.range.equals(0.0))
         return a;
     var interval = new Interval(
         a.range.x0 - b.range.x1,
@@ -704,13 +707,13 @@ FunctionSubs.subEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.mulEvalObjects = function (a, b, lang) {
-    if (a.isNumeric && a.range.x0 == 0.0)
+    if (a.range.equals(0.0))
         return a;
-    if (b.isNumeric && b.range.x0 == 0.0)
+    if (b.range.equals(0.0))
         return b;
-    if (a.isNumeric && a.range.x0 == 1.0)
+    if (a.range.equals(1.0))
         return b;
-    if (b.isNumeric && b.range.x0 == 1.0)
+    if (b.range.equals(1.0))
         return a;
     var boundaries = [
         a.range.x0 * b.range.x0, a.range.x0 * b.range.x1,
@@ -730,9 +733,9 @@ FunctionSubs.mulEvalObjects = function (a, b, lang) {
 }
 
 FunctionSubs.divEvalObjects = function (a, b, lang) {
-    if (a.isNumeric && a.range.x0 == 0.0)
+    if (a.range.equals(0.0))
         return a;
-    if (b.isNumeric && b.range.x0 == 1.0)
+    if (b.range.equals(1.0))
         return a;
     var interval = new Interval();
     if (b.range.containsZero()) {

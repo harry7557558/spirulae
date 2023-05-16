@@ -460,7 +460,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         // returns object
         if (MathParser.isIndependentVariable(evalobj.code))
             return evalobj;
-        if (evalobj.isNumeric && evalobj.range.x0 == evalobj.range.x1) {
+        if (evalobj.range.isConstant()) {
             let constexpr = MathFunctions['CONST'][1].langs[lang];
             var x = evalobj.range.x0;
             var xr = 1e-8 * Math.round(1e8 * x);
