@@ -27,6 +27,122 @@ const builtinFunctions = [
 ];
 
 
+function initLangpack() {
+    CodeGenerator.langs.glsl.presets.implicit2 = {
+        fun: "float {%funname%}(float x, float y) {\n\
+{%funbody%}\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "    float {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.glsl.presets.implicit2_compact = {
+        fun: "float {%funname%}(float x, float y) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.glsl.presets.implicit2g = {
+        fun: "vec3 {%funname%}(float x, float y) {\n\
+{%funbody%}\n\
+    return vec3({%val;x%}, {%val;y%}, {%val%});\n\
+}",
+        prefix: 'v',
+        def: "    float {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.glsl.presets.implicit2g_compact = {
+        fun: "vec3 {%funname%}(float x, float y) {\n\
+    float {%funbody%};\n\
+    return vec4({%val;x%}, {%val;y%}, {%val%});\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.cppf.presets.implicit2 = {
+        fun: "float {%funname%}(float x, float y) {\n\
+{%funbody%}\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "    float {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.cppf.presets.implicit2_compact = {
+        fun: "float {%funname%}(float x, float y) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.cppf.presets.implicit2g = {
+        fun: "float {%funname%}(float x, float y, float *gx, float *gy) {\n\
+{%funbody%}\n\
+    *gx = {%val;x%}, *gy = {%val;y%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "    float {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.cppf.presets.implicit2g_compact = {
+        fun: "float {%funname%}(float x, float y, float *gx, float *gy) {\n\
+    float {%funbody%};\n\
+    *gx = {%val;x%}, *gy = {%val;y%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.cppd.presets.implicit2 = {
+        fun: "double {%funname%}(double x, double y) {\n\
+{%funbody%}\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "    double {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.cppd.presets.implicit2_compact = {
+        fun: "double {%funname%}(double x, double y) {\n\
+    double {%funbody%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.cppd.presets.implicit2g = {
+        fun: "double {%funname%}(double x, double y, double *gx, double *gy) {\n\
+{%funbody%}\n\
+    *gx = {%val;x%}, *gy = {%val;y%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "    double {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.cppd.presets.implicit2g_compact = {
+        fun: "double {%funname%}(double x, double y, double z, double *gx, double *gy, double *gz) {\n\
+    double {%funbody%};\n\
+    *gx = {%val;x%}, *gy = {%val;y%}, *gz = {%val;z%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+}
+
+
 document.body.onload = function (event) {
     console.log("onload");
 
@@ -42,6 +158,10 @@ document.body.onload = function (event) {
         'x': "x",
         'y': "y"
     };
+
+    // init code generator
+    initLangpack();
+    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit2_compact;
 
     // init parameters
     initParameters([
@@ -62,3 +182,34 @@ document.body.onload = function (event) {
         "../shaders/frag-aa.glsl"
     ]);
 };
+
+function exportAllFunctions(lang, grad = false) {
+    let langpack = CodeGenerator.langs[lang];
+    let oldConfig = langpack.config;
+    langpack.config = langpack.presets[grad ? 'implicit2g_compact' : 'implicit2_compact'];
+    var funs = builtinFunctions;
+    var names = [], exprs = [];
+    for (var i = 0; i < funs.length; i++) {
+        var name = 'fun' + funs[i][0].replace(/[^\w]/g, '');
+        console.log(name);
+        var str = funs[i][1].replaceAll("&#32;", ' ')
+        var expr = MathParser.parseInput(str);
+        names.push(name);
+        exprs.push({ val: expr.val[0] });
+    }
+    var res = CodeGenerator.postfixToSource(exprs, names, lang);
+    console.log(res.source);
+    langpack.config = oldConfig;
+}
+
+function exportCurrentFunction(lang, grad = false) {
+    let langpack = CodeGenerator.langs[lang];
+    let oldConfig = langpack.config;
+    langpack.config = langpack.presets[grad ? 'implicit2g' : 'implicit2'];
+    var str = document.getElementById("equation-input").value;
+    var expr = MathParser.parseInput(str).val[0];
+    var res = CodeGenerator.postfixToSource(
+        [{ val: expr }], ["fun"], lang);
+    console.log(res.source);
+    langpack.config = oldConfig;
+}

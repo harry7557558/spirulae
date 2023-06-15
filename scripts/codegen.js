@@ -18,6 +18,7 @@ CodeGenerator.langs.glsl = {
     inherit: [],
     config: null,
     presets: {
+        // example only
         implicit3: {
             fun: "float {%funname%}(float x, float y, float z) {\n\
 {%funbody%}\n\
@@ -193,7 +194,7 @@ CodeGenerator.langs.cppf = {
     config: null,
     presets: {
         implicit3: {
-        fun: "float {%funname%}(float x, float y, float z) {\n\
+            fun: "float {%funname%}(float x, float y, float z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",
@@ -253,7 +254,7 @@ CodeGenerator.langs.cppd = {
     config: null,
     presets: {
         implicit3: {
-        fun: "double {%funname%}(double x, double y, double z) {\n\
+            fun: "double {%funname%}(double x, double y, double z) {\n\
 {%funbody%}\n\
     return {%val%};\n\
 }",

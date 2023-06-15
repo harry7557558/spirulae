@@ -9,12 +9,11 @@ uniform vec2 xyMin;
 uniform vec2 xyMax;
 
 
-#include "../shaders/functions.glsl"
-
 // function
+{%FUN%}
+
 float fun(vec2 p) {
-    float x = p.x, y = p.y;
-    {%FUN%}
+    return funRaw(p.x, p.y);
 }
 
 // numerical gradient
@@ -27,11 +26,10 @@ vec2 funGradN(vec2 p) {
 }
 
 // analytical gradient
-vec4 funGrad(vec2 p) {
-    float x = p.x, y = p.y;
-    {%FUNGRAD%}
+vec3 funGrad(vec2 p) {
+    return vec3(funGradN(p), fun(p));
 }
-#line 35
+#line 33
 
 // grid
 float grid1(vec2 p, float w) {
@@ -62,9 +60,9 @@ void main(void) {
     vec2 xy = mix(xyMin, xyMax, 0.5+0.5*uv);
 
     // get value and gradient
-    vec4 gv = funGrad(xy);
+    vec3 gv = funGrad(xy);
     vec2 g = gv.xy;
-    float v = gv.w;
+    float v = gv.z;
     g = (xyMax-xyMin)/iResolution * g;
 
     // handle infinite discontinuity
