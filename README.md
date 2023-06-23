@@ -1,15 +1,15 @@
 # Spirula
 
-[![spirula.jpg](src/spirula.jpg)](./implicit3/index.html)
+[![spirula.jpg](src/spirula.jpg)](https://harry7557558.github.io/spirula/implicit3/)
 
 GPU-accelerated function graphers in a web browser, both 3D and 2D.
 
 This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones:
 
- - [3D implicit surface grapher](./implicit3/index.html)
- - [3D parametric surface grapher](./paramsurf/index.html)
- - [Complex domain coloring grapher (2D)](./complex/index.html)
- - [Complex domain coloring grapher (3D)](./complex3/index.html)
+ - [3D implicit surface grapher](https://harry7557558.github.io/spirula/implicit3/)
+ - [3D parametric surface grapher](https://harry7557558.github.io/spirula/paramsurf/)
+ - [Complex domain coloring grapher (2D)](https://harry7557558.github.io/spirula/complex/)
+ - [Complex domain coloring grapher (3D)](https://harry7557558.github.io/spirula/complex3/)
 
 [//]: # "- [Implicit curve grapher](./implicit2/index.html) (for testing, not intended to be useful)"
 
@@ -29,13 +29,14 @@ The equation parser implements the following features:
  - Special functions
 
 The 3D graphers implements the following parameters/features:
- - Multiple shading and grid modes
+ - Infinite and bounded domain
  - Scalar field visualization
  - Speed vs. quality control
- - Red highlight discontinuity
+ - Multiple shading and grid modes
  - Dark and light color themes
  - Semi-transparent surface shading
  - Lighting control
+ - Red highlight discontinuity
  - Anti-aliasing
 
 Experimental features (subject to change):
@@ -50,7 +51,7 @@ These tools have the following dependencies:
  - [WebGL 2](https://webglreport.com/?v=2)
     - `EXT_disjoint_timer_query_webgl2`, an FPS counter will be shown when available
     - *`EXT_color_buffer_float`*, currently not required but is very likely a dependency in the future
- - [MathJax 3](https://www.mathjax.org/), required for rendering equation preview
+ - [MathJax 3](https://www.mathjax.org/), required for equation preview
 
 These tools have the following known issues:
  - Incompatibility across devices for functions with overflow and NaN
@@ -62,7 +63,7 @@ Features that may be implemented in the future (ordered approximately by priorit
  - Automatic differentiation
  - Vectors and complex numbers
  - Mathematically-defined custom colors
- - Iterative refinement to improve rendering quality
+ - Iteratively improve rendering quality
  - More viewport control parameters
  - Variable sliders
  - Graph sharing via URL
@@ -70,34 +71,36 @@ Features that may be implemented in the future (ordered approximately by priorit
  - Better expression editor (highlighting, bracket matching, etc.)
  - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers
 
+(Updated June 2023)
+
 ----
 
 ## Gallery
 
 Complex domain coloring
 
-[![](./src/gallery-complex-trigs.jpg)](./complex/index.html)
+[![](./src/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirula/complex/)
 
 Complex domain coloring in 3D
 
-[![](./src/gallery-complex3-tan.jpg)](./complex3/index.html)
+[![](./src/gallery-complex3-tan.jpg)](https://harry7557558.github.io/spirula/complex3/)
 
 A sextic algebraic surface
 
-[![](./src/gallery-implicit3-barth6.jpg)](./implicit3/index.html)
+[![](./src/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirula/implicit3/)
 
 The Burning Ship fractal
 
-[![](./src/gallery-implicit3-bship.jpg)](./implicit3/index.html)
+[![](./src/gallery-implicit3-bship.jpg)](https://harry7557558.github.io/spirula/implicit3/)
 
 An algebraic star surface with transparency
 
-[![](./src/gallery-implicit3-star.jpg)](./implicit3/index.html)
+[![](./src/gallery-implicit3-star.jpg)](https://harry7557558.github.io/spirula/implicit3/)
 
 Complex 3D plots of the Gamma function and the Riemann Zeta function
 
-[![](./src/gallery-complex3-gamma.jpg)](./complex3/index.html)
+[![](./src/gallery-complex3-gamma.jpg)](https://harry7557558.github.io/spirula/complex3/)
 
-[![](./src/gallery-complex3-zeta.jpg)](./complex3/index.html)
+[![](./src/gallery-complex3-zeta.jpg)](https://harry7557558.github.io/spirula/complex3/)
 
-This page was updated on 2023/05/07.
+(Updated September 2022)
