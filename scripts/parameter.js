@@ -143,7 +143,8 @@ function initParameters(parameters) {
         funSelect.childNodes[1].selected = true;
     }
     // event listeners
-    document.getElementById("canvas").addEventListener("webglcontextlost", function (event) {
+    let domObject = document.getElementById("canvas");
+    if (domObject) domObject.addEventListener("webglcontextlost", function (event) {
         event.preventDefault();
         setTimeout(function () {  // comment input when WebGL context lost
             var input = funInput.value.split('\n');
@@ -155,7 +156,8 @@ function initParameters(parameters) {
             localStorage.setItem(NAME + "input", input);
         }, 100);
     });
-    document.getElementById("button-update").addEventListener("click",
+    domObject = document.getElementById("button-update");
+    if (domObject) domObject.addEventListener("click",
         function (event) { updateFunctionInput(true); });
     funSelect.addEventListener("input", function (event) {
         // selecting a new function
@@ -352,18 +354,20 @@ function initMain(preloadShaderSources) {
     console.warn = myCustomWarn;
 
     // load shaders and init WebGL
-    loadShaderSources(preloadShaderSources, function () {
-        console.log("shaders loaded");
-        try {
-            state.name = NAME + "state";
-            initWebGL();
-            updateFunctionInput(true);
-            initRenderer();
-        } catch (e) {
-            console.error(e);
-            document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
-        }
-    });
+    if (typeof window.loadShaderSources !== 'undefined') {
+        loadShaderSources(preloadShaderSources, function () {
+            console.log("shaders loaded");
+            try {
+                state.name = NAME + "state";
+                initWebGL();
+                updateFunctionInput(true);
+                initRenderer();
+            } catch (e) {
+                console.error(e);
+                document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
+            }
+        });
+    }
 
     // MathJax - do this at the end
     initMathjax();
