@@ -18,38 +18,7 @@
 #include "main.cpp"
 #undef main
 
-EXTERN EMSCRIPTEN_KEEPALIVE
-void gl_test() {
-	testMain();
-}
 int main() {
 	printf("`int main()` called.\n\n");
 	return testMain();
-}
-
-EXTERN EMSCRIPTEN_KEEPALIVE
-int add(int argc, int* argv) {
-	printf("argc = %d\n", argc);
-	int sum = 0;
-	for (int i = 0; i < argc; i++) {
-		int x = argv[i];
-		printf("argv[%d] == %d\n", i, x);
-		sum += x;
-	}
-	return sum;
-}
-
-EXTERN EMSCRIPTEN_KEEPALIVE
-int* list(int n) {
-	int *p = new int[n];
-	for (int i = 0; i < n; i++)
-		p[i] = i;
-	return p;
-}
-
-EXTERN EMSCRIPTEN_KEEPALIVE
-char* liststr(int n) {
-	std::string s = "hello";
-	//return &s[0];  // might work? might not work?
-	return nullptr;
 }

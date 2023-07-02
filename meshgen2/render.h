@@ -78,6 +78,7 @@ void main() {
         if (isnan(dot(col,col))) col = vec3(0,1,0);
     }
     fragColor = brightness*(0.2*amb+0.7*dif+0.1*spc)*col;
+    if (brightness < 0.0) fragColor = col;
 })""";
 
 
@@ -86,13 +87,12 @@ void main() {
 class Viewport;
 
 namespace RenderParams {
-    const glm::ivec2 iResolution(600, 500);
+    glm::ivec2 iResolution(600, 500);
     const double fps = 60.0;
     GLFWwindow* window;
     GLuint vertexArrayID = 0;
     Viewport* viewport;
-    bool mouseDown = false;
-    glm::vec2 mousePos(-1, -1);
+    bool showMesh;
 }
 
 
@@ -359,38 +359,13 @@ struct RenderModel {
 } renderModel;
 
 void mainGUI(void (*callback)(void)) {
-    using glm::vec2, glm::vec3, glm::vec4;
-
-    // mouse action(s)
-    glfwSetScrollCallback(RenderParams::window,
-        [](GLFWwindow* window, double xoffset, double yoffset) {
-            RenderParams::viewport->mouseScroll((float)yoffset);
-        });
+    using glm::vec2, glm::vec3, glm::vec4, glm::ivec2;
 
     // main loop
     loop = [&] {
         callback();
 
-        // mouse drag
-        using RenderParams::mousePos, RenderParams::mouseDown;
         using RenderParams::viewport;
-        glm::dvec2 newMousePos;
-        glfwGetCursorPos(RenderParams::window, &newMousePos.x, &newMousePos.y);
-        newMousePos.y = RenderParams::iResolution.y - 1 - newMousePos.y;
-        vec2 mouseDelta = mousePos == vec2(-1) ? vec2(0.0) : vec2(newMousePos) - mousePos;
-        mousePos = newMousePos;
-        int mouseState = glfwGetMouseButton(RenderParams::window, GLFW_MOUSE_BUTTON_LEFT);
-        if (!mouseDown && mouseState == GLFW_PRESS) {
-            mouseDown = true;
-            viewport->mouseClick();
-        }
-        else if (mouseDown && mouseState == GLFW_RELEASE) {
-            mouseDown = false;
-            viewport->renderNeeded = true;
-        }
-        if (mouseDown) {
-            viewport->mouseMove(mouseDelta);
-        }
         if (!viewport->renderNeeded) return;
 
         glViewport(0, 0, RenderParams::iResolution.x, RenderParams::iResolution.y);
@@ -403,16 +378,25 @@ void mainGUI(void (*callback)(void)) {
             viewport->drawVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesF,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsF));
-            viewport->drawLinesVBO(
+            if (RenderParams::showMesh) viewport->drawLinesVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesE,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsE));
+            // axes
+            viewport->drawLinesVBO(
+                { vec3(0), vec3(3, 0, 0),
+                  vec3(0), vec3(0, -2.5, 0),
+                  vec3(0), vec3(0, 0, 3) },
+                std::vector<vec3>(6, vec3(0, 0, 1)),
+                { ivec2(0, 1), ivec2(2, 3), ivec2(4, 5) },
+                { vec4(1, 0, 0, 1), vec4(1, 0, 0, 1),
+                  vec4(0, 0, 1, 1), vec4(0, 0, 1, 1),
+                  vec4(0, 0.5, 0, 1), vec4(0, 0.5, 0, 1) },
+                1.0f, 1.0f, -1.0f
+            );
         }
 
         glfwSwapBuffers(RenderParams::window);
         glfwPollEvents();
-
-        if (!mouseDown)
-            viewport->renderNeeded = false;
     };
 
     main_loop();

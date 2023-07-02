@@ -89,7 +89,10 @@ document.body.onload = function (event) {
 
     // init parameters
     initParameters([
-        new GraphingParameter("bGrid", "checkbox-grid"),
+        new GraphingParameter("bGrid", "checkbox-grid",
+            function(value) {
+                Module.ccall('setBRenderMesh', null, ['number'], [value]);
+            }),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
     ]);

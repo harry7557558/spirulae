@@ -36,7 +36,7 @@ function initBuiltInFunctions(builtinFunctions) {
 // name: start with a lowercase letter
 //  - b/c: checkbox (boolean)
 //  - s: selector
-function GraphingParameter(name, id) {
+function GraphingParameter(name, id, callback=null) {
     this.element = document.getElementById(id);
     this.name = name;
     this.getValue = function () {
@@ -53,6 +53,7 @@ function GraphingParameter(name, id) {
         if (this.name[0] == "s")
             this.element.value = value;
     };
+    this.callback = callback;
 }
 
 // a slider that controls a shader uniform
@@ -238,6 +239,9 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     let texContainer = document.getElementById("mathjax-preview");
     if (!checkboxLatex.checked) texContainer.innerHTML = "";
     var parameters = parameterToDict(RawParameters);
+    for (var i = 0; i < RawParameters.length; i++)
+        if (RawParameters[i].callback)
+            RawParameters[i].callback(RawParameters[i].getValue());
     var expr = document.getElementById("equation-input").value;
     try {
         localStorage.setItem(NAME + "input", expr);

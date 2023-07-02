@@ -109,6 +109,8 @@ RenderModel prepareMesh(DiscretizedModel<float, float> model, bool flatShading) 
         n = glm::dot(n, n) == 0. ? n : normalize(n);
         res.normals[f.x] += n, res.normals[f.y] += n, res.normals[f.z] += n;
     }
+    for (int i = 0; i < (int)res.normals.size(); i++)
+        res.normals[i] = normalize(res.normals[i]);
 
     // edges
     auto ivec2Cmp = [](glm::ivec2 a, glm::ivec2 b) {
@@ -124,13 +126,6 @@ RenderModel prepareMesh(DiscretizedModel<float, float> model, bool flatShading) 
         }
     }
     res.indicesE = std::vector<glm::ivec2>(uniqueIndicesE.begin(), uniqueIndicesE.end());
-
-    // GUI
-    if (RenderParams::viewport)
-        delete RenderParams::viewport;
-    RenderParams::viewport = new Viewport(
-        1.5f / fmax(fmax(maxv.x - minv.x, maxv.y - minv.y), maxv.z - minv.z),
-        0.5f * (minv + maxv), -0.45f * PIf, 0.1f * PIf);
 
     // flat shading
     if (flatShading) {
@@ -166,6 +161,10 @@ void updateShaderFunction(const char* glsl) {
 void mainGUICallback() {
     if (newGlslFun.empty())
         return;
+    if (glslFun == newGlslFun) {
+        newGlslFun.clear();
+        return;
+    }
 
     printf("%s\n", &newGlslFun[0]);
     float t0 = getTimePast();
@@ -177,10 +176,46 @@ void mainGUICallback() {
     newGlslFun.clear();
 }
 
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setRenderNeeded(bool needed) {
+    RenderParams::viewport->renderNeeded = needed;
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void translateState(float dx, float dy) {
+    RenderParams::viewport->mouseMove(glm::vec2(dx, -dy));
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void scaleState(float dx, float dy, float sc) {
+    RenderParams::viewport->mouseScroll(-50.0f * log(sc));
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void resizeWindow(int w, int h) {
+    RenderParams::iResolution = glm::ivec2(w, h);
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void resetState() {
+    if (RenderParams::viewport)
+        delete RenderParams::viewport;
+    RenderParams::viewport = new Viewport(
+        0.4f, glm::vec3(0.0f), -0.45f * PIf, 0.1f * PIf);
+}
+
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setBRenderMesh(bool showMesh) {
+    RenderParams::showMesh = showMesh;
+}
+
+
 int main() {
     if (!initWindow())
         return -1;
-    emscripten_run_script("updateFunctionInput(true)");
+    emscripten_run_script("wasmReady()");
     mainGUI(mainGUICallback);
     return 0;
 }
