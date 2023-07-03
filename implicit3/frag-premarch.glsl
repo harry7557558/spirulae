@@ -108,7 +108,7 @@ vec2 premarch(in vec3 ro, in vec3 rd, float t0_, float t1_) {
 
 
 void main(void) {
-    vec3 ro_s = vec3(vXy-screenCenter,0);
+    vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
 #if {%CLIP%}
     vec3 ro_w = screenToWorld(ro_s);

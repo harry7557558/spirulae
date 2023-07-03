@@ -19,6 +19,6 @@
 #undef main
 
 int main() {
-	printf("`int main()` called.\n\n");
+	printf("`int main()` called.\n \n");
 	return testMain();
 }

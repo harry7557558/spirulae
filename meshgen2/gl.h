@@ -81,26 +81,27 @@ public:
 };
 
 GlBatchEvaluator::GlBatchEvaluator(std::string funRaw) {
-    vsSource = R"(
+    vsSource = R"(#version 300 es
         precision highp float;
-        attribute vec4 aPosition;
-        varying vec2 vXy;
+        in vec4 aPosition;
+        out vec2 vXy;
         void main() {
             gl_Position = vec4(aPosition.xy, 0.0, 1.0);
             gl_PointSize = 1.0;
             vXy = aPosition.zw;
         }
     )";
-    fsSource = R"(
+    fsSource = R"(#version 300 es
         precision highp float;
-        varying vec2 vXy;
+        in vec2 vXy;
+        out vec4 fragColor;
         )" + funRaw + R"(
 
         void main() {
             // vec2 xy = texelFetch(coords, ivec2(gl_FragCoord.xy), 0).xy;
             // vec2 xy = gl_FragCoord.xy;
             float result = funRaw(vXy.x, vXy.y);
-            gl_FragColor = vec4(result, 0, 0, 1);
+            fragColor = vec4(result, 0, 0, 1);
         }
     )";
     shaderProgram = createShaderProgram(&vsSource[0], &fsSource[0]);

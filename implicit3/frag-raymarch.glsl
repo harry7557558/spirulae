@@ -325,7 +325,7 @@ vec3 render(in vec3 ro, in vec3 rd, float t0, float t1) {
 
 
 void main(void) {
-    vec3 ro_s = vec3(vXy-screenCenter,0);
+    vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
     vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
     float pad = max(STEP_SIZE, 1./255.);

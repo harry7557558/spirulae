@@ -26,6 +26,6 @@ void main() {
     vUv = mix(uvRange.xy, uvRange.zw, vertexPosition);
     vXyz = F(vUv.x, vUv.y);
     gl_Position = transformMatrix * vec4(vXyz,1);
-    gl_Position += vec4(screenCenter, 0, 0) * gl_Position.w;
+    gl_Position += vec4(-1.0+2.0*screenCenter, 0, 0) * gl_Position.w;
 }
 

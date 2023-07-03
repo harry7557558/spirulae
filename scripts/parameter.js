@@ -358,7 +358,7 @@ function initMain(preloadShaderSources) {
     console.warn = myCustomWarn;
 
     // load shaders and init WebGL
-    if (typeof window.loadShaderSources !== 'undefined') {
+    if (typeof window.state !== 'undefined') {
         loadShaderSources(preloadShaderSources, function () {
             console.log("shaders loaded");
             try {

@@ -81,7 +81,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.premarchProgram, "screenCenter"),
-        state.screenCenter[0], state.screenCenter[1]);
+        state.screenCenter.x, state.screenCenter.y);
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "rZScale"), calcZScale());
     gl.uniform3f(gl.getUniformLocation(renderer.premarchProgram, "uClipBox"),
         state.clipSize[0], state.clipSize[1], state.clipSize[2]);
@@ -113,7 +113,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "screenCenter"),
-        state.screenCenter[0], state.screenCenter[1]);
+        state.screenCenter.x, state.screenCenter.y);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "uClipBox"),
         state.clipSize[0], state.clipSize[1], state.clipSize[2]);
@@ -187,7 +187,7 @@ var state = {
     name: "",
     width: window.innerWidth,
     height: window.innerHeight,
-    screenCenter: [0.0, 0.0],
+    screenCenter: { x: 0.5, y: 0.5 },
     defaultScreenCenter: true,
     iTime: -1.0,
     rz: null,
@@ -309,7 +309,7 @@ function initRenderer() {
     updateBuffers();
 
     // rendering
-    var oldScreenCenter = [-1, -1];
+    var oldScreenCenter = { x: -1, y: -1 };
     var startTime = performance.now();
     function render() {
         var timeDependent = true;
@@ -320,7 +320,7 @@ function initRenderer() {
             startTime = performance.now();
         var screenCenter = state.defaultScreenCenter ? calcScreenCenter() : state.screenCenter;
         state.screenCenter = screenCenter;
-        if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
+        if ((screenCenter.x != oldScreenCenter.x || screenCenter.y != oldScreenCenter.y)
             || state.renderNeeded) {
             state.width = canvas.width = canvas.style.width = window.innerWidth;
             state.height = canvas.height = canvas.style.height = window.innerHeight;
@@ -384,8 +384,8 @@ function initRenderer() {
             var dx = event.movementX, dy = event.movementY;
             if (event.shiftKey) { // center
                 state.defaultScreenCenter = false;
-                state.screenCenter[0] += 1.5 * dx / state.width;
-                state.screenCenter[1] -= 1.5 * dy / state.height;
+                state.screenCenter.x += 0.75 * dx / state.width;
+                state.screenCenter.x -= 0.75 * dy / state.height;
             }
             else {  // rotate
                 var k = fingerDist > 0. ? 0.001 : 0.01;

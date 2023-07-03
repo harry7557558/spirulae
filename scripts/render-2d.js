@@ -34,19 +34,6 @@ function resetState(loaded_state = {}, overwrite = true) {
     state.iTime = 0.0;
 }
 
-// calculate the center of the screen excluding the control box
-function calcScreenCenter() {
-    let rect = document.getElementById("control").getBoundingClientRect();
-    var w = window.innerWidth, h = window.innerHeight;
-    var rl = rect.left, rb = h - rect.bottom;
-    var cx = 0.5 * w, cy = 0.5 * h;
-    if (rl > rb && rl > 0) cx = 0.5 * rl;
-    else if (rb > 0) cy = 0.5 * rb;
-    var com = { x: 2.0 * (cx / w - 0.5), y: 2.0 * (cy / h - 0.5) };
-    com.x = 0.5 + 0.5 * Math.max(-0.6, Math.min(0.6, com.x));
-    com.y = 0.5 + 0.5 * Math.max(-0.6, Math.min(0.6, com.y));
-    return com;
-}
 // calculate the default bound points
 function calcXyMinMax() {
     var center = calcScreenCenter();

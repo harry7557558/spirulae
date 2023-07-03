@@ -65,12 +65,18 @@ DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
 }
 
 
-RenderModel prepareMesh(DiscretizedModel<float, float> model, bool flatShading) {
+namespace MeshParams {
+    bool showEdges = true;
+    bool smoothShading = true;
+    bool bothLeafs = true;
+};
+
+
+RenderModel prepareMesh(DiscretizedModel<float, float> model) {
     RenderModel res;
 
     // model
     res.vertices = std::vector<vec3>(model.N, vec3(0));
-    res.normals = std::vector<vec3>(model.N, vec3(0));
     vec3 minv(1e10f), maxv(-1e10f);
     for (int i = 0; i < model.N; i++) {
         vec3 v = vec3(model.X[i], model.U[i]);
@@ -99,36 +105,83 @@ RenderModel prepareMesh(DiscretizedModel<float, float> model, bool flatShading) 
     for (auto p : uniqueIndicesF) //if (p.second == 1)
         res.indicesF.push_back(p.first);
 
-    // normals
-    for (auto fc : uniqueIndicesF) {
-        assert(fc.second == 1);
-        glm::ivec3 f = fc.first;
-        vec3 n = glm::cross(
-            res.vertices[f.y] - res.vertices[f.x],
-            res.vertices[f.z] - res.vertices[f.x]);
-        n = glm::dot(n, n) == 0. ? n : normalize(n);
-        res.normals[f.x] += n, res.normals[f.y] += n, res.normals[f.z] += n;
-    }
-    for (int i = 0; i < (int)res.normals.size(); i++)
-        res.normals[i] = normalize(res.normals[i]);
-
     // edges
     auto ivec2Cmp = [](glm::ivec2 a, glm::ivec2 b) {
         return a.x != b.x ? a.x < b.x : a.y < b.y;
     };
-    std::set<glm::ivec2, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
+    std::map<glm::ivec2, int, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
     for (int ti = 0; ti < model.M; ti++) {
         ivec3 t = model.SE[ti];
         for (int _ = 0; _ < 3; _++) {
             glm::ivec2 e(t[_], t[(_+1)%3]);
             if (e.x > e.y) std::swap(e.x, e.y);
-            uniqueIndicesE.insert(e);
+            uniqueIndicesE[e] += 1;
         }
     }
-    res.indicesE = std::vector<glm::ivec2>(uniqueIndicesE.begin(), uniqueIndicesE.end());
+    if (MeshParams::showEdges) {
+        res.indicesE.reserve(uniqueIndicesE.size());
+        for (std::pair<glm::ivec2, int> ec : uniqueIndicesE)
+            res.indicesE.push_back(ec.first);
+    }
+
+    // two leafs
+    if (MeshParams::bothLeafs) {
+        // get boundary
+        int vn = (int)res.vertices.size();
+        std::vector<int> bmap(vn, -1);
+        for (std::pair<glm::ivec2, int> ec : uniqueIndicesE)
+            if (ec.second == 1) {
+                bmap[ec.first.x] = 0;
+                bmap[ec.first.y] = 0;
+            }
+        int bmapI = vn;
+        for (int i = 0; i < vn; i++) {
+            if (bmap[i] == -1) {
+                bmap[i] = bmapI;
+                bmapI++;
+            }
+            else bmap[i] = i;
+        }
+        // expand verts
+        res.vertices.resize(bmapI);
+        for (int i = 0; i < vn; i++) {
+            if (bmap[i] != i)
+                res.vertices[bmap[i]] = res.vertices[i] * glm::vec3(1, -1, 1);
+        }
+        // expand faces
+        int fn = (int)res.indicesF.size();
+        res.indicesF.reserve(2 * fn);
+        for (int i = 0; i < fn; i++) {
+            glm::ivec3 f = res.indicesF[i];
+            f.x = bmap[f.x], f.y = bmap[f.y], f.z = bmap[f.z];
+            std::swap(f.y, f.z);
+            res.indicesF.push_back(f);
+        }
+        // expand edges
+        int en = (int)res.indicesE.size();
+        res.indicesE.reserve(2 * en);
+        for (int i = 0; i < en; i++) {
+            glm::ivec2 e = res.indicesE[i];
+            e.x = bmap[e.x], e.y = bmap[e.y];
+            if (e != res.indicesE[i])
+                res.indicesE.push_back(e);
+        }
+    }
+
+    // normals
+    res.normals = std::vector<vec3>(res.vertices.size(), vec3(0));
+    for (auto f : res.indicesF) {
+        vec3 n = glm::cross(
+            res.vertices[f.y] - res.vertices[f.x],
+            res.vertices[f.z] - res.vertices[f.x]);
+        // n = glm::dot(n, n) == 0. ? n : normalize(n);
+        res.normals[f.x] += n, res.normals[f.y] += n, res.normals[f.z] += n;
+    }
+    for (int i = 0; i < (int)res.normals.size(); i++)
+        res.normals[i] = normalize(res.normals[i]);
 
     // flat shading
-    if (flatShading) {
+    if (!MeshParams::smoothShading) {
         std::vector<glm::ivec3> indicesF1;
         for (auto f : res.indicesF) {
             vec3 n = cross(
@@ -158,6 +211,8 @@ void updateShaderFunction(const char* glsl) {
     newGlslFun = glsl;
 }
 
+DiscretizedModel<float, float> structure;
+
 void mainGUICallback() {
     if (newGlslFun.empty())
         return;
@@ -166,12 +221,12 @@ void mainGUICallback() {
         return;
     }
 
-    printf("%s\n", &newGlslFun[0]);
+    // printf("%s\n", &newGlslFun[0]);
     float t0 = getTimePast();
-    DiscretizedModel<float, float> structure = generateMesh(newGlslFun);
+    structure = generateMesh(newGlslFun);
     float t1 = getTimePast();
-    printf("Total %.2g secs.\n\n", t1 - t0);
-    renderModel = prepareMesh(structure, false);
+    printf("Total %.2g secs.\n \n", t1 - t0);
+    renderModel = prepareMesh(structure);
     glslFun = newGlslFun;
     newGlslFun.clear();
 }
@@ -189,7 +244,7 @@ void translateState(float dx, float dy) {
 
 EXTERN EMSCRIPTEN_KEEPALIVE
 void scaleState(float dx, float dy, float sc) {
-    RenderParams::viewport->mouseScroll(-50.0f * log(sc));
+    RenderParams::viewport->mouseScroll(-25.0f * log(sc));
 }
 
 EXTERN EMSCRIPTEN_KEEPALIVE
@@ -207,8 +262,36 @@ void resetState() {
 
 
 EXTERN EMSCRIPTEN_KEEPALIVE
-void setBRenderMesh(bool showMesh) {
-    RenderParams::showMesh = showMesh;
+void setScreenCenter(float x, float y) {
+    glm::vec2 screenCenter(x, y);
+    if (screenCenter != RenderParams::screenCenter) {
+        RenderParams::screenCenter = screenCenter;
+        RenderParams::viewport->renderNeeded = true;
+    }
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setMeshShowEdges(bool showEdges) {
+    if (MeshParams::showEdges != showEdges) {
+        MeshParams::showEdges = showEdges;
+        renderModel = prepareMesh(structure);
+    }
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setMeshSmoothShading(bool smoothShading) {
+    if (MeshParams::smoothShading != smoothShading) {
+        MeshParams::smoothShading = smoothShading;
+        renderModel = prepareMesh(structure);
+    }
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setMeshBothLeafs(bool bothLeafs) {
+    if (MeshParams::bothLeafs != bothLeafs) {
+        MeshParams::bothLeafs = bothLeafs;
+        renderModel = prepareMesh(structure);
+    }
 }
 
 

@@ -1,19 +1,5 @@
 "use strict";
 
-// calculate the center of the screen excluding the control box
-function calcScreenCenter() {
-    let rect = document.getElementById("control").getBoundingClientRect();
-    var w = window.innerWidth, h = window.innerHeight;
-    var rl = rect.left, rb = h - rect.bottom;
-    var cx = 0.5 * w, cy = 0.5 * h;
-    if (rl > rb && rl > 0) cx = 0.5 * rl;
-    else if (rb > 0) cy = 0.5 * rb;
-    var com = [2.0 * (cx / w - 0.5), 2.0 * (cy / h - 0.5)];
-    com[0] = Math.max(-0.6, Math.min(0.6, com[0]));
-    com[1] = Math.max(-0.6, Math.min(0.6, com[1]));
-    return com;
-}
-
 function calcTransformMatrix(state, inverse = true) {
     var sc = (state.height / Math.min(state.width, state.height)) / state.scale;
     var transformMatrix = mat4Perspective(

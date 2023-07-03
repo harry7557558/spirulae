@@ -42,12 +42,29 @@ function resetState() {
         []);
 }
 
+function setScreenCenter() {
+    var c = calcScreenCenter();
+    Module.ccall('setScreenCenter',
+        null,
+        ['number', 'number'],
+        [c.x, c.y]);
+}
+
+
+
 
 function wasmReady() {
+    if (document.readyState != "complete") {
+        setTimeout(wasmReady, 50);
+        return;
+    };
+
     let canvas = document.getElementById("emscripten-canvas");
+    let control = document.getElementById("control");
 
     updateFunctionInput(true);
     resizeWindow();
+    setScreenCenter();
     resetState();
 
     // interactions
@@ -88,8 +105,6 @@ function wasmReady() {
         fingerDist = -1.0;
     }, { passive: true });
     canvas.addEventListener("touchmove", function (event) {
-        if (renderer.shaderProgram == null)
-            return;
         if (event.touches.length == 2) {
             var fingerPos0 = { x: event.touches[0].pageX, y: event.touches[0].pageY };
             var fingerPos1 = { x: event.touches[1].pageX, y: event.touches[1].pageY };
@@ -107,7 +122,11 @@ function wasmReady() {
     }, { passive: true });
     window.addEventListener("resize", function () {
         resizeWindow();
+        setScreenCenter();
     });
+    new ResizeObserver(function() {
+        setScreenCenter();
+    }).observe(control);
     document.getElementById("fps").addEventListener("click", function () {
         state.iTime = -1.0;
     });

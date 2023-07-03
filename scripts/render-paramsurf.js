@@ -123,7 +123,7 @@ async function drawScene(screenCenter, transformMatrix, lightDir) {
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "iTime"), state.iTime);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "screenCenter"),
-        screenCenter[0], screenCenter[1]);
+        screenCenter.x, screenCenter.y);
     gl.uniform1f(gl.getUniformLocation(renderer.shaderProgram, "uScale"), state.scale);
     gl.uniform3f(gl.getUniformLocation(renderer.shaderProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
@@ -216,7 +216,7 @@ var state = {
     name: "",
     width: window.innerWidth,
     height: window.innerHeight,
-    screenCenter: [0.0, 0.0],
+    screenCenter: { x: 0.5, y: 0.5 },
     defaultScreenCenter: true,
     iTime: -1.0,
     rz: null,
@@ -352,7 +352,7 @@ function initRenderer() {
     updateBuffers();
 
     // rendering
-    var oldScreenCenter = [-1, -1];
+    var oldScreenCenter = { x: -1, y : -1 };
     var startTime = performance.now();
     function render() {
         var timeDependent = true;
@@ -363,7 +363,7 @@ function initRenderer() {
             startTime = performance.now();
         var screenCenter = state.defaultScreenCenter ? calcScreenCenter() : state.screenCenter;
         state.screenCenter = screenCenter;
-        if ((screenCenter[0] != oldScreenCenter[0] || screenCenter[1] != oldScreenCenter[1])
+        if ((screenCenter.x != oldScreenCenter.x || screenCenter.y != oldScreenCenter.y)
             || state.renderNeeded) {
             setWidthHeight();
             try {
@@ -424,8 +424,8 @@ function initRenderer() {
             var dx = event.movementX, dy = event.movementY;
             if (event.shiftKey) { // center
                 state.defaultScreenCenter = false;
-                state.screenCenter[0] += 1.5 * dx / state.width;
-                state.screenCenter[1] -= 1.5 * dy / state.height;
+                state.screenCenter.x += 0.75 * dx / state.width;
+                state.screenCenter.y -= 0.75 * dy / state.height;
             }
             else {  // rotate
                 var k = fingerDist > 0. ? 0.001 : 0.01;

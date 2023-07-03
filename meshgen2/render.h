@@ -45,7 +45,7 @@ const char FRAGMENT_SHADER_SOURCE[] = R"""(#version 300 es
 precision highp float;
 in vec3 fragNormal;
 in vec4 interpolatedColor;
-out vec3 fragColor;  // negative rgb for value<0-1> colormap
+out vec4 fragColor;  // negative rgb for value<0-1> colormap
 uniform float maxValue;  // colormap, positive for smooth and negative for steps
 uniform float colorRemapK;  // negative for slider, positive for object
 uniform float brightness;  // multiply color by this number
@@ -77,8 +77,8 @@ void main() {
         col = vec3(132.23,.39,-142.83)+vec3(-245.97,-1.4,270.69)*t+vec3(755.63,1.32,891.31)*cos(vec3(.3275,2.39,.3053)*t+vec3(-1.7461,-1.84,1.4092));
         if (isnan(dot(col,col))) col = vec3(0,1,0);
     }
-    fragColor = brightness*(0.2*amb+0.7*dif+0.1*spc)*col;
-    if (brightness < 0.0) fragColor = col;
+    fragColor = vec4(brightness*(0.2*amb+0.7*dif+0.1*spc)*col, 1);
+    if (brightness < 0.0) fragColor.xyz = col;
 })""";
 
 
@@ -92,7 +92,7 @@ namespace RenderParams {
     GLFWwindow* window;
     GLuint vertexArrayID = 0;
     Viewport* viewport;
-    bool showMesh;
+    glm::vec2 screenCenter = glm::vec2(0.5, 0.5);
 }
 
 
@@ -160,10 +160,13 @@ public:
 
         glm::vec2 res = RenderParams::iResolution;
         transformMatrix = glm::perspective(0.2f * PIf, res.x / res.y, 0.1f / scale, 100.0f / scale);
-        transformMatrix = glm::translate(transformMatrix, glm::vec3(0.0, 0.0, -3.0 / scale));
+        transformMatrix = glm::translate(transformMatrix, glm::vec3(0.0, 0.0, -3.0f / scale));
         transformMatrix = glm::rotate(transformMatrix, rx, glm::vec3(1, 0, 0));
         transformMatrix = glm::rotate(transformMatrix, rz, glm::vec3(0, 0, 1));
         transformMatrix = glm::translate(transformMatrix, -center);
+        glm::vec2 sctr = (-1.0f+2.0f*RenderParams::screenCenter);
+        transformMatrix[3][0] += sctr.x * transformMatrix[3][3];
+        transformMatrix[3][1] += sctr.y * transformMatrix[3][3];
     }
     // Setup transformation matrix for 2D drawing
     void initDraw2D() {
@@ -378,7 +381,7 @@ void mainGUI(void (*callback)(void)) {
             viewport->drawVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesF,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsF));
-            if (RenderParams::showMesh) viewport->drawLinesVBO(
+            if (!renderModel.indicesE.empty()) viewport->drawLinesVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesE,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsE));
             // axes

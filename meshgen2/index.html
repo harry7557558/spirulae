@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Emscripten-Generated Code</title>
+    <title>meshgen2</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirula/meshgen2/" />
@@ -124,7 +124,7 @@
     <div class="emscripten_border">
       <canvas class="emscripten" id="emscripten-canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
     </div>
-    <textarea id="output" rows="8"></textarea>
+    <textarea id="output" rows="8" style="display:none"></textarea>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
@@ -144,7 +144,7 @@
             //text = text.replace(/</g, "&lt;");
             //text = text.replace(/>/g, "&gt;");
             //text = text.replace('\n', '<br>', 'g');
-            // console.log(text);
+            console.log(text);
             if (element) {
               element.value += text + "\n";
               element.scrollTop = element.scrollHeight; // focus on bottom
@@ -199,8 +199,6 @@
         };
       };
     </script>
-    <script async type="text/javascript" src="module.js"></script>
-
 
 
     <div id="legend">
@@ -223,12 +221,14 @@
         <span title="Display a preview of the input equation"><input type="checkbox" id="checkbox-latex"
                 checked />equation preview</span>&ensp;
         <span title="Automatically update the shader on input"><input type="checkbox" id="checkbox-auto-compile"
-                />auto-update</span>&ensp;
+                checked />auto-update</span>&ensp;
         <br />
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span title="Show mesh"><input type="checkbox" id="checkbox-grid" checked />mesh</span>&ensp;
+        <span title="show mesh"><input type="checkbox" id="checkbox-edge" checked />mesh</span>&ensp;
+        <span title="smooth shading"><input type="checkbox" id="checkbox-normal" checked />normal</span>&ensp;
+        <span title="one vs two leaves"><input type="checkbox" id="checkbox-closed" checked />closed</span>
         <br />
         <p id="error-message" style="display:none"></p>
     </div>
@@ -248,10 +248,12 @@
                 script.src = src + "?nocache=" + hour;
                 document.head.appendChild(script);
             }
+            loadScript("module.js");
             loadScript("../scripts/parameter.js");
             loadScript("../scripts/functions.js");
             loadScript("../scripts/parser.js");
             loadScript("../scripts/codegen.js");
+            loadScript("../scripts/render-gl.js");
             loadScript("../scripts/render-emscripten.js");
             loadScript("../scripts/latex.js");
             loadScript("script.js");
