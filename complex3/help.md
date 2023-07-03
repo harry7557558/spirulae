@@ -60,4 +60,4 @@ These parameters determine how the equation is rendered. Right-click a slider to
 
 <p>The input entered is parsed in JavaScript. After preprocessing (ex. adding multiplication signs), the input is parsed to the postfix notation using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm" target="_blank">shunting-yard algorithm</a>. When generating GLSL code, the expression is evaluated on a stack with caching of common subtrees. Generated GLSL code is logged to the console, which can be found under the "Console" tab of the F12 developer tool.</p>
 
-<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirula/tree/master/complex3" target="_blank">GitHub</a>.</p>
+<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirulae/tree/master/complex3" target="_blank">GitHub</a>.</p>

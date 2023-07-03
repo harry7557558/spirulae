@@ -1,6 +1,6 @@
 // 3D Implicit Surface Grapher
 
-const NAME = "spirula.meshgen2.";
+const NAME = "spirulae.meshgen2.";
 
 // a lot of these are from the Desmos Discord server
 // https://discord.gg/hNtrWCTwwa

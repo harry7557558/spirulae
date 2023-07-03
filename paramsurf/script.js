@@ -1,6 +1,6 @@
 // 3D Implicit Surface Grapher
 
-const NAME = "spirula.paramsurf.";
+const NAME = "spirulae.paramsurf.";
 
 const builtinFunctions = [
     ["Nautilus", "x=ucos(2piln(u))(1+cos(2piv));y=usin(2piln(u))(1+cos(2piv));z=usin(2piv)"],

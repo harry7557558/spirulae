@@ -1,6 +1,6 @@
 // 2D Complex Function Grapher
 
-const NAME = "spirula.complex.";
+const NAME = "spirulae.complex.";
 
 const builtinFunctions = [
     ["Sine", "sin(2z)"],

@@ -1,6 +1,6 @@
 // 3D Complex Function Grapher
 
-const NAME = "spirula.complex3.";
+const NAME = "spirulae.complex3.";
 
 const builtinFunctions = [
     ["csc(z)", "csc(z)"],

@@ -1,6 +1,6 @@
 <h2>Implicit Curve Grapher</h2>
 
-<p>By Harry Chen (harry7557558) - Implicit curve grapher in 2D. This tool isn't indented to be useful. It was created as a member of the Spirula function grapher series to test 2D viewport and input parsing. You can find cooler function graphers from the series <a href="../implicit3/" title="3D Implicit Surface Grapher">here</a>, <a href="../complex/" title="Complex Domain Coloring Grapher">here</a>, and <a href="../complex3/" title="3D Complex Domain Coloring Grapher">here</a>.</p>
+<p>By Harry Chen (harry7557558) - Implicit curve grapher in 2D. This tool isn't indented to be useful. It was created as a member of the Spirulae function grapher series to test 2D viewport and input parsing. You can find cooler function graphers from the series <a href="../implicit3/" title="3D Implicit Surface Grapher">here</a>, <a href="../complex/" title="Complex Domain Coloring Grapher">here</a>, and <a href="../complex3/" title="3D Complex Domain Coloring Grapher">here</a>.</p>
 
 <p>If you insist to use this tool, here is a brief description of it (template copied from other graphers):</p>
 
@@ -32,4 +32,4 @@
 
 <p>The input entered is parsed in JavaScript. After preprocessing (ex. adding multiplication signs), the input is parsed to the postfix notation using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm" target="_blank">shunting-yard algorithm</a>. When generating GLSL code, the expression is evaluated on a stack with caching of common subtrees. Generated GLSL code is logged to the console, which can be found under the "Console" tab of the F12 developer tool.</p>
 
-<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirula/tree/master/implicit2" target="_blank">GitHub</a>.</p>
+<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirulae/tree/master/implicit2" target="_blank">GitHub</a>.</p>

@@ -1,6 +1,6 @@
 <h2>Complex Domain Coloring Grapher</h2>
 
-<p>By Harry Chen (harry7557558) - Complex domain coloring. Integrating <a href="https://harry7557558.github.io/tools/complex_webgl.html" target="_blank">a domain coloring tool I created before</a> and the powerful input parser of Spirula. I created this tool primarily because I found the domain coloring graphs of complex functions to be visually cool.</p>
+<p>By Harry Chen (harry7557558) - Complex domain coloring. Integrating <a href="https://harry7557558.github.io/tools/complex_webgl.html" target="_blank">a domain coloring tool I created before</a> and the powerful input parser of Spirulae. I created this tool primarily because I found the domain coloring graphs of complex functions to be visually cool.</p>
 
 <img src="../src/gallery-complex-trigs.jpg" alt="gallery-complex-trigs.jpg" />
 
@@ -36,4 +36,4 @@
 
 <p>The input entered is parsed in JavaScript. After preprocessing (ex. adding multiplication signs), the input is parsed to the postfix notation using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm" target="_blank">shunting-yard algorithm</a>. When generating GLSL code, the expression is evaluated on a stack with caching of common subtrees. Generated GLSL code is logged to the console, which can be found under the "Console" tab of the F12 developer tool.</p>
 
-<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirula/tree/master/complex" target="_blank">GitHub</a>.</p>
+<p>The source code of this tool can be found on <a href="https://github.com/harry7557558/spirulae/tree/master/complex" target="_blank">GitHub</a>.</p>
