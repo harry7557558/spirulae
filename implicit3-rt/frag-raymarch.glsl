@@ -4,6 +4,7 @@ precision highp float;
 in vec2 vXy;
 out vec4 fragColor;
 
+uniform vec2 iResolution;
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
 uniform float uScale;
@@ -22,7 +23,7 @@ uniform float ZERO;  // used in loops to reduce compilation time
 bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
     vec3 inv_rd = 1.0 / rd;
     vec3 n = inv_rd*(ro);
-    vec3 k = abs(inv_rd)*0.8*uClipBox;
+    vec3 k = abs(inv_rd)*uClipBox;
     vec3 t1 = -n - k, t2 = -n + k;
     tn = max(max(t1.x, t1.y), t1.z);
     tf = min(min(t2.x, t2.y), t2.z);
@@ -123,28 +124,14 @@ float fade(float t) {
     t = pow(t, 1.2);
     return exp(-t);
 }
-vec4 calcColor(vec3 ro, vec3 rd, float t) {
-    vec3 p = screenToWorld(ro+rd*t);
-    vec3 n0 = funGrad(p).xyz;
-    // vec3 ncalc = funRaw(p.x,p.y,p.z).xyz;
-    // vec3 ndiff = vec3(1) * length(n0-ncalc);
-    rd = normalize(screenToWorld(ro+rd)-screenToWorld(ro));
-    n0 = dot(n0,rd)>0. ? -n0 : n0;
+vec3 calcAlbedo(vec3 p, vec3 n0) {
     vec3 n = normalize(n0);
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
     float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
 #if {%COLOR%} == 0
-    // porcelain-like shading
-    vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
-    // albedo = vec3(1) * ndiff;
-    vec3 amb = (0.1+0.2*BACKGROUND_COLOR) * albedo;
-    vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
-    vec3 spc = min(1.2*pow(max(dot(reflect(rd,n),LDIR),0.0),100.0),1.) * vec3(20.);
-    vec3 rfl = mix(vec3(1.), vec3(4.), clamp(5.*dot(reflect(rd,n),LDIR),0.,1.));
-    // spc *= albedo, rfl *= albedo;
-    vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
+    return g * vec3(1, 0.5, 0.2);
 #else // {%COLOR%} == 0
 #if {%COLOR%} == 1
     // color based on normal
@@ -157,19 +144,8 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
 #endif // {%COLOR%} == 1
     albedo *= g;
-    albedo = pow(albedo, vec3(2.2));
-    // phong shading
-    vec3 amb = (0.05+0.2*BACKGROUND_COLOR) * albedo;
-    vec3 dif = 0.6*pow(max(dot(n,LDIR),0.0),1.5) * albedo;
-    vec3 spc = pow(max(dot(reflect(rd,n),LDIR),0.0),40.0) * vec3(0.06) * pow(albedo,vec3(0.2));
-    vec3 col = amb + dif + spc;
+    return pow(albedo, vec3(1.5));
 #endif // {%COLOR%} == 0
-    if (isnan(dot(col, vec3(1))))
-        return vec4(mix(BACKGROUND_COLOR, vec3(0,0.5,0)*g, fade(t)), 1.0);
-    return vec4(
-        mix(BACKGROUND_COLOR, col, fade(t)),
-        1.0-pow(1.0-OPACITY,abs(1.0/dot(rd,n)))
-    );
 }
 
 #define FIELD_EMISSION (0.25*(bool({%CLIP%}) ? clamp(4.0/(uScale*length(uClipBox)),1.0,10.0) : 1.0))
@@ -198,10 +174,17 @@ void integrateField(float v0, float v1, vec3 c0, vec3 c1, out vec3 col, out floa
 }
 
 
-float intersectObjectS(in vec3 ro, in vec3 rd, float t0, float t1) {
-    // screen space
+float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, out vec3 n) {
+    rd = normalize(rd);
+    float t0_, t1_;
+    if (!clipIntersection(ro, rd, t0_, t1_))
+        return -1.0;
+    t0 = max(t0, t0_), t1 = min(t1, t1_);
+    if (t1 < t0)
+        return -1.0;
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
-    float t = t0, dt = STEP_SIZE;
+    float step_size = 4.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z);
+    float t = t0, dt = step_size;
     float v = 0.0, v0 = v, v00 = v, v1;
     float dt0 = 0.0, dt00 = 0.0;
     float dvdt, old_dvdt;  // discontinuity checking
@@ -214,13 +197,27 @@ float intersectObjectS(in vec3 ro, in vec3 rd, float t0, float t1) {
         if (++i >= MAX_STEP || t > t1) {
             return -1.0;
         }
-        v = funS(ro+rd*t);
+        v = fun(ro+rd*t);
         if (isBisecting) {  // bisection search
-            // if (t1-t0 <= STEP_SIZE/64.) break;
-            if (t1-t0 <= 1e-4) break;
+            // if (t1-t0 <= step_size/64.) break;
+            if (t1-t0 <= 1e-4) {
+                t = t0 - v0/(v1-v0) * (t1-t0);
+                break;
+            }
             if (v*v0 < 0.0) t1 = t, v1 = v;
             else t0 = t, v0 = v;
             t = 0.5*(t0+t1);
+#if {%DISCONTINUITY%}
+            dvdt = abs((v1-v0)/(t1-t0));
+            if (abs(t1-t0) < 1e-4 && dvdt > 1.8*old_dvdt) {
+                col = vec3(1,0,0);
+                if (bool({%GRID%}))
+                    col *= grid(ro+rd*t, vec3(sqrt(0.33)));
+                n = normalize(funGrad(ro+rd*t));
+                return t;
+            }
+            old_dvdt = dvdt;
+#endif
         }
         else if (v*v0 < 0.0) {  // switch from raymarching to to bisection
             isBisecting = true;
@@ -249,35 +246,17 @@ float intersectObjectS(in vec3 ro, in vec3 rd, float t0, float t1) {
             // update
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             float ddt = abs(v/g);
-            dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
-                clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
+            dt = (g==0. || isnan(ddt) || isinf(ddt)) ? step_size :
+                clamp(min(ddt-step_size, t1-t0-0.01*step_size), 0.05*step_size, step_size);
             t += dt;
         }
     }
+    vec3 grad = funGrad(ro+rd*t);
+    col = calcAlbedo(ro+rd*t, grad);
+    n = normalize(grad);
     return t;
-    // vec3 col = calcColor(ro, rd, t).xyz;
-    // return totemi + col * totabs;
 }
 
-float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1) {
-    rd = normalize(rd);
-#if {%CLIP%}
-    float t0_, t1_;
-    if (!clipIntersection(ro, rd, t0_, t1_))
-        return -1.0;
-    t0 = max(t0, t0_), t1 = min(t1, t1_);
-    if (t1 < t0) return -1.0;
-#endif
-    vec3 ro_s = worldToScreen(ro);
-    vec3 rd_s = normalize(worldToScreen(ro+rd)-ro_s);
-    t0 = dot(worldToScreen(ro+t0*rd)-ro_s, rd_s);
-    vec3 p1 = worldToScreen(ro+t1*rd);
-    t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
-    float t = intersectObjectS(ro_s, rd_s, t0, t1);
-    if (t < 0.) return -1.;
-    t = dot(screenToWorld(ro_s+rd_s*t)-ro, rd);
-    return t;
-}
 
 
 // define materials
@@ -287,60 +266,148 @@ const int MAT_PLANE = 1;
 const int MAT_OBJECT = 2;
 
 
-vec3 mainRender(vec3 ro, vec3 rd) {
-    vec3 m_col = vec3(1.0), t_col = vec3(0.0), col;
-    bool is_inside = false;
+// Random number generator
+uint seed = 0u;
+uint randu() { return seed = seed * 1664525u + 1013904223u; }
+float randf() { return float(randu()) / 4294967296.; }
 
-    for (int iter = int(ZERO); iter < 10; iter++) {
-        ro += 1e-3 * rd;
+
+// Faked multi-scattering BRDF
+vec3 sampleBrdf(
+    vec3 wi, vec3 n,
+    float alpha,  // roughness
+    float f0,  // ratio of reflection along the normal
+    vec3 albedo,
+    inout vec3 m_col
+    ) {
+
+    vec3 u = normalize(cross(n, vec3(1.23, 2.34, -3.45)));
+    vec3 v = cross(u, n);
+    wi = vec3(dot(wi, u), dot(wi, v), dot(wi, n));
+    vec3 wi0 = wi, wo, m;  // in, out and half vector
+
+    // generate output ray
+    for (int i = 0; i < 4; i++) {
+        // generate a random GGX normal
+        float su = 2.*PI*randf();
+        float sv = randf();
+        sv = atan(alpha*sqrt(sv/(1.-sv)));
+        vec3 h = vec3(sin(sv)*vec2(cos(su),sin(su)), cos(sv));
+        // reflect it about the GGX normal
+        wo = -(wi-2.*dot(wi,h)*h);
+        // if below surface, set it as the new in vector,
+        // keep bouncing until it gives a good one
+        if (wo.z < 0.) wi = -wo;
+        else break;
+    }
+    wo.z = abs(wo.z);  // prevent below surface
+    wi = wi0;
+    m = normalize(wi+wo);
+
+    // fresnel
+    float F = mix(pow(1.-dot(wi, m), 5.), 1., f0);
+    m_col *= F * albedo;
+    return wo.x * u + wo.y * v + wo.z * n;
+}
+
+vec3 sampleGlassBsdf(vec3 rd, vec3 n, float eta) {
+    float ci = -dot(n, rd);
+    if (ci < 0.0) ci = -ci, n = -n;
+    float ct = 1.0 - eta * eta * (1.0 - ci * ci);
+    if (ct < 0.0) return rd + 2.0*ci*n;
+    ct = sqrt(ct);
+    float Rs = (eta * ci - ct) / (eta * ci + ct);
+    float Rp = (eta * ct - ci) / (eta * ct + ci);
+    float R = 0.5 * (Rs * Rs + Rp * Rp);
+    return randf() > R ?
+        rd * eta + n * (eta * ci - ct)  // refraction
+        : rd + 2.0*ci*n;  // reflection
+}
+
+
+
+vec3 mainRender(vec3 ro, vec3 rd) {
+    vec3 m_col = vec3(1.0), t_col = vec3(0.0), col, tmpcol;
+    bool is_inside = false;
+    vec3 prev_col = vec3(1.0);
+
+    for (int iter = int(ZERO); iter < 32; iter++) {
+        ro += 1e-4*length(ro) * rd;
         vec3 n, min_n;
         float t, min_t = 1e12;
         vec3 min_ro = ro, min_rd = rd;
         int material = MAT_BACKGROUND;
 
         // plane
-        t = -ro.z / rd.z;
+        t = -(ro.z+uClipBox.z) / rd.z;
         if (t > 0.0) {
             min_t = t, min_n = vec3(0,0,1);
             min_ro = ro+rd*t, min_rd = rd;
-            col = vec3(0.8, 0.9, 1);
+            col = sin(PI*min_ro.x)*sin(PI*min_ro.y) < 0. ?
+                vec3(0.7, 0.8, 0.9) : vec3(0.8, 0.7, 0.9);
+            col = pow(col, vec3(2.2));
             material = MAT_PLANE;
         }
 
         // object
-        t = intersectObject(ro, rd, 0.0, min_t);
+        t = intersectObject(ro, rd, 0.0, min_t, tmpcol, n);
         if (t > 0.0 && t < min_t) {
-            min_t = t;
-            min_n = normalize(funGrad(ro+rd*t));
+            min_t = t, min_n = n;
             min_ro = ro+rd*t, min_rd = rd;
-            col = vec3(1,0.5,0.2);
+            col = tmpcol;
             material = MAT_OBJECT;
         }
 
         // update ray
         if (material == MAT_BACKGROUND) {
-            col = vec3(max(rd.z, 0.0));
+            col = vec3(max(0.5+0.5*dot(rd,LDIR), 0.0));
             return m_col * col + t_col;
+        }
+        if (isnan(dot(min_n, col))) {
+            return m_col * vec3(0, 1, 0) + t_col;
         }
         ro = min_ro, rd = min_rd;
         min_n = dot(rd,min_n) < 0. ? min_n : -min_n;
-        rd -= 2.0*dot(rd, min_n) * min_n;
-        m_col = m_col * col;
+        if (material == MAT_PLANE) {
+            // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
+            rd = sampleBrdf(-rd, min_n, 0.05, 1.0, col, m_col);
+        }
+        else if (material == MAT_OBJECT) {
+            // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
+            // rd = sampleBrdf(-rd, min_n, 0.1, 1.0, col, m_col);
+            rd = sampleGlassBsdf(rd, min_n, is_inside?1.5:1.0/1.5);
+            if (is_inside) m_col *= pow(0.5*(prev_col+col), vec3(1.0*min_t));
+        }
         if (dot(rd, min_n) < 0.)
             is_inside = !is_inside;
-        if (is_inside) return vec3(1,0,0);
-
+        // if (is_inside) return vec3(0,1,0);
+        prev_col = col;
     }
     return m_col + t_col;
+    return t_col;
 }
 
 
 void main(void) {
-    vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
-    vec3 rd_s = vec3(0,0,1);
-    vec3 ro = screenToWorld(ro_s);
-    vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
-    vec3 col = mainRender(ro, rd);
-    col = pow(col, vec3(1./2.2));
+    int nFrame = clamp(int(1e6/(iResolution.x*iResolution.y)), 1, 16);
+    vec3 totCol = vec3(0);
+    int totCount = 0;
+    for (int iFrame=0; iFrame<nFrame; iFrame++) {
+        // random number seed
+        vec3 p3 = fract(vec3(gl_FragCoord.xy,iFrame)*1.1031);
+        p3 += dot(p3, p3.zxy + 31.32);
+        float h = fract((p3.x + p3.y) * p3.z);
+        seed = uint(1048576.*h);
+
+        vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
+        ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
+        vec3 rd_s = vec3(0,0,1);
+        vec3 ro = screenToWorld(ro_s);
+        vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
+        vec3 col = mainRender(ro, rd);
+        if (!isnan(dot(col, vec3(1))))
+            totCol += col, totCount++;
+    }
+    vec3 col = pow(totCol/float(totCount), vec3(1./2.2));
     fragColor = vec4(col, 1.0);
 }

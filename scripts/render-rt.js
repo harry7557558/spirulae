@@ -9,7 +9,6 @@ var renderer = {
     aaSource: "",
     positionBuffer: null,
     raymarchProgram: null,
-    antiAliaser: null,
     timerExt: null,
 };
 
@@ -21,7 +20,6 @@ async function drawScene(state, transformMatrix, lightDir) {
     }
     else renderer.canvas.style.cursor = "default";
     let gl = renderer.gl;
-    let antiAliaser = renderer.antiAliaser;
 
     // set position buffer for vertex shader
     function setPositionBuffer(program) {
@@ -66,7 +64,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // render image
     gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.raymarchProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.renderFramebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     setPositionBuffer(renderer.raymarchProgram);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "ZERO"), 0.0);
     gl.uniformMatrix4fv(
@@ -74,6 +72,8 @@ async function drawScene(state, transformMatrix, lightDir) {
         false,
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "iTime"), state.iTime);
+    gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "iResolution"),
+        state.width, state.height);
     gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "screenCenter"),
         state.screenCenter.x, state.screenCenter.y);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
@@ -83,27 +83,6 @@ async function drawScene(state, transformMatrix, lightDir) {
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rBrightness"), state.rBrightness);
-    renderPass();
-
-    // render image gradient
-    gl.useProgram(antiAliaser.imgGradProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.imgGradFramebuffer);
-    setPositionBuffer(antiAliaser.imgGradProgram);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
-    gl.uniform1i(gl.getUniformLocation(antiAliaser.imgGradProgram, "iChannel0"), 0);
-    renderPass();
-
-    // render anti-aliasing
-    gl.useProgram(antiAliaser.aaProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    setPositionBuffer(antiAliaser.aaProgram);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
-    gl.uniform1i(gl.getUniformLocation(antiAliaser.aaProgram, "iChannel0"), 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, antiAliaser.imgGradTexture);
-    gl.uniform1i(gl.getUniformLocation(antiAliaser.aaProgram, "iChannel1"), 1);
     renderPass();
 
     if (!countIndividualTime && timer != null)
@@ -244,10 +223,6 @@ function updateBuffers() {
     state.width = canvas.width = canvas.style.width = window.innerWidth;
     state.height = canvas.height = canvas.style.height = window.innerHeight;
 
-    var oldAntiAliaser = renderer.antiAliaser;
-    renderer.antiAliaser = createAntiAliaser(gl, state.width, state.height, false);
-    if (oldAntiAliaser) destroyAntiAliaser(gl, oldAntiAliaser);
-
     state.renderNeeded = true;
 }
 
@@ -278,7 +253,9 @@ function initRenderer() {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
             var transformMatrix = calcTransformMatrix(state);
-            var lightDir = calcLightDirection(transformMatrix, state.rTheta, state.rPhi);
+            var lightDir = calcLightDirection(
+                [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+                state.rTheta, state.rPhi);
             drawScene(state, transformMatrix, lightDir);
             renderLegend(state);
             if (timeDependent) {

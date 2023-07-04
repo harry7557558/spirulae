@@ -102,8 +102,8 @@ document.body.onload = function (event) {
         new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
-        new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, Math.PI / 6.0),
-        new UniformSlider("rPhi", "slider-phi", 0, Math.PI, Math.PI / 6.0),
+        new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, 1.0 * Math.PI),
+        new UniformSlider("rPhi", "slider-phi", 0, Math.PI, 0.9 * Math.PI),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
@@ -113,7 +113,7 @@ document.body.onload = function (event) {
     resetState({
         rz: -0.9 * Math.PI,
         rx: -0.4 * Math.PI,
-        scale: 0.5,
+        scale: 0.3,
         clipSize: [2.0, 2.0, 2.0]
     }, false);
 
