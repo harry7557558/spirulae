@@ -267,9 +267,16 @@ const int MAT_OBJECT = 2;
 
 
 // Random number generator
-uint seed = 0u;
-uint randu() { return seed = seed * 1664525u + 1013904223u; }
-float randf() { return float(randu()) / 4294967296.; }
+float seed;
+float hash31(vec3 p) {
+    vec3 p3 = fract(p*1.1031);
+    p3 += dot(p3, p3.zxy + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    seed = hash31(vec3(seed,1,1));
+    return seed;
+}
 
 
 // Faked multi-scattering BRDF
@@ -394,10 +401,7 @@ void main(void) {
     int totCount = 0;
     for (int iFrame=0; iFrame<nFrame; iFrame++) {
         // random number seed
-        vec3 p3 = fract(vec3(gl_FragCoord.xy,iFrame)*1.1031);
-        p3 += dot(p3, p3.zxy + 31.32);
-        float h = fract((p3.x + p3.y) * p3.z);
-        seed = uint(1048576.*h);
+        seed = hash31(vec3(gl_FragCoord.xy,iFrame));
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;

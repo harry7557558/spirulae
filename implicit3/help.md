@@ -26,6 +26,14 @@
 
 <p><b><i>Y</i>-up</b>: A majority of math textbooks use the <i>z</i>-axis as the vertical axis. Check this checkbox if you prefer <i>y</i> as the vertical axis.</p>
 
+<p><b>Light theme</b>: Check <code>☼</code> to use light background instead of the default dark background.</p>
+
+<p><b>Clip</b>: Restrict the domain of the function for better visualization and accelerated rendering.</p>
+
+<p><b>Fixed clip</b>: By default domain clipping changes while zooming to adapt to viewport. Check this if you want to keep the function domain consistent.</p>
+
+<p><b>Field</b>: Visualize scalar field using volume contour lines. Use this selector to choose linear contour, logarithmic contour, or no contour. Warn that volume rendering can be slow when the function domain isn't restricted, and therefore it's recommended to set a clip when using this feature.</p>
+
 <p><b>Grid</b>: When checked, this tool will display an adaptive grid on the surface, making it easier to see the size of the object and read the coordinates of a point.</p>
 
 <p><b>Transparency</b>: Check this if you want the surface to be semi-transparent so you can look through it. (Try the "A5 Star" example.) Warn that this may decrease the accuracy of the rendering.</p>

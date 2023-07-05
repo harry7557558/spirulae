@@ -385,7 +385,7 @@ function initRenderer() {
             if (event.shiftKey) { // center
                 state.defaultScreenCenter = false;
                 state.screenCenter.x += 0.75 * dx / state.width;
-                state.screenCenter.x -= 0.75 * dy / state.height;
+                state.screenCenter.y -= 0.75 * dy / state.height;
             }
             else {  // rotate
                 var k = fingerDist > 0. ? 0.001 : 0.01;
