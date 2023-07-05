@@ -1,5 +1,7 @@
 # Spirulae
 
+*by Harry Chen - updated July 2023*
+
 [![spirulae.jpg](src/spirulae.jpg)](implicit3/)
 
 GPU-accelerated function graphers in a web browser, both 3D and 2D.
@@ -11,11 +13,9 @@ This is a personal passion project. I couldn't find a 3D graphing calculator wit
  - [Complex domain coloring grapher (2D)](complex/)
  - [Complex domain coloring grapher (3D)](complex3/)
 
-[//]: # "- [Implicit curve grapher](./implicit2/index.html) (for testing, not intended to be useful)"
-
 It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirulae/issues).
 
-The name "Spirulae" comes from the name of a [deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) that has distinctive spiral shells. I consider myself a fan of spirals so it's not surprising that you see a lot of spirals in example graphs.
+The name "Spirulae" comes from the name of a [deep-ocean cephalopod mollusk](https://en.wikipedia.org/wiki/Spirula) that has distinctive spiral shells. (I consider myself a fan of spirals so it's not surprising to see a lot of spirals in examples.)
 
 ----
 
@@ -58,6 +58,15 @@ These tools have the following known issues:
  - Reduced quality when rendering implicit surfaces with transparency
  - The parser has ambiguity in resolving conflicting variable names
 
+----
+
+## Working in Progress
+
+Spirulae is under active development. Tools that are being developed include:
+ - 2D mesh generation (`/meshgen2`)
+ - Ray tracing (`/implicit3-rt`)
+ - Automatic differentiation (`/autodiff`)
+
 Features that may be implemented in the future (ordered approximately by priority):
  - Exporting 3D models
  - Automatic differentiation
@@ -71,8 +80,6 @@ Features that may be implemented in the future (ordered approximately by priorit
  - Better expression editor (highlighting, bracket matching, etc.)
  - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers
 
-(Updated June 2023)
-
 ----
 
 ## Gallery
@@ -81,26 +88,26 @@ Complex domain coloring
 
 [![](./src/gallery-complex-trigs.jpg)](complex/)
 
-Complex domain coloring in 3D
+The Gamma function in 3D
 
-[![](./src/gallery-complex3-tan.jpg)](complex3/)
+[![](./src/gallery-complex3-gamma-2.jpg)](complex3/)
 
 A sextic algebraic surface
 
 [![](./src/gallery-implicit3-barth6.jpg)](implicit3/)
 
-The Burning Ship fractal
+A fractal with scalar field visualized
 
-[![](./src/gallery-implicit3-bship.jpg)](implicit3/)
+[![](./src/gallery-implicit3-roots-field.jpg)](implicit3/)
 
-An algebraic star surface with transparency
+A clipped quintic implicit surface, with volumetrics showing isosurfaces
 
-[![](./src/gallery-implicit3-star.jpg)](implicit3/)
+[![](./src/gallery-implicit3-field.jpg)](implicit3/)
 
-Complex 3D plots of the Gamma function and the Riemann Zeta function
+A parametric surface rendered in X-ray mode
 
-[![](./src/gallery-complex3-gamma.jpg)](complex3/)
+[![](./src/gallery-paramsurf-twist.jpg)](paramsurf/)
 
-[![](./src/gallery-complex3-zeta.jpg)](complex3/)
+A path-traced fractal (working in progress)
 
-(Updated September 2022)
+![](./src/gallery-implicit3-rt-mandeltorus.jpg)

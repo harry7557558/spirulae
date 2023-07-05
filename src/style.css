@@ -2,16 +2,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: #f0f5ff;
   color: #222;
+  margin: 10px 0;
 }
 
 #container {
   max-width: 800px;
-  width: 90%;
-  margin: 50px auto 80px;
+  width: 88%;
+  margin: 0 auto;
+  padding: 30px 6%;
 }
 
 img {
-  max-width: 100%;
+  width: 100%;
 }
 
 p {
@@ -31,6 +33,10 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+em {
+  color: #555;
 }
 
 code {
