@@ -55,7 +55,7 @@
             </select>quality</span>&ensp;
         <span title="Use y-up coordinate system convension"><input type="checkbox"
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
-        <span title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
+        <span style="display:none" title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <br />
         <span title="Clip the shape inside a box"><select id="select-clip">
             <option value="1" selected>box</option>
@@ -63,7 +63,7 @@
         </select>clip</span>
         (<span title="Fixed box size independent of zooming"><input type="checkbox"
                 id="checkbox-clip-fixed" checked />fixed</span>)&ensp;
-            <span title="Visualize scalar field with volume contour lines"><select id="select-field">
+            <span style="display:none;" title="Visualize scalar field with volume contour lines"><select id="select-field">
                 <option value="0" selected>no</option>
                 <option value="1">linear</option>
                 <option value="2">log</option>
@@ -74,10 +74,10 @@
                 <option value="1">normal</option>
                 <option value="2" selected>gradient</option>
             </select>color</span>&ensp;
-        <span title="Display the surface as semi-transparent"><input type="checkbox"
-                id="checkbox-transparency" />transparency</span>
+        <span title="Glass instead of opaque material"><input type="checkbox"
+                id="checkbox-transparency" checked />transparency</span>
         <br />
-        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
+        <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
                 id="checkbox-discontinuity" checked />highlight discontinuity</span>
         <br />

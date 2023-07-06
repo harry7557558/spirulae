@@ -189,26 +189,28 @@ function createShaderProgram(gl, vsSource, fsSource) {
 }
 
 // create texture/framebuffer
-function createSampleTexture(gl, width, height) {
+function createSampleTexture(gl, width, height, floatTexture=false) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    const level = 0;
-    const internalFormat = gl.RGBA8;
-    const border = 0;
-    const format = gl.RGBA;
-    const type = gl.UNSIGNED_BYTE;
-    const data = null;
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-        width, height, border,
-        format, type, data);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (floatTexture) {
+        gl.texImage2D(gl.TEXTURE_2D, 0,
+            gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    }
+    else {
+        gl.texImage2D(gl.TEXTURE_2D, 0,
+            gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
     return tex;
 }
-function createRenderTarget(gl, width, height, requireDepth = false) {
-    let tex = createSampleTexture(gl, width, height);
+function createRenderTarget(gl, width, height, requireDepth = false,
+        floatTexture=false, includeSampler=false) {
+    let tex = createSampleTexture(gl, width, height, floatTexture);
     let framebuffer = gl.createFramebuffer();
     var depthbuffer = null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -219,17 +221,22 @@ function createRenderTarget(gl, width, height, requireDepth = false) {
         gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
         gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthbuffer);
     }
-    return {
+    var res = {
         texture: tex,
         framebuffer: framebuffer,
         depthbuffer: depthbuffer
     };
+    if (includeSampler)
+        res.sampler = createSampleTexture(gl, width, height, floatTexture);
+    return res;
 }
 function destroyRenderTarget(gl, target) {
     gl.deleteTexture(target.texture);
     gl.deleteFramebuffer(target.framebuffer);
     if (target.depthbuffer != null)
         gl.deleteRenderbuffer(target.depthbuffer);
+    if (target.sampler != null)
+        gl.deleteTexture(target.sampler);
 }
 
 // create anti-aliasing object

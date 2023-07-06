@@ -3,9 +3,9 @@
 const NAME = "spirulae.implicit3-rt.";
 
 const builtinFunctions = [
-    ["A6 Heart", "(x^2+9/4*y^2+z^2-1)^3=(x^2+9/80*y^2)*z^3"],
-    ["A6 Fox", "2(x^2+2y^2+z^2)^3-2(9x^2+y^2)z^3=1"],
+    // ["A6 Heart", "(x^2+9/4*y^2+z^2-1)^3=(x^2+9/80*y^2)*z^3"],
     ["A5 Star", "4(x^2+2y^2+z^2-1)^2-z(5x^4-10x^2z^2+z^4)=1"],
+    ["A6 Fox", "2(x^2+2y^2+z^2)^3-2(9x^2+y^2)z^3=1"],
     ["A7 Genus 2", "2y(y^2-3x^2)(1-z^2)+(x^2+y^2)^2-(9z^2-1)(1-z^2)"],
     ["A4 Goursat", "2(x^4+y^4+z^4)-3(x^2+y^2+z^2)+2"],
     ["A4 Genus 3", "(x^2-1)^2+(y^2-1)^2+(z^2-1)^2+4(x^2y^2+x^2z^2+y^2z^2)+8xyz-2(x^2+y^2+z^2)"],
@@ -119,11 +119,8 @@ document.body.onload = function (event) {
 
     // main
     initMain([
-        "../shaders/vert-pixel.glsl",
-        "../shaders/frag-pool.glsl",
-        "frag-raymarch.glsl",
-        "../shaders/frag-imggrad.glsl",
-        "../shaders/frag-aa.glsl"
+        "frag-render.glsl",
+        "../shaders/frag-rt-post.glsl"
     ]);
 };
 

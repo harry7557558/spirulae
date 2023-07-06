@@ -4,7 +4,10 @@ precision highp float;
 in vec2 vXy;
 out vec4 fragColor;
 
+uniform int iFrame;
 uniform vec2 iResolution;
+uniform sampler2D iChannel0;
+
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
 uniform float uScale;
@@ -12,6 +15,19 @@ uniform vec3 uClipBox;
 
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
+
+// Random number generator
+float seed;
+float hash31(vec3 p) {
+    vec3 p3 = fract(p*1.1031);
+    p3 += dot(p3, p3.zxy + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    seed = hash31(vec3(seed,1,1));
+    return seed;
+}
+
 
 #if {%LIGHT_THEME%} && {%FIELD%}==0
 #define BACKGROUND_COLOR vec3(0.82,0.8,0.78)
@@ -129,7 +145,7 @@ vec3 calcAlbedo(vec3 p, vec3 n0) {
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
-    float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
+    float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.1;
 #if {%COLOR%} == 0
     return g * vec3(1, 0.5, 0.2);
 #else // {%COLOR%} == 0
@@ -248,6 +264,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
             float ddt = abs(v/g);
             dt = (g==0. || isnan(ddt) || isinf(ddt)) ? step_size :
                 clamp(min(ddt-step_size, t1-t0-0.01*step_size), 0.05*step_size, step_size);
+            if (i == 1) dt *= randf();
             t += dt;
         }
     }
@@ -265,18 +282,6 @@ const int MAT_BACKGROUND = 0;
 const int MAT_PLANE = 1;
 const int MAT_OBJECT = 2;
 
-
-// Random number generator
-float seed;
-float hash31(vec3 p) {
-    vec3 p3 = fract(p*1.1031);
-    p3 += dot(p3, p3.zxy + 31.32);
-    return fract((p3.x + p3.y) * p3.z);
-}
-float randf() {
-    seed = hash31(vec3(seed,1,1));
-    return seed;
-}
 
 
 // Faked multi-scattering BRDF
@@ -381,9 +386,15 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         }
         else if (material == MAT_OBJECT) {
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
-            // rd = sampleBrdf(-rd, min_n, 0.1, 1.0, col, m_col);
+        #if {%TRANSPARENCY%}
             rd = sampleGlassBsdf(rd, min_n, is_inside?1.5:1.0/1.5);
-            if (is_inside) m_col *= pow(0.5*(prev_col+col), vec3(1.0*min_t));
+            if (is_inside) {
+                vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
+                m_col *= pow(col, vec3(1.0*min_t));
+            }
+        #else
+            rd = sampleBrdf(-rd, min_n, 0.1, 1.0, col, m_col);
+        #endif
         }
         if (dot(rd, min_n) < 0.)
             is_inside = !is_inside;
@@ -396,12 +407,13 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
 
 void main(void) {
-    int nFrame = clamp(int(1e6/(iResolution.x*iResolution.y)), 1, 16);
-    vec3 totCol = vec3(0);
-    int totCount = 0;
-    for (int iFrame=0; iFrame<nFrame; iFrame++) {
+    vec4 pixel = texelFetch(iChannel0, ivec2(gl_FragCoord.xy), 0);
+    if (iFrame == 0) pixel = vec4(0);
+
+    int nFrame = 1;
+    for (int fi=0; fi<nFrame; fi++) {
         // random number seed
-        seed = hash31(vec3(gl_FragCoord.xy,iFrame));
+        seed = hash31(vec3(gl_FragCoord.xy,iFrame*nFrame+fi));
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
@@ -410,8 +422,7 @@ void main(void) {
         vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
         vec3 col = mainRender(ro, rd);
         if (!isnan(dot(col, vec3(1))))
-            totCol += col, totCount++;
+            pixel += vec4(col, 1);
     }
-    vec3 col = pow(totCol/float(totCount), vec3(1./2.2));
-    fragColor = vec4(col, 1.0);
+    fragColor = pixel;
 }

@@ -4,17 +4,18 @@ var renderer = {
     canvas: null,
     gl: null,
     vsSource: "",
-    raymarchSource: "",
-    imgGradSource: "",
-    aaSource: "",
+    renderSource: "",
+    postSource: "",
     positionBuffer: null,
-    raymarchProgram: null,
+    renderProgram: null,
+    postProgram: null,
+    renderTarget: null,
     timerExt: null,
 };
 
 // call this function to re-render
 async function drawScene(state, transformMatrix, lightDir) {
-    if (renderer.raymarchProgram == null) {
+    if (renderer.renderProgram == null) {
         renderer.canvas.style.cursor = "not-allowed";
         return;
     }
@@ -58,31 +59,48 @@ async function drawScene(state, transformMatrix, lightDir) {
     }
 
     // clear the canvas
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // render image
     gl.viewport(0, 0, state.width, state.height);
-    gl.useProgram(renderer.raymarchProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    setPositionBuffer(renderer.raymarchProgram);
-    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "ZERO"), 0.0);
+    gl.useProgram(renderer.renderProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
+    setPositionBuffer(renderer.renderProgram);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "ZERO"), 0.0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iChannel0"), 0);
+    gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "iResolution"),
+        state.width, state.height);
+    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iFrame"), state.iFrame);
     gl.uniformMatrix4fv(
-        gl.getUniformLocation(renderer.raymarchProgram, "transformMatrix"),
+        gl.getUniformLocation(renderer.renderProgram, "transformMatrix"),
         false,
         mat4ToFloat32Array(transformMatrix));
-    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "iTime"), state.iTime);
-    gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "iResolution"),
-        state.width, state.height);
-    gl.uniform2f(gl.getUniformLocation(renderer.raymarchProgram, "screenCenter"),
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iTime"), state.iTime);
+    gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "screenCenter"),
         state.screenCenter.x, state.screenCenter.y);
-    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "uScale"), state.scale);
-    gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "uClipBox"),
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "uScale"), state.scale);
+    gl.uniform3f(gl.getUniformLocation(renderer.renderProgram, "uClipBox"),
         state.clipSize[0], state.clipSize[1], state.clipSize[2]);
-    gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "LDIR"),
+    gl.uniform3f(gl.getUniformLocation(renderer.renderProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
-    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
-    gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rBrightness"), state.rBrightness);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "rZScale"), calcZScale());
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "rBrightness"), state.rBrightness);
+    renderPass();
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    gl.copyTexImage2D(gl.TEXTURE_2D,
+        0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+
+    // post processing
+    gl.useProgram(renderer.postProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    setPositionBuffer(renderer.postProgram);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
+    gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel0"), 0);
     renderPass();
 
     if (!countIndividualTime && timer != null)
@@ -94,7 +112,8 @@ async function drawScene(state, transformMatrix, lightDir) {
         if (timer == null) {
             for (var i = 0; i < timerQueries.length; i++)
                 gl.deleteQuery(timerQueries[i]);
-            fpsDisplay.innerHTML = state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s" : "";
+            fpsDisplay.innerHTML = state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s" :
+                state.iFrame + " spp";
             return;
         }
         if (timerQueries.length == 0) return;
@@ -115,7 +134,8 @@ async function drawScene(state, transformMatrix, lightDir) {
         }
         if (countIndividualTime) console.log(indivTime.join(' '));
         fpsDisplay.innerHTML = (
-            state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s - " : "") +
+            state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s - " :
+            state.iFrame + " spp - ") +
             (1000.0 / totTime).toFixed(1) + " fps";
     }
     setTimeout(checkTime, 100);
@@ -126,6 +146,7 @@ async function drawScene(state, transformMatrix, lightDir) {
 
 var state = {
     name: "",
+    iFrame: 0,
     width: window.innerWidth,
     height: window.innerHeight,
     screenCenter: { x: 0.5, y: 0.5 },
@@ -189,7 +210,8 @@ function initWebGL() {
     console.time("load glsl code");
     renderer.vsSource = "#version 300 es\nin vec4 vertexPosition;out vec2 vXy;" +
         "void main(){vXy=vertexPosition.xy;gl_Position=vertexPosition;}";
-    renderer.raymarchSource = getShaderSource("frag-raymarch.glsl");
+    renderer.renderSource = getShaderSource("frag-render.glsl");
+    renderer.postSource = getShaderSource("../shaders/frag-rt-post.glsl");
     console.timeEnd("load glsl code");
 
     // position buffer
@@ -202,6 +224,8 @@ function initWebGL() {
     renderer.timerExt = renderer.gl.getExtension('EXT_disjoint_timer_query_webgl2');
     if (renderer.timerExt)
         document.getElementById("fps").textContent = "Timer loaded.";
+    if (!renderer.gl.getExtension("EXT_color_buffer_float"))
+        throw ("Error: your device does not support float framebuffer.");
 
     // state
     try {
@@ -223,6 +247,10 @@ function updateBuffers() {
     state.width = canvas.width = canvas.style.width = window.innerWidth;
     state.height = canvas.height = canvas.style.height = window.innerHeight;
 
+    var oldRenderTarget = renderer.renderTarget;
+    renderer.renderTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldRenderTarget) destroyRenderTarget(gl, oldRenderTarget);
+
     state.renderNeeded = true;
 }
 
@@ -239,14 +267,17 @@ function initRenderer() {
     function render() {
         var timeDependent = true;
         try {
-            timeDependent = /\(iTime\)/.test(updateShaderFunction.prevCode.raymarchSource);
+            timeDependent = /\(iTime\)/.test(updateShaderFunction.prevCode.renderSource);
         } catch (e) { }
         if (timeDependent && state.iTime == -1.0)
             startTime = performance.now();
         var screenCenter = state.defaultScreenCenter ? calcScreenCenter() : state.screenCenter;
         state.screenCenter = screenCenter;
-        if ((screenCenter.x != oldScreenCenter.x || screenCenter.y != oldScreenCenter.y)
-            || state.renderNeeded) {
+        if (screenCenter.x != oldScreenCenter.x || screenCenter.y != oldScreenCenter.y)
+            state.renderNeeded = true;
+        if (state.renderNeeded)
+            state.iFrame = 0;
+        if (state.iFrame < 256) {
             state.width = canvas.width = canvas.style.width = window.innerWidth;
             state.height = canvas.height = canvas.style.height = window.innerHeight;
             try {
@@ -267,6 +298,7 @@ function initRenderer() {
                 startTime = performance.now();
                 state.iTime = -1.0;
             }
+            state.iFrame += 1;
         }
         oldScreenCenter = screenCenter;
         requestAnimationFrame(render);
@@ -276,7 +308,7 @@ function initRenderer() {
     // interactions
     var fingerDist = -1;
     canvas.addEventListener("wheel", function (event) {
-        if (renderer.raymarchProgram == null)
+        if (renderer.renderProgram == null)
             return;
         var sc = Math.exp(0.0002 * event.wheelDeltaY);
         state.scale *= sc;
@@ -305,7 +337,7 @@ function initRenderer() {
         mouseDown = false;
     });
     canvas.addEventListener("pointermove", function (event) {
-        if (renderer.raymarchProgram == null)
+        if (renderer.renderProgram == null)
             return;
         if (mouseDown) {
             var dx = event.movementX, dy = event.movementY;
@@ -333,7 +365,7 @@ function initRenderer() {
         fingerDist = -1.0;
     }, { passive: true });
     canvas.addEventListener("touchmove", function (event) {
-        if (renderer.raymarchProgram == null)
+        if (renderer.renderProgram == null)
             return;
         if (event.touches.length == 2) {
             var fingerPos0 = [event.touches[0].pageX, event.touches[0].pageY];
@@ -380,9 +412,13 @@ function updateShaderFunction(funCode, funGradCode, params) {
 
     // parsing error
     if (funCode == null) {
-        if (renderer.raymarchProgram != null) {
-            gl.deleteProgram(renderer.raymarchProgram);
-            renderer.raymarchProgram = null;
+        if (renderer.renderProgram != null) {
+            gl.deleteProgram(renderer.renderProgram);
+            renderer.renderProgram = null;
+        }
+        if (renderer.postProgram != null) {
+            gl.deleteProgram(renderer.postProgram);
+            renderer.postProgram = null;
         }
         return;
     }
@@ -390,24 +426,31 @@ function updateShaderFunction(funCode, funGradCode, params) {
     // cache code
     if (updateShaderFunction.prevCode == undefined)
         updateShaderFunction.prevCode = {
-            raymarchSource: ""
+            renderSource: "",
+            postSource: ""
         };
     var prevCode = updateShaderFunction.prevCode;
-    var raymarchSource = sub(renderer.raymarchSource);
+    var renderSource = sub(renderer.renderSource);
+    var postSource = sub(renderer.postSource);
 
     console.time("compile shader");
 
     // raymarching program
-    if (prevCode.raymarchSource != raymarchSource || renderer.raymarchProgram == null) {
-        if (renderer.raymarchProgram != null) {
-            gl.deleteProgram(renderer.raymarchProgram);
-            renderer.raymarchProgram = null;
+    if (prevCode.renderSource != renderSource || renderer.renderProgram == null) {
+        if (renderer.renderProgram != null) {
+            gl.deleteProgram(renderer.renderProgram);
+            renderer.renderProgram = null;
+        }
+        if (renderer.postProgram != null) {
+            gl.deleteProgram(renderer.postProgram);
+            renderer.postProgram = null;
         }
         try {
-            renderer.raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
+            renderer.renderProgram = createShaderProgram(gl, renderer.vsSource, renderSource);
+            renderer.postProgram = createShaderProgram(gl, renderer.vsSource, postSource);
         }
         catch (e) { console.error(e); }
-        prevCode.raymarchSource = raymarchSource;
+        prevCode.renderSource = renderSource;
     }
 
     console.timeEnd("compile shader");
