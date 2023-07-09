@@ -10,6 +10,8 @@
 
 #include "meshgen_trig_implicit.h"
 
+#include "write_model.h"
+
 
 DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
 
@@ -232,6 +234,8 @@ void mainGUICallback() {
 }
 
 
+// viewport
+
 EXTERN EMSCRIPTEN_KEEPALIVE
 void setRenderNeeded(bool needed) {
     RenderParams::viewport->renderNeeded = needed;
@@ -260,7 +264,6 @@ void resetState() {
         0.4f, glm::vec3(0.0f), -0.45f * PIf, 0.1f * PIf);
 }
 
-
 EXTERN EMSCRIPTEN_KEEPALIVE
 void setScreenCenter(float x, float y) {
     glm::vec2 screenCenter(x, y);
@@ -269,6 +272,9 @@ void setScreenCenter(float x, float y) {
         RenderParams::viewport->renderNeeded = true;
     }
 }
+
+
+// display mode
 
 EXTERN EMSCRIPTEN_KEEPALIVE
 void setMeshShowEdges(bool showEdges) {
@@ -294,6 +300,96 @@ void setMeshBothLeafs(bool bothLeafs) {
     }
 }
 
+
+// file export
+
+std::vector<uint8_t> fileBuffer;
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+bool isModelEmpty() {
+    return renderModel.vertices.empty()
+        || renderModel.indicesF.empty();
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+size_t getFileSize() {
+    return fileBuffer.size();
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+uint8_t* generateSTL() {
+    fileBuffer = writeSTL(
+        renderModel.vertices,
+        *(std::vector<ivec3>*)&renderModel.indicesF
+    );
+    return fileBuffer.data();
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+uint8_t* generatePLY() {
+    if (MeshParams::smoothShading) {
+        fileBuffer = writePLY(
+            renderModel.vertices,
+            *(std::vector<ivec3>*)&renderModel.indicesF,
+            renderModel.normals
+        );
+    }
+    else {
+        MeshParams::smoothShading = true;
+        RenderModel model = prepareMesh(structure);
+        fileBuffer = writePLY(
+            model.vertices,
+            *(std::vector<ivec3>*)&model.indicesF
+        );
+        MeshParams::smoothShading = false;
+    }
+    return fileBuffer.data();
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+uint8_t* generateOBJ() {
+    if (MeshParams::smoothShading) {
+        fileBuffer = writeOBJ(
+            renderModel.vertices,
+            *(std::vector<ivec3>*)&renderModel.indicesF,
+            renderModel.normals
+        );
+    }
+    else {
+        MeshParams::smoothShading = true;
+        RenderModel model = prepareMesh(structure);
+        fileBuffer = writeOBJ(
+            model.vertices,
+            *(std::vector<ivec3>*)&model.indicesF
+        );
+        MeshParams::smoothShading = false;
+    }
+    return fileBuffer.data();
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+uint8_t* generateGLB() {
+    if (MeshParams::smoothShading) {
+        fileBuffer = writeGLB(
+            renderModel.vertices,
+            *(std::vector<ivec3>*)&renderModel.indicesF,
+            renderModel.normals
+        );
+    }
+    else {
+        MeshParams::smoothShading = true;
+        RenderModel model = prepareMesh(structure);
+        fileBuffer = writeGLB(
+            model.vertices,
+            *(std::vector<ivec3>*)&model.indicesF
+        );
+        MeshParams::smoothShading = false;
+    }
+    return fileBuffer.data();
+}
+
+
+// main
 
 int main() {
     if (!initWindow())
