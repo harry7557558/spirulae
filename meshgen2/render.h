@@ -331,6 +331,7 @@ bool initWindow() {
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_SAMPLES, 8);
 
     // Open a window and create its OpenGL context
     RenderParams::window = glfwCreateWindow(
