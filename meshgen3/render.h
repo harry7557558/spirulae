@@ -16,8 +16,6 @@
 #include <algorithm>
 #include <thread>
 
-#include "solver.h"
-
 #if SUPPRESS_ASSERT
 #undef assert
 #define assert(x) 0
@@ -355,8 +353,8 @@ void main_loop() { loop(); }
 
 
 struct RenderModel {
-    std::vector<vec3> vertices;
-    std::vector<vec3> normals;
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec3> normals;
     std::vector<glm::ivec3> indicesF;
     std::vector<glm::ivec2> indicesE;
 } renderModel;
@@ -387,13 +385,13 @@ void mainGUI(void (*callback)(void)) {
             // axes
             viewport->drawLinesVBO(
                 { vec3(0), vec3(3, 0, 0),
-                  vec3(0), vec3(0, -2.5, 0),
+                  vec3(0), vec3(0, 3, 0),
                   vec3(0), vec3(0, 0, 3) },
                 std::vector<vec3>(6, vec3(0, 0, 1)),
                 { ivec2(0, 1), ivec2(2, 3), ivec2(4, 5) },
                 { vec4(1, 0, 0, 1), vec4(1, 0, 0, 1),
-                  vec4(0, 0, 1, 1), vec4(0, 0, 1, 1),
-                  vec4(0, 0.5, 0, 1), vec4(0, 0.5, 0, 1) },
+                  vec4(0, 0.5, 0, 1), vec4(0, 0.5, 0, 1),
+                  vec4(0, 0, 1, 1), vec4(0, 0, 1, 1) },
                 1.0f, 1.0f, -1.0f
             );
         }

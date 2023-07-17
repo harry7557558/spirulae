@@ -68,19 +68,19 @@ GLuint createShaderProgram(const char* vs_source, const char* fs_source) {
 
 
 
-class GlBatchEvaluator {
+class GlBatchEvaluator2 {
     std::string vsSource, fsSource;
     GLuint shaderProgram;
     GLuint framebuffer, texture;
     int textureW, textureH;
 
 public:
-    GlBatchEvaluator(std::string funRaw);
-    ~GlBatchEvaluator();
+    GlBatchEvaluator2(std::string funRaw);
+    ~GlBatchEvaluator2();
     void evaluateFunction(size_t pn, const glm::vec2 *points, float *v);
 };
 
-GlBatchEvaluator::GlBatchEvaluator(std::string funRaw) {
+GlBatchEvaluator2::GlBatchEvaluator2(std::string funRaw) {
     vsSource = R"(#version 300 es
         precision highp float;
         in vec4 aPosition;
@@ -124,14 +124,14 @@ GlBatchEvaluator::GlBatchEvaluator(std::string funRaw) {
     glBindFramebuffer(GL_FRAMEBUFFER, NULL);
 }
 
-GlBatchEvaluator::~GlBatchEvaluator() {
+GlBatchEvaluator2::~GlBatchEvaluator2() {
     glDeleteShader(shaderProgram);
     glDeleteTextures(1, &texture);
     glDeleteFramebuffers(1, &framebuffer);
 }
 
 
-void GlBatchEvaluator::evaluateFunction(
+void GlBatchEvaluator2::evaluateFunction(
     size_t pn, const glm::vec2 *points, float *v) {
 
     if (shaderProgram == -1) {
@@ -168,6 +168,125 @@ void GlBatchEvaluator::evaluateFunction(
         v[i] = pixels[i].x;
 
     glDeleteBuffers(1, &vbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+
+}
+
+
+
+
+class GlBatchEvaluator3 {
+    std::string vsSource, fsSource;
+    GLuint shaderProgram;
+    GLuint framebuffer, texture;
+    int textureW, textureH;
+
+public:
+    GlBatchEvaluator3(std::string funRaw);
+    ~GlBatchEvaluator3();
+    void evaluateFunction(size_t pn, const glm::vec3 *points, float *v);
+};
+
+GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw) {
+    vsSource = R"(#version 300 es
+        precision highp float;
+        in vec2 aPosition;
+        in vec3 aXyz;
+        out vec3 vXyz;
+        void main() {
+            gl_Position = vec4(aPosition, 0.0, 1.0);
+            gl_PointSize = 1.0;
+            vXyz = aXyz;
+        }
+    )";
+    fsSource = R"(#version 300 es
+        precision highp float;
+        in vec3 vXyz;
+        out vec4 fragColor;
+        )" + funRaw + R"(
+
+        void main() {
+            float result = funRaw(vXyz.x, vXyz.y, vXyz.z);
+            fragColor = vec4(result, 0, 0, 1);
+        }
+    )";
+    shaderProgram = createShaderProgram(&vsSource[0], &fsSource[0]);
+
+    textureW = 256;
+    textureH = 256;
+
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textureW, textureH, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        printf("Failed to create framebuffer.\n");
+        throw "Failed to create framebuffer.";
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+}
+
+GlBatchEvaluator3::~GlBatchEvaluator3() {
+    glDeleteShader(shaderProgram);
+    glDeleteTextures(1, &texture);
+    glDeleteFramebuffers(1, &framebuffer);
+}
+
+
+void GlBatchEvaluator3::evaluateFunction(
+    size_t pn, const glm::vec3 *points, float *v) {
+
+    if (shaderProgram == -1) {
+        for (int i = 0; i < pn; i++)
+            v[i] = 0.0f;
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glViewport(0, 0, textureW, textureH);
+    glUseProgram(shaderProgram);
+
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    GLuint vxyz;
+    glGenBuffers(1, &vxyz);
+
+    size_t batch_size = textureW * textureH;
+    for (size_t batchi = 0; batchi < pn; batchi += batch_size) {
+        size_t batchn = std::min(batch_size, pn - batchi);
+    
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        std::vector<glm::vec2> coords(batchn);
+        for (int i = 0; i < batchn; i++) {
+            float x = i % textureW, y = i / textureW;
+            coords[i] = (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f;
+        }
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * coords.size(), coords.data(), GL_STATIC_DRAW);
+        GLint posAttrib = glGetAttribLocation(shaderProgram, "aPosition");
+        glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(posAttrib);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vxyz);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * batchn, &points[batchi], GL_STATIC_DRAW);
+        GLint xyzAttrib = glGetAttribLocation(shaderProgram, "aXyz");
+        glVertexAttribPointer(xyzAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(xyzAttrib);
+
+        glDrawArrays(GL_POINTS, 0, batchn);
+
+        std::vector<glm::vec4> pixels(batch_size);
+        glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
+        for (int i = 0; i < batchn; i++)
+            v[batchi+i] = pixels[i].x;
+        break;
+    }
+
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &vxyz);
     glBindFramebuffer(GL_FRAMEBUFFER, NULL);
 
 }

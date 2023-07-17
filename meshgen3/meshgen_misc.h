@@ -20,13 +20,8 @@
 MESHGEN_MISC_NS_START
 
 
-typedef std::function<float(float, float)> ScalarFieldF;
-typedef std::function<void(size_t, const vec2*, float*)> ScalarFieldFBatch;
-
-struct MeshVertex {
-    vec2 x;
-    float fv;
-};
+typedef std::function<float(float, float, float)> ScalarFieldF;
+typedef std::function<void(size_t, const vec3*, float*)> ScalarFieldFBatch;
 
 
 // for maps/sets

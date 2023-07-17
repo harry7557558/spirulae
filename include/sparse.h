@@ -5,9 +5,7 @@
 #include <cstdio>
 
 #include <assert.h>
-
-#include "elements.h"
-
+#include <cmath>
 
 class LilMatrix {
     int n;  // n*n square matrix
@@ -287,8 +285,8 @@ int conjugateGradient(
         // verbose
         if ((k + 1) % 100 == 0) {
             float maxdif = 0.0;
-            for (int i = 0; i < n; i += 3)
-                maxdif = std::max(maxdif, length(*((vec3*)&r[i])));
+            for (int i = 0; i < n; i++)
+                maxdif = fmax(maxdif, fabs(r[i]));
             printf("%d %f\n", k + 1, maxdif);
         }
     }
@@ -337,8 +335,8 @@ int conjugateGradientPreconditioned(
         // verbose
         if ((k + 1) % 100 == 0) {
             float maxdif = 0.0;
-            for (int i = 0; i < n; i += 3)
-                maxdif = std::max(maxdif, length(*((vec3*)&r[i])));
+            for (int i = 0; i < n; i++)
+                maxdif = fmax(maxdif, fabs(r[i]));
             printf("%d %f\n", k + 1, maxdif);
         }
     }

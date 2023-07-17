@@ -113,13 +113,7 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.warnNaN = true;
 
     // main
-    initMain([
-        "../shaders/vert-pixel.glsl",
-        "../shaders/functions.glsl",
-        "frag-shader.glsl",
-        "../shaders/frag-imggrad.glsl",
-        "../shaders/frag-aa.glsl"
-    ]);
+    initMain([]);
 
     // init model export
     ModelExporter.init();

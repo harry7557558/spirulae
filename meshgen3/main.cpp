@@ -1,88 +1,87 @@
 #pragma GCC optimize "O3"
 
-#define SUPPRESS_ASSERT 1
+#define SUPPRESS_ASSERT 0
 
 #include <cstdio>
 #include <random>
 
-#include "solver.h"
 #include "render.h"
 
-#include "meshgen_trig_implicit.h"
+#include "meshgen_tet_implicit.h"
 
 #include "../include/write_model.h"
 
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 
-DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
 
-    GlBatchEvaluator2 evaluator(funDeclaration);
+void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vector<ivec4> &tets) {
+
+    GlBatchEvaluator3 evaluator(funDeclaration);
     int batchEvalCount = 0;
-    MeshgenTrigImplicit::ScalarFieldFBatch Fs = [&](size_t n, const vec2 *p, float *v) {
+    MeshgenTetImplicit::ScalarFieldFBatch Fs = [&](size_t n, const vec3 *p, float *v) {
         // printf("Batch eval %d %d\n", ++batchEvalCount, (int)n);
         evaluator.evaluateFunction(n, p, v);
+        // for (size_t i = 0; i < n; i++) v[i] = length(p[i]) - 1.0f;
     };
-    vec2 bc = vec2(0), br = vec2(2);
-    auto constraint = [=](vec2 p) {
+    vec3 bc = vec3(0), br = vec3(2);
+    auto constraint = [=](vec3 p) {
         p -= bc;
-        return -vec2(
+        return -vec3(
             sign(p.x) * fmax(abs(p.x) - br.x, 0.0),
-            sign(p.y) * fmax(abs(p.y) - br.y, 0.0)
+            sign(p.y) * fmax(abs(p.y) - br.y, 0.0),
+            sign(p.z) * fmax(abs(p.z) - br.z, 0.0)
         );
     };
 
     float t0 = getTimePast();
-    std::vector<vec2> vs;
-    std::vector<ivec3> trigs;
-    std::vector<bool> isConstrained[2];
-    MeshgenTrigImplicit::generateInitialMesh(
+    verts.clear(), tets.clear();
+    std::vector<bool> isConstrained[3];
+    MeshgenTetImplicit::generateInitialMesh(
         Fs, bc-br, bc+br,
-        // ivec2(16, 16), 5,
-        // ivec2(32, 32), 4,
-        ivec2(48, 48), 3,
-        // ivec2(64, 64), 3,
-        vs, trigs, isConstrained
+        // ivec3(14, 15, 16), 1,
+        // ivec3(6, 7, 8), 2,
+        ivec3(24), 2,
+        verts, tets, isConstrained
     );
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+#if 0
+    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
     float t1 = getTimePast();
     printf("Mesh generated in %.2g secs.\n", t1-t0);
-    int vn0 = (int)vs.size();
-    MeshgenTrigImplicit::splitStickyVertices(vs, trigs, isConstrained);
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+    int vn0 = (int)verts.size();
+    MeshgenTetImplicit::splitStickyVertices(verts, trigs, isConstrained);
+    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
     float t2 = getTimePast();
     printf("Mesh cleaned in %.2g secs.\n", t2-t1);
-    MeshgenTrigImplicit::smoothMesh(
-        vs, trigs, 5, Fs,
+    MeshgenTetImplicit::smoothMesh(
+        verts, trigs, 5, Fs,
         constraint, isConstrained);
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
     float t3 = getTimePast();
     printf("Mesh optimized in %.2g secs.\n", t3-t2);
-
-    DiscretizedModel<float, float> res = solveLaplacianLinearTrig(
-        vs, std::vector<float>(vs.size(), 4.0f), trigs);
-    for (int i = 0; i < res.N; i++)
-        res.U[i] = 1.0f*sqrt(fmax(res.U[i], 0.0f));
-    float maxu = 0.0; for (int i = 0; i < res.N; i++) maxu = fmax(maxu, res.U[i]);
-    printf("height: %f\n", maxu);
-    return res;
+#endif
 }
 
 
 namespace MeshParams {
     bool showEdges = true;
     bool smoothShading = true;
-    bool bothLeafs = true;
 };
 
 
-RenderModel prepareMesh(DiscretizedModel<float, float> model) {
+RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     RenderModel res;
 
     // model
-    res.vertices = std::vector<vec3>(model.N, vec3(0));
+    res.vertices = std::vector<vec3>(verts.size());
     vec3 minv(1e10f), maxv(-1e10f);
-    for (int i = 0; i < model.N; i++) {
-        vec3 v = vec3(model.X[i], model.U[i]);
-        res.vertices[i] = vec3(v.x, -v.z, v.y);
+    for (int i = 0; i < (int)verts.size(); i++) {
+        vec3 v = verts[i];
+        res.vertices[i] = v;
         minv = glm::min(minv, res.vertices[i]);
         maxv = glm::max(maxv, res.vertices[i]);
     }
@@ -93,27 +92,29 @@ RenderModel prepareMesh(DiscretizedModel<float, float> model) {
         // std::sort(&b.x, &b.x + 3);
         return a.x != b.x ? a.x < b.x : a.y != b.y ? a.y < b.y : a.z < b.z;
     };
-    std::map<glm::ivec3, int, decltype(ivec3Cmp)> uniqueIndicesF(ivec3Cmp);  // count
-    for (int ti = 0; ti < model.M; ti++) {
-        ivec3 t0 = model.SE[ti];
-        assert(t0[0] != t0[1] && t0[0] != t0[2]);
-        int i = t0[0] < t0[1] && t0[0] < t0[2] ? 0 :
-            t0[1] < t0[2] && t0[1] < t0[0] ? 1 : 2;
-        glm::ivec3 t(t0[i], t0[(i + 1) % 3], t0[(i + 2) % 3]);
-        uniqueIndicesF[t] += 1;
-        t = glm::ivec3(t.x, t.z, t.y);
-        assert(uniqueIndicesF.find(t) == uniqueIndicesF.end());
+    std::set<glm::ivec3, decltype(ivec3Cmp)> uniqueIndicesF(ivec3Cmp);
+    for (ivec4 t : tets) {
+        for (int _ = 0; _ < 4; _++) {
+            ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
+            if (_ % 2 == 0) std::swap(f.y, f.z);
+            int i = f[0] < f[1] && f[0] < f[2] ? 0 :
+                f[1] < f[2] && f[1] < f[0] ? 1 : 2;
+            glm::ivec3 f1(f[i], f[(i + 1) % 3], f[(i + 2) % 3]);
+            glm::ivec3 fo = glm::ivec3(f1.x, f1.z, f1.y);
+            if (uniqueIndicesF.find(fo) != uniqueIndicesF.end())
+                uniqueIndicesF.erase(fo);
+            else uniqueIndicesF.insert(f1);
+        }
     }
-    for (auto p : uniqueIndicesF) //if (p.second == 1)
-        res.indicesF.push_back(p.first);
+    for (glm::ivec3 f : uniqueIndicesF)
+        res.indicesF.push_back(f);
 
     // edges
     auto ivec2Cmp = [](glm::ivec2 a, glm::ivec2 b) {
         return a.x != b.x ? a.x < b.x : a.y < b.y;
     };
     std::map<glm::ivec2, int, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
-    for (int ti = 0; ti < model.M; ti++) {
-        ivec3 t = model.SE[ti];
+    for (glm::ivec3 t : res.indicesF) {
         for (int _ = 0; _ < 3; _++) {
             glm::ivec2 e(t[_], t[(_+1)%3]);
             if (e.x > e.y) std::swap(e.x, e.y);
@@ -124,50 +125,6 @@ RenderModel prepareMesh(DiscretizedModel<float, float> model) {
         res.indicesE.reserve(uniqueIndicesE.size());
         for (std::pair<glm::ivec2, int> ec : uniqueIndicesE)
             res.indicesE.push_back(ec.first);
-    }
-
-    // two leafs
-    if (MeshParams::bothLeafs) {
-        // get boundary
-        int vn = (int)res.vertices.size();
-        std::vector<int> bmap(vn, -1);
-        for (std::pair<glm::ivec2, int> ec : uniqueIndicesE)
-            if (ec.second == 1) {
-                bmap[ec.first.x] = 0;
-                bmap[ec.first.y] = 0;
-            }
-        int bmapI = vn;
-        for (int i = 0; i < vn; i++) {
-            if (bmap[i] == -1) {
-                bmap[i] = bmapI;
-                bmapI++;
-            }
-            else bmap[i] = i;
-        }
-        // expand verts
-        res.vertices.resize(bmapI);
-        for (int i = 0; i < vn; i++) {
-            if (bmap[i] != i)
-                res.vertices[bmap[i]] = res.vertices[i] * glm::vec3(1, -1, 1);
-        }
-        // expand faces
-        int fn = (int)res.indicesF.size();
-        res.indicesF.reserve(2 * fn);
-        for (int i = 0; i < fn; i++) {
-            glm::ivec3 f = res.indicesF[i];
-            f.x = bmap[f.x], f.y = bmap[f.y], f.z = bmap[f.z];
-            std::swap(f.y, f.z);
-            res.indicesF.push_back(f);
-        }
-        // expand edges
-        int en = (int)res.indicesE.size();
-        res.indicesE.reserve(2 * en);
-        for (int i = 0; i < en; i++) {
-            glm::ivec2 e = res.indicesE[i];
-            e.x = bmap[e.x], e.y = bmap[e.y];
-            if (e != res.indicesE[i])
-                res.indicesE.push_back(e);
-        }
     }
 
     // normals
@@ -213,7 +170,10 @@ void updateShaderFunction(const char* glsl) {
     newGlslFun = glsl;
 }
 
-DiscretizedModel<float, float> structure;
+namespace Prepared {
+    std::vector<vec3> verts;
+    std::vector<ivec4> tets;
+}
 
 void mainGUICallback() {
     if (newGlslFun.empty())
@@ -223,12 +183,12 @@ void mainGUICallback() {
         return;
     }
 
-    // printf("%s\n", &newGlslFun[0]);
+    // printf("newGlslFun:\n%s\n", &newGlslFun[0]);
     float t0 = getTimePast();
-    structure = generateMesh(newGlslFun);
+    generateMesh(newGlslFun, Prepared::verts, Prepared::tets);
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
-    renderModel = prepareMesh(structure);
+    renderModel = prepareMesh(Prepared::verts, Prepared::tets);
     glslFun = newGlslFun;
     newGlslFun.clear();
 }
@@ -280,7 +240,7 @@ EXTERN EMSCRIPTEN_KEEPALIVE
 void setMeshShowEdges(bool showEdges) {
     if (MeshParams::showEdges != showEdges) {
         MeshParams::showEdges = showEdges;
-        renderModel = prepareMesh(structure);
+        renderModel = prepareMesh(Prepared::verts, Prepared::tets);
     }
 }
 
@@ -288,15 +248,7 @@ EXTERN EMSCRIPTEN_KEEPALIVE
 void setMeshSmoothShading(bool smoothShading) {
     if (MeshParams::smoothShading != smoothShading) {
         MeshParams::smoothShading = smoothShading;
-        renderModel = prepareMesh(structure);
-    }
-}
-
-EXTERN EMSCRIPTEN_KEEPALIVE
-void setMeshBothLeafs(bool bothLeafs) {
-    if (MeshParams::bothLeafs != bothLeafs) {
-        MeshParams::bothLeafs = bothLeafs;
-        renderModel = prepareMesh(structure);
+        renderModel = prepareMesh(Prepared::verts, Prepared::tets);
     }
 }
 
@@ -336,7 +288,7 @@ uint8_t* generatePLY() {
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(structure);
+        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets);
         fileBuffer = writePLY(
             model.vertices,
             *(std::vector<ivec3>*)&model.indicesF
@@ -357,7 +309,7 @@ uint8_t* generateOBJ() {
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(structure);
+        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets);
         fileBuffer = writeOBJ(
             model.vertices,
             *(std::vector<ivec3>*)&model.indicesF
@@ -378,7 +330,7 @@ uint8_t* generateGLB() {
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(structure);
+        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets);
         fileBuffer = writeGLB(
             model.vertices,
             *(std::vector<ivec3>*)&model.indicesF

@@ -7,8 +7,8 @@
 #include <set>
 #include <unordered_set>
 
-#include "elements.h"
-#include "sparse.h"
+#include "../include/elements.h"
+#include "../include/sparse.h"
 
 
 
