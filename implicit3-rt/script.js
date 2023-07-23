@@ -4,11 +4,11 @@ const NAME = "spirulae.implicit3-rt.";
 
 const builtinFunctions = [
     // ["A6 Heart", "(x^2+9/4*y^2+z^2-1)^3=(x^2+9/80*y^2)*z^3"],
+    ["A4 Genus 3", "(x^2-1)^2+(y^2-1)^2+(z^2-1)^2+4(x^2y^2+x^2z^2+y^2z^2)+8xyz-2(x^2+y^2+z^2)"],
     ["A5 Star", "4(x^2+2y^2+z^2-1)^2-z(5x^4-10x^2z^2+z^4)=1"],
     ["A6 Fox", "2(x^2+2y^2+z^2)^3-2(9x^2+y^2)z^3=1"],
     ["A7 Genus 2", "2y(y^2-3x^2)(1-z^2)+(x^2+y^2)^2-(9z^2-1)(1-z^2)"],
     ["A4 Goursat", "2(x^4+y^4+z^4)-3(x^2+y^2+z^2)+2"],
-    ["A4 Genus 3", "(x^2-1)^2+(y^2-1)^2+(z^2-1)^2+4(x^2y^2+x^2z^2+y^2z^2)+8xyz-2(x^2+y^2+z^2)"],
     ["A6 Spiky 1", "(x^2+y^2+z^2-2)^3+2000(x^2y^2+x^2z^2+y^2z^2)=10"],
     ["A6 Spiky 2", "z^6-5(x^2+y^2)z^4+5(x^2+y^2)^2z^2+2(5x^4-10x^2y^2+y^4)yz-1.002(x^2+y^2+z^2)^3+0.2"],
     ["A6 Barth", "4(x^2-y^2)(y^2-z^2)(z^2-x^2)-3(x^2+y^2+z^2-1)^2"],
@@ -104,6 +104,8 @@ document.body.onload = function (event) {
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, 1.0 * Math.PI),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, 0.9 * Math.PI),
+        new UniformSlider("rRoughness1", "slider-roughness1", 0, 1, 0.2),
+        new UniformSlider("rRoughness2", "slider-roughness2", 0, 1, 0.3),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
@@ -111,8 +113,8 @@ document.body.onload = function (event) {
 
     // init viewport
     resetState({
-        rz: -0.9 * Math.PI,
-        rx: -0.4 * Math.PI,
+        rz: -0.95 * Math.PI,
+        rx: -0.48 * Math.PI,
         scale: 0.3,
         clipSize: [2.0, 2.0, 2.0]
     }, false);

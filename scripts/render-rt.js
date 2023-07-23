@@ -88,7 +88,11 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.uniform3f(gl.getUniformLocation(renderer.renderProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "rZScale"), calcZScale());
-    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "rBrightness"), state.rBrightness);
+    for (var r in state) {
+        if (!/^r[A-Z]/.test(r))
+            continue;
+        gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, r), state[r]);
+    }
     renderPass();
     gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
     gl.copyTexImage2D(gl.TEXTURE_2D,

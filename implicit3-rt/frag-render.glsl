@@ -132,14 +132,6 @@ float grid(vec3 p, vec3 n) {
     float g2 = grid1(q2, n, w1);
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
-float fade(float t) {
-    t = smoothstep(0.7, 1., t);
-    t = t/(1.-t);
-    t = mix(pow(0.8*t, 0.8), pow(0.2*t, 1.5),
-        smoothstep(0., 0.8, dot(BACKGROUND_COLOR,vec3(1./3.))));
-    t = pow(t, 1.2);
-    return exp(-t);
-}
 vec3 calcAlbedo(vec3 p, vec3 n0) {
     vec3 n = normalize(n0);
 #if {%Y_UP%}
@@ -147,7 +139,8 @@ vec3 calcAlbedo(vec3 p, vec3 n0) {
 #endif // {%Y_UP%}
     float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.1;
 #if {%COLOR%} == 0
-    return g * vec3(1, 0.5, 0.2);
+    // return g * vec3(1, 0.5, 0.2);
+    return vec3(clamp(0.8*g, 0.0, 1.0));
 #else // {%COLOR%} == 0
 #if {%COLOR%} == 1
     // color based on normal
@@ -199,7 +192,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
     if (t1 < t0)
         return -1.0;
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
-    float step_size = 4.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z);
+    float step_size = 8.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z);
     float t = t0, dt = step_size;
     float v = 0.0, v0 = v, v00 = v, v1;
     float dt0 = 0.0, dt00 = 0.0;
@@ -285,6 +278,7 @@ const int MAT_OBJECT = 2;
 
 
 // Faked multi-scattering BRDF
+
 vec3 sampleBrdf(
     vec3 wi, vec3 n,
     float alpha,  // roughness
@@ -336,6 +330,32 @@ vec3 sampleGlassBsdf(vec3 rd, vec3 n, float eta) {
         : rd + 2.0*ci*n;  // reflection
 }
 
+vec3 sampleRoughGlassBsdf(
+    vec3 wi, vec3 n,
+    float alpha,  // roughness
+    float eta
+    ) {
+
+    vec3 u = normalize(cross(n, vec3(1.23, 2.34, -3.45)));
+    vec3 v = cross(u, n);
+    wi = vec3(dot(wi, u), dot(wi, v), dot(wi, n));
+
+    // generate a random GGX normal
+    float su = 2.*PI*randf();
+    float sv = randf();
+    sv = atan(alpha*sqrt(sv/(1.-sv)));
+    vec3 h = vec3(sin(sv)*vec2(cos(su),sin(su)), cos(sv));
+    // prevent below surface
+    if (dot(wi, h) * wi.z < 0.0) h = -h;
+
+    vec3 wo = sampleGlassBsdf(-wi, h, eta);
+    return wo.x * u + wo.y * v + wo.z * n;
+}
+
+
+
+uniform float rRoughness1;
+uniform float rRoughness2;
 
 
 vec3 mainRender(vec3 ro, vec3 rd) {
@@ -382,18 +402,21 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         min_n = dot(rd,min_n) < 0. ? min_n : -min_n;
         if (material == MAT_PLANE) {
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
-            rd = sampleBrdf(-rd, min_n, 0.05, 1.0, col, m_col);
+            rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
         }
         else if (material == MAT_OBJECT) {
+            float alpha = pow(rRoughness1,2.0);
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
         #if {%TRANSPARENCY%}
-            rd = sampleGlassBsdf(rd, min_n, is_inside?1.5:1.0/1.5);
+            float eta = is_inside?1.5:1.0/1.5;
+            // rd = sampleGlassBsdf(rd, min_n, eta);
+            rd = sampleRoughGlassBsdf(-rd, min_n, alpha, eta);
             if (is_inside) {
                 vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
                 m_col *= pow(col, vec3(1.0*min_t));
             }
         #else
-            rd = sampleBrdf(-rd, min_n, 0.1, 1.0, col, m_col);
+            rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
         #endif
         }
         if (dot(rd, min_n) < 0.)

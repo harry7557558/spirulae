@@ -76,6 +76,11 @@ input, select, button {
     vertical-align: middle;
 }
 
+hr {
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0.5em 0;
+}
+
 #help-menu {
     display: block;
     position: fixed;
