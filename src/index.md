@@ -1,9 +1,3 @@
-# Spirulae
-
-*by Harry Chen - updated July 2023*
-
-[![spirulae.jpg](src/spirulae.jpg)](implicit3/)
-
 GPU-accelerated function graphers in a web browser, both 3D and 2D.
 
 This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.

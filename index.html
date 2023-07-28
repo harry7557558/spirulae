@@ -9,25 +9,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/" />
 
-    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
     <link rel="stylesheet" href="./src/style.css" />
 
 </head>
 
 <body>
 
-    <div id="container"></div>
+    <div id="container">
 
-    <script>
-        let req = new XMLHttpRequest();
-        req.open("GET", "./README.md");
-        req.onload = function () {
-            let converter = new showdown.Converter();
-            let html = converter.makeHtml(req.responseText);
-            document.getElementById("container").innerHTML = html;
-        }
-        req.send();
-    </script>
+        <h1><center>Spirulae</center></h1>
+        <center style="color:#555"><em>by Harry Chen - updated July 2023</em></center>
+        <br/>
+        
+        <a href="implicit3/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-implicit3.jpg" style="width:100%"></img>
+           <br/>
+           3D Implicit Surface Grapher
+        </a>
+        <a href="paramsurf/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-paramsurf.jpg" style="width:100%"></img>
+           <br/>
+           3D Parametric Surface Grapher
+        </a>
+        <a href="complex/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-complex.jpg" style="width:100%"></img>
+           <br/>
+           Complex Domain Coloring Grapher
+        </a>
+        <a href="complex3/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-complex3.jpg" style="width:100%"></img>
+           <br/>
+           3D Complex Function Grapher
+        </a>
+        <a href="implicit3-rt/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-implicit3-rt.jpg" style="width:100%"></img>
+           <br/>
+           Implicit Surface Path Tracer (beta)
+        </a>
+        <a href="meshgen2/" style="display:inline-block;text-align:center;width:48%">
+           <img src="src/img-meshgen2.jpg" style="width:100%"></img>
+           <br/>
+           2D to 3D Mesh Generator (beta)
+        </a>
+
+        <p>GPU-accelerated function graphers in a web browser, both 3D and 2D.</p>
+<p>This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
+<p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
+<p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
+<hr />
+<h2>Features</h2>
+<p>The equation parser implements the following features:</p>
+<ul>
+<li>Function and variable definition</li>
+<li>Comments (start with <code>#</code>, <code>%</code>, or <code>//</code>)</li>
+<li>LaTeX preview</li>
+<li>Real-time shader generation</li>
+<li>Special functions</li>
+</ul>
+<p>The 3D graphers implements the following parameters/features:</p>
+<ul>
+<li>Infinite and bounded domain</li>
+<li>Scalar field visualization</li>
+<li>Speed vs. quality control</li>
+<li>Multiple shading and grid modes</li>
+<li>Dark and light color themes</li>
+<li>Semi-transparent surface shading</li>
+<li>Lighting control</li>
+<li>Red highlight discontinuity</li>
+<li>Anti-aliasing</li>
+</ul>
+<p>Experimental features (subject to change):</p>
+<ul>
+<li>Animation via <code>iTime(0)</code></li>
+<li>Export C++ code for 3D implicit grapher, via <code>exportCurrentFunction('cppd')</code> in the browser JS console</li>
+</ul>
+<hr />
+<h2>Limitations</h2>
+<p>These tools have the following dependencies:</p>
+<ul>
+<li><a href="https://webglreport.com/?v=2">WebGL 2</a><ul>
+<li><code>EXT_color_buffer_float</code>, required for path tracing and mesh generation</li>
+<li><code>EXT_disjoint_timer_query_webgl2</code> (<em>optional</em>), an FPS counter will be shown when available</li>
+</ul>
+</li>
+<li>WebAssembly, required for mesh generation</li>
+<li><a href="https://www.mathjax.org/">MathJax 3</a>, required for equation preview</li>
+</ul>
+<p>These tools have the following known issues:</p>
+<ul>
+<li>Incompatibility across devices for functions with overflow and NaN</li>
+<li>Reduced quality when rendering implicit surfaces with transparency</li>
+<li>The parser has ambiguity in resolving conflicting variable names</li>
+</ul>
+<hr />
+<h2>Working in Progress</h2>
+<p>Spirulae is under active development. Tools and features that are being developed include:</p>
+<ul>
+<li>2D mesh generation (<code>/meshgen2</code>, beta)</li>
+<li>Ray tracing (<code>/implicit3-rt</code>, beta)</li>
+<li>Automatic differentiation (<code>/autodiff</code>)</li>
+<li>3D mesh generation (<code>/meshgen3</code>)</li>
+</ul>
+<p>Features that may be implemented in the future (ordered approximately by priority):</p>
+<ul>
+<li>Vectors and complex numbers</li>
+<li>Mathematically-defined custom colors</li>
+<li>Iteratively improve rendering quality</li>
+<li>More viewport control parameters</li>
+<li>Variable sliders</li>
+<li>Graph sharing via URL</li>
+<li><code>&lt;iframe&gt;</code> embed for webpages</li>
+<li>Better expression editor (highlighting, bracket matching, etc.)</li>
+<li>More <a href="https://en.wikipedia.org/wiki/Domain_coloring">domain coloring parameters</a> for complex graphers</li>
+</ul>
+<hr />
+<h2>Frequently Asked Questions</h2>
+<p><strong>Q: Is Spirulae completely written from scratch?</strong></p>
+<p><em>Largely</em>. I tried to make Spirulae with as little dependency as possible, and therefore I wrote the equation parser and renderer from scratch without external libraries and frameworks, although it still uses native browser APIs like WebGL and WebAssembly. Spirulae uses <a href="https://www.mathjax.org/">MathJax</a> to display equations, which can be considered its only dependency.</p>
+<p><strong>Q: How to draw shapes using equations?</strong></p>
+<p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
+<p><strong>Q: How does Spirulae evaluate equations on the GPU?</strong></p>
+<p>For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation">postfix notation</a> and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.</p>
+<hr />
+<h2>Gallery</h2>
+<p>Complex domain coloring</p>
+<p><a href="complex/"><img alt="" src="./src/gallery-complex-trigs.jpg" /></a></p>
+<p>The gamma function in 3D</p>
+<p><a href="complex3/"><img alt="" src="./src/gallery-complex3-gamma-2.jpg" /></a></p>
+<p>A sextic algebraic surface</p>
+<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-barth6.jpg" /></a></p>
+<p>A fractal with scalar field visualized</p>
+<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-roots-field.jpg" /></a></p>
+<p>A clipped quintic implicit surface, with volumetrics showing isosurfaces</p>
+<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-field.jpg" /></a></p>
+<p>A parametric surface rendered in X-ray mode</p>
+<p><a href="paramsurf/"><img alt="" src="./src/gallery-paramsurf-twist.jpg" /></a></p>
+<p>A path-traced fractal</p>
+<p><img alt="" src="./src/gallery-implicit3-rt-mandeltorus.jpg" /></p>
+
+    </div>
 
 </body>
 
