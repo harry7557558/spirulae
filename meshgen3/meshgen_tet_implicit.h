@@ -162,33 +162,37 @@ void generateInitialMesh(
                  (int)(v101 > 0.0) + (int)(v111 > 0.0) +
                  (int)(vccc > 0.0)) % 9 == 0)
                 continue;
-        #if 0
+        #if 1
             // Basic idea:
-            // - least squares fit to a circle
-            //   - a (x^2+y^2) + b x + c y + d
-            //   - [cc 00 10 01 11]
-            // - compare the radius of the circle to grid size
+            // - least squares fit to a sphere
+            //   - a (x^2+y^2+z^2) + b x + c y + d z + f
+            //   - [ccc 000 100 010 110 001 101 011 111]
+            // - compare the radius of the sphere to grid size
             // MATLAB:
-            // - syms x y
-            // - A = [0 0 0 1; x^2+y^2 -x -y 1; x^2+y^2 x -y 1; x^2+y^2 -x y 1; x^2+y^2 x y 1]
+            // - syms x y z
+            // - A = [0 0 0 0 1; x^2+y^2+z^2 -x -y -z 1; x^2+y^2+z^2 x -y -z 1; x^2+y^2+z^2 -x y -z 1; x^2+y^2+z^2 x y -z 1; x^2+y^2+z^2 -x -y z 1; x^2+y^2+z^2 x -y z 1; x^2+y^2+z^2 -x y z 1; x^2+y^2+z^2 x y z 1]
             // - G = (A'*A)\A'
             float hx = 0.5f * (b1.x - b0.x) / (float)bnd.x * step;
             float hy = 0.5f * (b1.y - b0.y) / (float)bnd.y * step;
-            float a = (v00 + v10 + v01 + v11 - 4.0f * vcc) / (4.0f * (hx * hx + hy * hy));
+            float hz = 0.5f * (b1.z - b0.z) / (float)bnd.z * step;
+            float a = (v000+v100+v010+v110+v001+v101+v011+v111 - 8.0f * vccc) / (8.0f * (hx * hx + hy * hy + hz * hz));
             if (a == 0.0f) continue;
-            float b = (v10 + v11 - v00 - v01) / (4.0f * hx * a);
-            float c = (v01 + v11 - v00 - v10) / (4.0f * hy * a);
-            float d = vcc / a;
+            float b = (-v000+v100-v010+v110-v001+v101-v011+v111) / (8.0f * hx * a);
+            float c = (-v000-v100+v010+v110-v001-v101+v011+v111) / (8.0f * hy * a);
+            float d = (-v000-v100-v010-v110+v001+v101+v011+v111) / (8.0f * hz * a);
+            float f = vccc / a;
             float x0 = -0.5f * b;
             float y0 = -0.5f * c;
-            float r = sqrt(fmax(x0 * x0 + y0 * y0 - d, 0.0f));
-            float e = sqrt((b1.x - b0.x) * (b1.y - b0.y) / (bnd.x * bnd.y));
-            float s = sqrt(hx * hy);
+            float z0 = -0.5f * d;
+            float r = sqrt(fmax(x0 * x0 + y0 * y0 + z0 * z0 - f, 0.0f));
+            float e = cbrt((b1.x-b0.x) * (b1.y-b0.y) * (b1.z-b0.z) / (bnd.x*bnd.y*bnd.z));
+            float s = cbrt(hx * hy * hz);
             // if (r < 10.0f * s)  // curvature
             if (s * s > 0.5f * e * r)  // error
                 toDiv0[i] = true;
-        #endif
+        #else
             toDiv0[i] = true;
+        #endif
         }
         // spread todiv
         std::vector<bool> toDiv = toDiv0;

@@ -50,7 +50,7 @@ void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vec
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
         // ivec3(6, 7, 8), 2,
-        ivec3(24), 2,
+        ivec3(32), 3,
         verts, tets, isConstrained
     );
 #if 0
