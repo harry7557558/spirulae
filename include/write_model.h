@@ -1,8 +1,11 @@
+#pragma once
+
 #include "elements.h"
 
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <sstream>
 
 

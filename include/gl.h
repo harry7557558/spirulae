@@ -241,7 +241,7 @@ void GlBatchEvaluator3::evaluateFunction(
     size_t pn, const glm::vec3 *points, float *v) {
 
     if (shaderProgram == -1) {
-        for (int i = 0; i < pn; i++)
+        for (size_t i = 0; i < pn; i++)
             v[i] = 0.0f;
         return;
     }
@@ -265,7 +265,7 @@ void GlBatchEvaluator3::evaluateFunction(
             float x = i % textureW, y = i / textureW;
             coords[i] = (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f;
         }
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * coords.size(), coords.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * batchn, coords.data(), GL_STATIC_DRAW);
         GLint posAttrib = glGetAttribLocation(shaderProgram, "aPosition");
         glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(posAttrib);
@@ -282,7 +282,7 @@ void GlBatchEvaluator3::evaluateFunction(
         glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
         for (int i = 0; i < batchn; i++)
             v[batchi+i] = pixels[i].x;
-        break;
+        // break;
     }
 
     glDeleteBuffers(1, &vbo);

@@ -60,12 +60,11 @@ void generateInitialMesh(
     auto batchVal = [&]() {
         if (reqValIdx.empty())
             return;
-        std::vector<vec3> ps;
-        ps.reserve(reqValIdx.size());
+        std::vector<vec3> ps(reqValIdx.size());
         for (int i = 0; i < (int)reqValIdx.size(); i++) {
             int idx = reqValIdx[i];
             vmap[idx] = (int)vals.size() + i;
-            ps.push_back(idxToPos(idx));
+            ps[i] = idxToPos(idx);
         }
         vals.resize(vals.size() + ps.size());
         Fs(ps.size(), &ps[0], &vals[vals.size() - ps.size()]);
@@ -311,7 +310,7 @@ void generateInitialMesh(
         }
         else vpsa[i] = -1;
     }
-    isConstrained[0] = isConstrained[1] =
+    isConstrained[0] = isConstrained[1] = isConstrained[2] =
         std::vector<bool>(vertices.size(), false);
     for (std::pair<int, int> ii : vmap) {
         int i = vpsa[ii.second];

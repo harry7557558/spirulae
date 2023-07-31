@@ -15,11 +15,6 @@
 #define PI 3.1415926535897932384626
 #endif
 
-#undef max
-#undef min
-#undef abs
-#define max(x,y) ((x)>(y)?(x):(y))
-#define min(x,y) ((x)<(y)?(x):(y))
 template<typename T> T abs(T x) { return x > 0 ? x : -x; }
 
 #include "glm/glm.hpp"

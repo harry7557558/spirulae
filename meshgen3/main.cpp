@@ -1,4 +1,4 @@
-#pragma GCC optimize "O3"
+#pragma GCC optimize "O2"
 
 #define SUPPRESS_ASSERT 0
 
@@ -10,6 +10,11 @@
 #include "meshgen_tet_implicit.h"
 
 #include "../include/write_model.h"
+
+#ifndef __EMSCRIPTEN__
+#define EXTERN
+#define EMSCRIPTEN_KEEPALIVE
+#endif
 
 #ifdef max
 #undef max
@@ -344,9 +349,22 @@ uint8_t* generateGLB() {
 // main
 
 int main() {
+
+#ifdef __EMSCRIPTEN__
+
     if (!initWindow())
         return -1;
     emscripten_run_script("wasmReady()");
     mainGUI(mainGUICallback);
+
+#else
+
+    if (!initWindow())
+        return -1;
+    updateShaderFunction("float funRaw(float x, float y, float z) { return length(vec3(x,y,z))-1.0; }");
+    mainGUI(mainGUICallback);
+
+#endif
+
     return 0;
 }

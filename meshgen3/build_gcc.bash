@@ -1,0 +1,1 @@
+g++ main.cpp -std=c++17 -lOpenGL -lGLEW -lglfw -o ~/temp

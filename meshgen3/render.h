@@ -1,4 +1,8 @@
+#pragma once
+
+#ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#endif
 
 #include "../include/gl.h"
 #include "../include/glm/gtc/matrix_transform.hpp"
@@ -339,6 +343,13 @@ bool initWindow() {
     }
     glfwMakeContextCurrent(RenderParams::window);
 
+#ifndef __EMSCRIPTEN__
+    if (glewInit() != GLEW_OK) {
+        glfwTerminate();
+        return false;
+    }
+#endif
+
     glGenVertexArrays(1, &RenderParams::vertexArrayID);
     glBindVertexArray(RenderParams::vertexArrayID);
 
@@ -400,9 +411,15 @@ void mainGUI(void (*callback)(void)) {
         glfwPollEvents();
     };
 
+#ifdef __EMSCRIPTEN__
     main_loop();
     emscripten_set_main_loop(main_loop, 0, true);
     return;
+#else
+    do {
+        main_loop();
+    } while (!glfwWindowShouldClose(RenderParams::window));
+#endif
 
 
     // Close OpenGL window and terminate GLFW
