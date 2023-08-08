@@ -37,6 +37,9 @@ void generateInitialMesh(
     auto getIdx = [&](int i, int j, int k) {
         return (((i << 10) | j) << 10) | k;
     };
+    auto getIdx3 = [&](ivec3 i) {
+        return (((i.x << 10) | i.y) << 10) | i.z;
+    };
     auto idxToIjk = [&](int idx) {
         int i = idx >> 20;
         int j = (idx - (i << 20)) >> 10;
@@ -49,6 +52,11 @@ void generateInitialMesh(
         float ty = ij.y / (float)bnd.y;
         float tz = ij.z / (float)bnd.z;
         return b0 + (b1 - b0) * vec3(tx, ty, tz);
+    };
+    auto getIdxV = [&](int i, int j, int k) -> int {
+        auto p = vmap.find(getIdx(i, j, k));
+        if (p == vmap.end()) return -1;
+        return p->second;
     };
     auto reqVal = [&](int i, int j, int k) {
         int idx = getIdx(i, j, k);
@@ -104,15 +112,18 @@ void generateInitialMesh(
         return p.x - 1 * p.y >= 1;
     };
     auto addTet = [&](int t1, int t2, int t3, int t4) {
+        assert(determinant(mat3(
+            idxToPos(t2)-idxToPos(t1),
+            idxToPos(t3)-idxToPos(t1),
+            idxToPos(t4)-idxToPos(t1)
+        )) > 0.0);
         ivec2 p = calcTet(t1, t2, t3, t4);
         if (testTet(p))
             tets.push_back(ivec4(t1, t2, t3, t4));
     };
-    std::vector<ivec3> cubesToAdd;
-    std::vector<int> cubeSizes;
+    std::unordered_map<int, std::vector<ivec3>> cubesToAdd;
     auto addCube = [&](int i, int j, int k, int step) {
-        cubesToAdd.push_back(ivec3(i, j, k));
-        cubeSizes.push_back(step);
+        cubesToAdd[step].push_back(ivec3(i, j, k));
     };
 
     // verts
@@ -280,25 +291,86 @@ void generateInitialMesh(
     }
 
     // add cubes
-    auto addT2 = [&](int idx1, int idx2, int idx3, int idx4, int idx0, int s) {
-        // if (s > 1 && vmap.find(idx0) != vmap.end()) {
-        //     addTet(idx1, idx0, idx3);
-        //     addTet(idx2, idx3, idx0);
-        // }
-        // else addTet(idx1, idx2, idx3, idx4);
-        addTet(idx1, idx2, idx3, idx4);
-    };
-    for (int i = 0; i < (int)cubesToAdd.size(); i++) {
-        ivec3 cb = cubesToAdd[i];
-        int s = cubeSizes[i];
-        if (s == 1) continue;
-        int i0 = cb.x, i1 = i0 + s / 2, i2 = i0 + s;
-        int j0 = cb.y, j1 = j0 + s / 2, j2 = j0 + s;
-        int k0 = cb.z, k1 = k0 + s / 2, k2 = k0 + s;
-        int idxc = getIdx(i1, j1, k1);
-        // addT2(getIdx(i0, j0, k0), getIdx(i2, j0, k0), getIdx(i2, j2, k0), idxc, getIdx(i1, j1, k0), s);
-        // addT2(getIdx(i0, j0, k0), getIdx(i2, j2, k0), getIdx(i0, j2, k0), idxc, getIdx(i1, j1, k0), s);
-        addT2(getIdx(i0, j0, k0), getIdx(i2, j2, k0), getIdx(i0, j2, k2), getIdx(i2, j0, k2), idxc, s);
+    for (int s = 2; s <= 1 << nd; s <<= 1) {
+        int h = s / 2;
+        std::set<int> addedCubes;
+        const static ivec3 DIRS[6] = {
+            { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 },
+            { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, -1 }
+        };
+        const static ivec3 US[6] = {
+            { 0, 1, 0 }, { -1, 0, 0 }, { 1, 0, 0 },
+            { 0, 0, -1 }, { 0, 0, -1 }, { 0, -1, 0 }
+        };
+        const static ivec3 VS[6] = {
+            { 0, 0, 1 }, { 0, 0, 1 }, { 0, 1, 0 },
+            { 0, -1, 0 }, { 1, 0, 0 }, { -1, 0, 0 }
+        };
+        const static ivec3 SFW[15] = {
+            { 0, 0, 0 },
+            { 2, -2, -2 }, { 2, 2, -2 }, { 2, 2, 2 }, { 2, -2, 2 },
+            { 2, -2, 0 }, { 2, 0, -2 }, { 2, 2, 0 }, { 2, 0, 2 },
+            { 2, 0, 0 },
+            { 3, -1, -1 }, { 3, 1, -1 }, { 3, 1, 1 }, { 3, -1, 1 },
+            { 4, 0, 0 }
+        };
+        const static ivec4 TETS[] = {
+            { 0, 5, 9, 4 }, { 0, 4, 9, 8 }, { 0, 8, 9, 3 }, { 0, 3, 9, 7 },
+            { 0, 7, 9, 2 }, { 0, 2, 9, 6 }, { 0, 6, 9, 1 }, { 0, 1, 9, 5 },
+            { 5, 9, 4, 13 }, { 4, 9, 8, 13 }, { 8, 9, 3, 12 }, { 3, 9, 7, 12 },
+            { 7, 9, 2, 11 }, { 2, 9, 6, 11 }, { 6, 9, 1, 10 }, { 1, 9, 5, 10 },
+            // { 5, 9, 13, 10 }, { 8, 9, 12, 13 }, { 7, 9, 11, 12 }, { 6, 9, 10, 11 },
+            // { 9, 14, 12, 13 }, { 9, 14, 11, 12 }, { 9, 14, 10, 11 }, { 9, 14, 13, 10 }
+        };
+        for (ivec3 cb : cubesToAdd[s]) {
+            int i0 = cb.x, i1 = i0 + h, i2 = i0 + s;
+            int j0 = cb.y, j1 = j0 + h, j2 = j0 + s;
+            int k0 = cb.z, k1 = k0 + h, k2 = k0 + s;
+            ivec3 ic = { i1, j1, k1 };
+            int idxc = getIdx3(ic);
+            // subdivided?
+            bool subdivided[6];
+            for (int i = 0; i < 6; i++) {
+                int idx1 = getIdx3(ic+h*DIRS[i]);
+                subdivided[i] = (vmap.find(idx1) != vmap.end());
+            }
+            // non subdivide faces
+            for (int d = 0; d < 3; d++) {
+                if (subdivided[d])
+                    continue;
+                int idx1 = getIdx3(ic+s*DIRS[d]);
+                if (vmap.find(idx1) != vmap.end()) {
+                    const int
+                        WU[8] = { -1, 1, 1, -1, 0, 1, 0, -1 },
+                        WV[8] = { -1, -1, 1, 1, -1, 0, 1, 0 };
+                    int idxs[8];
+                    for (int _ = 0; _ < 8; _++) {
+                        idxs[_] = getIdx3(ic+h*(DIRS[d]+WU[_]*US[d]+WV[_]*VS[d]));
+                    }
+                    for (int _ = 0; _ < 4; _++) {
+                        if (vmap.find(idxs[_+4]) != vmap.end()) {
+                            addTet(idxc, idx1, idxs[_], idxs[_+4]);
+                            addTet(idxc, idx1, idxs[_+4], idxs[(_+1)%4]);
+                        }
+                        else addTet(idxc, idx1, idxs[_], idxs[(_+1)%4]);
+                    }
+                }
+            }
+            // subdivide faces
+            for (int d = 0; d < 6; d++) {
+                if (!subdivided[d])
+                    continue;
+                int q = h / 2;
+                int idxs[15];
+                for (int i = 0; i < 15; i++)
+                    idxs[i] = getIdx3(ic+q*(
+                        DIRS[d]*SFW[i][0]+US[d]*SFW[i][1]+VS[d]*SFW[i][2]));
+                for (int i = 0; i < 16; i++)
+                    addTet(idxs[TETS[i][0]], idxs[TETS[i][1]],
+                        idxs[TETS[i][2]], idxs[TETS[i][3]]);
+            }
+        }
+        // break;
     }
 
     // remove unused vertices
