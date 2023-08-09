@@ -249,6 +249,8 @@ void GlBatchEvaluator3::evaluateFunction(
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glViewport(0, 0, textureW, textureH);
     glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 
     GLuint vbo;
     glGenBuffers(1, &vbo);

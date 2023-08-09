@@ -117,6 +117,7 @@ void generateInitialMesh(
             idxToPos(t3)-idxToPos(t1),
             idxToPos(t4)-idxToPos(t1)
         )) > 0.0);
+        // tets.push_back(ivec4(t1, t2, t3, t4));
         ivec2 p = calcTet(t1, t2, t3, t4);
         if (testTet(p))
             tets.push_back(ivec4(t1, t2, t3, t4));
@@ -125,6 +126,8 @@ void generateInitialMesh(
     auto addCube = [&](int i, int j, int k, int step) {
         cubesToAdd[step].push_back(ivec3(i, j, k));
     };
+
+    double time0 = getTimePast();
 
     // verts
     int step = 1 << nd;
@@ -167,11 +170,11 @@ void generateInitialMesh(
             float v101 = getVal(cb.x+1*step, cb.y+0*step, cb.z+1*step);
             float v111 = getVal(cb.x+1*step, cb.y+1*step, cb.z+1*step);
             float vccc = getVal(cb.x+step/2, cb.y+step/2, cb.z+step/2);
-            if (((int)(v000 > 0.0) + (int)(v010 > 0.0) +
-                 (int)(v100 > 0.0) + (int)(v110 > 0.0) +
-                 (int)(v001 > 0.0) + (int)(v011 > 0.0) +
-                 (int)(v101 > 0.0) + (int)(v111 > 0.0) +
-                 (int)(vccc > 0.0)) % 9 == 0)
+            if (((int)(v000 >= 0.0) + (int)(v010 >= 0.0) +
+                 (int)(v100 >= 0.0) + (int)(v110 >= 0.0) +
+                 (int)(v001 >= 0.0) + (int)(v011 >= 0.0) +
+                 (int)(v101 >= 0.0) + (int)(v111 >= 0.0) +
+                 (int)(vccc >= 0.0)) % 9 == 0)
                 continue;
         #if 1
             // Basic idea:
@@ -214,7 +217,7 @@ void generateInitialMesh(
                 for (int u = -2; u <= 2; u++)
                     for (int v = -2; v <= 2; v++)
                         for (int w = -2; w <= 2; w++) {
-                            if (u * u  + v * v + w * w <= 2) {
+                            if (u * u  + v * v + w * w <= 3) {
                                 ivec3 cb1(cb.x + u * step, cb.y + v * step, cb.z + w * step);
                                 int idx = getIdx(cb1.x, cb1.y, cb1.z);
                                 if (cubesmap.find(idx) != cubesmap.end()) {
@@ -290,10 +293,11 @@ void generateInitialMesh(
         addCube(cb.x, cb.y, cb.z, step);
     }
 
+    double time1 = getTimePast();
+
     // add cubes
     for (int s = 2; s <= 1 << nd; s <<= 1) {
         int h = s / 2;
-        std::set<int> addedCubes;
         const static ivec3 DIRS[6] = {
             { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 },
             { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, -1 }
@@ -322,6 +326,42 @@ void generateInitialMesh(
             // { 5, 9, 13, 10 }, { 8, 9, 12, 13 }, { 7, 9, 11, 12 }, { 6, 9, 10, 11 },
             // { 9, 14, 12, 13 }, { 9, 14, 11, 12 }, { 9, 14, 10, 11 }, { 9, 14, 13, 10 }
         };
+        const int WU[8] = { -1, 1, 1, -1, 0, 1, 0, -1 };
+        const int WV[8] = { -1, -1, 1, 1, -1, 0, 1, 0 };
+        const static int LUTF[16][2][18] = {
+            { { 0, 1, 2, 0, 2, 3, -1 },
+                { 1, 2, 3, 1, 3, 0, -1 } },
+            { { 0, 4, 3, 3, 4, 2, 2, 4, 1, -1 },
+                { 0, 4, 3, 3, 4, 2, 2, 4, 1, -1 } },
+            { { 0, 1, 5, 0, 5, 3, 3, 5, 2, -1 },
+                { 0, 1, 5, 0, 5, 3, 3, 5, 2, -1 } },
+            { { 3, 0, 4, 3, 4, 5, 3, 5, 2, 4, 1, 5, -1 },
+                { 3, 0, 4, 3, 4, 5, 3, 5, 2, 4, 1, 5, -1 } },
+            { { 6, 3, 0, 6, 0, 1, 6, 1, 2, -1 },
+                { 6, 3, 0, 6, 0, 1, 6, 1, 2, -1 } },
+            { { 0, 6, 3, 6, 0, 4, 4, 2, 6, 2, 4, 1, -1 },
+                { 0, 4, 3, 3, 4, 6, 6, 4, 1, 1, 2, 6, -1 } },
+            { { 0, 1, 5, 0, 5, 6, 0, 6, 3, 6, 5, 2, -1 },
+                { 0, 1, 5, 0, 5, 6, 0, 6, 3, 6, 5, 2, -1 } },
+            { { 0, 6, 3, 0, 4, 6, 4, 1, 5, 4, 5, 6, 6, 5, 2, -1 },
+                { 0, 4, 3, 3, 4, 6, 4, 1, 5, 4, 5, 6, 6, 5, 2, -1 } },
+            { { 0, 1, 7, 7, 1, 2, 7, 2, 3, -1 },
+                { 0, 1, 7, 7, 1, 2, 7, 2, 3, -1 } },
+            { { 0, 4, 7, 2, 3, 7, 2, 7, 4, 2, 4, 1, -1 },
+                { 0, 4, 7, 2, 3, 7, 2, 7, 4, 2, 4, 1, -1 } },
+            { { 0, 1, 5, 0, 5, 7, 7, 5, 2, 7, 2, 3, -1 },
+                { 0, 1, 7, 7, 1, 5, 7, 5, 3, 3, 5, 2, -1 } },
+            { { 0, 4, 7, 7, 4, 5, 5, 4, 1, 7, 5, 2, 7, 2, 3, -1 },
+                { 0, 4, 7, 7, 4, 5, 5, 4, 1, 7, 5, 3, 3, 5, 2, -1 } },
+            { { 0, 1, 7, 7, 1, 6, 6, 1, 2, 3, 7, 6, -1 },
+                { 0, 1, 7, 7, 1, 6, 6, 1, 2, 3, 7, 6, -1 } },
+            { { 0, 4, 7, 7, 4, 6, 7, 6, 3, 4, 2, 6, 4, 1, 2, -1 },
+                { 0, 4, 7, 7, 4, 6, 7, 6, 3, 4, 1, 6, 6, 1, 2, -1 } },
+            { { 0, 1, 5, 0, 5, 7, 3, 7, 6, 6, 7, 5, 6, 5, 2, -1 },
+                { 0, 1, 7, 7, 1, 5, 3, 7, 6, 6, 7, 5, 6, 5, 2, -1 } },
+            { { 0, 4, 7, 3, 7, 6, 2, 6, 5, 1, 5, 4, 4, 6, 7, 4, 5, 6 },
+                { 0, 4, 7, 3, 7, 6, 2, 6, 5, 1, 5, 4, 7, 4, 5, 7, 5, 6 } }
+        };
         for (ivec3 cb : cubesToAdd[s]) {
             int i0 = cb.x, i1 = i0 + h, i2 = i0 + s;
             int j0 = cb.y, j1 = j0 + h, j2 = j0 + s;
@@ -340,9 +380,6 @@ void generateInitialMesh(
                     continue;
                 int idx1 = getIdx3(ic+s*DIRS[d]);
                 if (vmap.find(idx1) != vmap.end()) {
-                    const int
-                        WU[8] = { -1, 1, 1, -1, 0, 1, 0, -1 },
-                        WV[8] = { -1, -1, 1, 1, -1, 0, 1, 0 };
                     int idxs[8];
                     for (int _ = 0; _ < 8; _++) {
                         idxs[_] = getIdx3(ic+h*(DIRS[d]+WU[_]*US[d]+WV[_]*VS[d]));
@@ -369,15 +406,39 @@ void generateInitialMesh(
                     addTet(idxs[TETS[i][0]], idxs[TETS[i][1]],
                         idxs[TETS[i][2]], idxs[TETS[i][3]]);
             }
+            // boundary
+            for (int d = 0; d < 6; d++) {
+                ivec3 ib = ic + h * DIRS[d];
+                int idxb = getIdx3(ib);
+                if (!((d%3 == 0 && isConstrainedX(idxb)) ||
+                      (d%3 == 1 && isConstrainedY(idxb)) ||
+                      (d%3 == 2 && isConstrainedZ(idxb))
+                    )) continue;
+                int idxs[8];
+                for (int _ = 0; _ < 8; _++) {
+                    idxs[_] = getIdx3(ic+h*(DIRS[d]+WU[_]*US[d]+WV[_]*VS[d]));
+                }
+                int casei = 0;
+                for (int _ = 0; _ < 4; _++)
+                    casei |= int(vmap.find(idxs[_+4]) != vmap.end()) << _;
+                const int *lut = LUTF[casei][((ib[0]+ib[1]+ib[2]-ib[d%3])/s)&1];
+                for (int i = 0; i < 18; i += 3) {
+                    if (lut[i] == -1) break;
+                    addTet(idxc, idxs[lut[i]], idxs[lut[i+1]], idxs[lut[i+2]]);
+                }
+            }
         }
         // break;
     }
 
+    double time2 = getTimePast();
+
     // remove unused vertices
     std::vector<int> vpsa(vmap.size(), 0);
-    for (ivec4 t : tets)
+    for (int i = 0; i < (int)tets.size(); i++) {
         for (int _ = 0; _ < 4; _++)
-            vpsa[vmap[t[_]]] = 1;
+            vpsa[tets[i][_] = vmap[tets[i][_]]] = 1;
+    }
     vertices.clear();
     for (int i = 0; i < (int)vpsa.size(); i++) {
         if (vpsa[i]) {
@@ -406,11 +467,14 @@ void generateInitialMesh(
     }
     for (int i = 0; i < (int)tets.size(); i++) {
         for (int _ = 0; _ < 4; _++) {
-            tets[i][_] = vpsa[vmap[tets[i][_]]];
+            tets[i][_] = vpsa[tets[i][_]];
             assert(tets[i][_] >= 0);
         }
     }
 
+    double time3 = getTimePast();
+    printf("generateInitialMesh: %.2lg + %.2lg + %.2lg = %.2lg secs\n",
+        time1-time0, time2-time1, time3-time2, time3-time0);
 }
 
 

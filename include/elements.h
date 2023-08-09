@@ -5,6 +5,7 @@
 #include <cmath>
 #include <initializer_list>
 #include <cassert>
+#include <functional>
 
 #if SUPPRESS_ASSERT
 #undef assert
@@ -35,4 +36,26 @@ auto _TIME_START = std::chrono::high_resolution_clock::now();
 float getTimePast() {
     auto t1 = std::chrono::high_resolution_clock::now();
     return std::chrono::duration<float>(t1 - _TIME_START).count();
+}
+
+// hash
+namespace std {
+    template<>
+    struct hash<glm::ivec2> {
+        size_t operator()(const glm::ivec2& v) const {
+            return hash<int>()(v.x) ^ hash<int>()(v.y);
+        }
+    };
+    template<>
+    struct hash<glm::ivec3> {
+        size_t operator()(const glm::ivec3& v) const {
+            return hash<int>()(v.x) ^ hash<int>()(v.y) ^ hash<int>()(v.z);
+        }
+    };
+    template<>
+    struct hash<glm::ivec4> {
+        size_t operator()(const glm::ivec4& v) const {
+            return hash<int>()(v.x) ^ hash<int>()(v.y) ^ hash<int>()(v.z) ^ hash<int>()(v.w);
+        }
+    };
 }

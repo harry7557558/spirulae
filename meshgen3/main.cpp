@@ -51,8 +51,10 @@ void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vec
         // ivec3(14, 15, 16), 1,
         // ivec3(6, 7, 8), 2,
         ivec3(32), 3,
+        // ivec3(16), 2,
         verts, tets, isConstrained
     );
+    printf("%d verts, %d tets\n", (int)verts.size(), (int)tets.size());
 #if 0
     MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
     float t1 = getTimePast();
@@ -81,23 +83,19 @@ namespace MeshParams {
 RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     RenderModel res;
 
+    double time0 = getTimePast();
+
     // model
-    res.vertices = std::vector<vec3>(verts.size());
     vec3 minv(1e10f), maxv(-1e10f);
-    for (int i = 0; i < (int)verts.size(); i++) {
-        vec3 v = verts[i];
-        res.vertices[i] = v;
-        minv = glm::min(minv, res.vertices[i]);
-        maxv = glm::max(maxv, res.vertices[i]);
+    for (vec3 v : verts) {
+        minv = glm::min(minv, v);
+        maxv = glm::max(maxv, v);
     }
 
+    double time1 = getTimePast();
+
     // faces
-    auto ivec3Cmp = [](glm::ivec3 a, glm::ivec3 b) {
-        // std::sort(&a.x, &a.x + 3);
-        // std::sort(&b.x, &b.x + 3);
-        return a.x != b.x ? a.x < b.x : a.y != b.y ? a.y < b.y : a.z < b.z;
-    };
-    std::set<glm::ivec3, decltype(ivec3Cmp)> uniqueIndicesF(ivec3Cmp);
+    std::unordered_set<glm::ivec3> uniqueIndicesF;
     for (ivec4 t : tets) {
         for (int _ = 0; _ < 4; _++) {
             ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
@@ -114,11 +112,14 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     for (glm::ivec3 f : uniqueIndicesF)
         res.indicesF.push_back(f);
 
+    double time2 = getTimePast();
+
     // edges
     auto ivec2Cmp = [](glm::ivec2 a, glm::ivec2 b) {
         return a.x != b.x ? a.x < b.x : a.y < b.y;
     };
     std::map<glm::ivec2, int, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
+    // std::unordered_map<glm::ivec2, int> uniqueIndicesE;
     for (glm::ivec3 t : res.indicesF) {
         for (int _ = 0; _ < 3; _++) {
             glm::ivec2 e(t[_], t[(_+1)%3]);
@@ -131,6 +132,33 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
         for (std::pair<glm::ivec2, int> ec : uniqueIndicesE)
             res.indicesE.push_back(ec.first);
     }
+
+    double time3 = getTimePast();
+
+    // remove unused vertices
+    std::vector<int> vmap(verts.size(), -1);
+    for (ivec3 t : res.indicesF)
+        vmap[t[0]] = vmap[t[1]] = vmap[t[2]] = 1;
+    res.vertices.clear();
+    for (int i = 0; i < (int)verts.size(); i++) {
+        if (vmap[i] != -1) {
+            vmap[i] = (int)res.vertices.size();
+            res.vertices.push_back(verts[i]);
+        }
+    }
+    for (int i = 0; i < (int)res.indicesF.size(); i++) {
+        for (int _ = 0; _ < 3; _++)
+            res.indicesF[i][_] = vmap[res.indicesF[i][_]];
+    }
+    for (int i = 0; i < (int)res.indicesE.size(); i++) {
+        for (int _ = 0; _ < 2; _++)
+            res.indicesE[i][_] = vmap[res.indicesE[i][_]];
+    }
+    int vn = (int)res.vertices.size();
+    int en = (int)res.indicesE.size();
+    int fn = (int)res.indicesF.size();
+
+    double time4 = getTimePast();
 
     // normals
     res.normals = std::vector<vec3>(res.vertices.size(), vec3(0));
@@ -162,6 +190,11 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
         res.indicesF = indicesF1;
     }
 
+    double time5 = getTimePast();
+
+    printf("prepareMesh: %.2lg + %.2lg + %.2lg + %.2lg + %.2lg = %.2lg secs\n",
+        time1-time0, time2-time1, time3-time2, time4-time3, time5-time4, time5-time0);
+    printf("(v e f v-e+f) = %d %d %d %d\n", vn, en, fn, vn-en+fn);
     return res;
 }
 

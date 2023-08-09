@@ -151,8 +151,10 @@ public:
     void initDraw3D() {
         glUseProgram(this->shaderProgram);
         glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
         glDepthFunc(GL_LESS);
         glClearColor(0.6f, 0.7f, 0.8f, 1.0f);
+        // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // glDisable(GL_DEPTH_TEST);
