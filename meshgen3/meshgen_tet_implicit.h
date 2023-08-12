@@ -176,6 +176,12 @@ void generateInitialMesh(
                  (int)(v101 >= 0.0) + (int)(v111 >= 0.0) +
                  (int)(vccc >= 0.0)) % 9 == 0)
                 continue;
+            if (((int)std::isfinite(v000) + (int)std::isfinite(v010) +
+                 (int)std::isfinite(v100) + (int)std::isfinite(v110) +
+                 (int)std::isfinite(v001) + (int)std::isfinite(v011) +
+                 (int)std::isfinite(v101) + (int)std::isfinite(v111) +
+                 8 * (int)std::isfinite(vccc)) <= 4)
+                continue;
         #if 1
             // Basic idea:
             // - least squares fit to a sphere
@@ -236,7 +242,8 @@ void generateInitialMesh(
             for (int u = -1; u <= 1; u++)
                 for (int v = -1; v <= 1; v++)
                     for (int w = -1; w <= 1; w++) {
-                        if (abs(u) + abs(v) + abs(w) == 1) {
+                        int gi = abs(u) + abs(v) + abs(w);
+                        if (gi == 1 || gi == 2) {
                             ivec3 cb1(cb.x + u * step, cb.y + v * step, cb.z + w * step);
                             int idx = getIdx(cb1.x, cb1.y, cb1.z);
                             if (cubesmap.find(idx) == cubesmap.end() && !(
@@ -588,57 +595,82 @@ void splitStickyVertices(
     }
 }
 
+#endif
 
 /* Mesh Optimizer */
 
 
-void assertVolumeEqual(
-    const std::vector<vec2>& verts,
-    const std::vector<ivec3>& trigs
+// assert this
+bool isVolumeConsistent(
+    const std::vector<vec3>& verts,
+    const std::vector<ivec4>& tets
 ) {
-    // sum of trig values
-    float At = 0.0;
-    for (ivec3 t : trigs) {
-        float dA = determinant(mat2(
+    // sum of tet volumes
+    double Vt = 0.0;
+    for (ivec4 t : tets) {
+        float dV = determinant(mat3(
             verts[t[1]] - verts[t[0]],
-            verts[t[2]] - verts[t[0]]
-        )) / 2.0;
-        assert(dA > 0.0);
-        At += dA;
+            verts[t[2]] - verts[t[0]],
+            verts[t[3]] - verts[t[0]]
+        )) / 6.0f;
+        if (!(dV > 0.0))
+            return false;
+        Vt += (double)dV;
     }
 
-    // edges
-    std::set<uint64_t> edges;
-    for (ivec3 t : trigs) {
-        for (int i = 0; i < 3; i++) {
-            ivec2 e;
-            for (int _ = 0; _ < 2; _++)
-                e[_] = t[(i+_)%3];
-            uint64_t ei = ((uint64_t)e.x << 32) | (uint64_t)e.y;
-            assert(edges.find(ei) == edges.end());
-            uint64_t eo = ((uint64_t)e.y << 32) | (uint64_t)e.x;
-            if (edges.find(eo) != edges.end())
-                edges.erase(eo);
-            else edges.insert(ei);
+    // faces
+    std::unordered_set<ivec3> faces;
+    for (ivec4 t : tets) {
+        for (int i = 0; i < 4; i++) {
+            ivec3 f;
+            for (int _ = 0; _ < 3; _++)
+                f[_] = t[(i+_)%4];
+            if (i % 2 == 0)
+                std::swap(f[1], f[2]);
+            f = rotateIvec3(f);
+            if (faces.find(f) != faces.end())
+                return false;
+            ivec3 fo = ivec3(f.x, f.z, f.y);
+            if (faces.find(fo) != faces.end())
+                faces.erase(fo);
+            else faces.insert(f);
         }
     }
 
-    // area from boundary
-    float As = 0.0;
-    for (uint64_t ei : edges) {
-        ivec2 e = ivec2((int)(ei>>32), (int)ei);
-        float dA = determinant(mat2(
-            verts[e.x], verts[e.y]
-        )) / 2.0;
-        As += dA;
+    // edges x volume from boundary
+    std::unordered_set<ivec2> edges;
+    int sticky_edge_count = 0;
+    double Vs = 0.0;
+    for (ivec3 f : faces) {
+        for (int i = 0; i < 3; i++) {
+            ivec2 e(f[i], f[(i+1)%3]);
+            if (edges.find(e) != edges.end()) {
+                sticky_edge_count += 1;
+                edges.erase(e);
+                continue;
+            }
+            ivec2 eo = ivec2(e.y, e.x);
+            if (edges.find(eo) != edges.end())
+                edges.erase(eo);
+            else edges.insert(e);
+        }
+        float dV = determinant(mat3(
+            verts[f.x], verts[f.y], verts[f.z]
+        )) / 6.0f;
+        Vs += (double)dV;
     }
-    assert(As > 0);
+    printf(">=%d sticky edges\n", sticky_edge_count);
+    if (edges.size() != 0)
+        return false;
+    if (!(Vs > 0.0))
+        return false;
 
     // compare
-    printf("At=%f As=%f\n", At, As);
-    assert(abs(As / At - 1.0) < 1e-3);
+    printf("Vt=%f Vs=%f\n", Vt, Vs);
+    return abs(Vs / Vt - 1.0) < 1e-4;
 }
 
+#if 0
 
 // Refine the mesh, requires positive volumes for all trigs
 void smoothMesh(

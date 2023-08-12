@@ -55,19 +55,19 @@ void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vec
         verts, tets, isConstrained
     );
     printf("%d verts, %d tets\n", (int)verts.size(), (int)tets.size());
+    // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
 #if 0
-    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
     float t1 = getTimePast();
     printf("Mesh generated in %.2g secs.\n", t1-t0);
     int vn0 = (int)verts.size();
     MeshgenTetImplicit::splitStickyVertices(verts, trigs, isConstrained);
-    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
+    MeshgenTetImplicit::isVolumeConsistent(verts, trigs);
     float t2 = getTimePast();
     printf("Mesh cleaned in %.2g secs.\n", t2-t1);
     MeshgenTetImplicit::smoothMesh(
         verts, trigs, 5, Fs,
         constraint, isConstrained);
-    MeshgenTetImplicit::assertVolumeEqual(verts, trigs);
+    MeshgenTetImplicit::isVolumeConsistent(verts, trigs);
     float t3 = getTimePast();
     printf("Mesh optimized in %.2g secs.\n", t3-t2);
 #endif
