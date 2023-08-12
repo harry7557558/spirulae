@@ -127,7 +127,7 @@ void generateInitialMesh(
         cubesToAdd[step].push_back(ivec3(i, j, k));
     };
 
-    double time0 = getTimePast();
+    float time0 = getTimePast();
 
     // verts
     int step = 1 << nd;
@@ -300,7 +300,7 @@ void generateInitialMesh(
         addCube(cb.x, cb.y, cb.z, step);
     }
 
-    double time1 = getTimePast();
+    float time1 = getTimePast();
 
     // add cubes
     for (int s = 2; s <= 1 << nd; s <<= 1) {
@@ -438,7 +438,7 @@ void generateInitialMesh(
         // break;
     }
 
-    double time2 = getTimePast();
+    float time2 = getTimePast();
 
     // remove unused vertices
     std::vector<int> vpsa(vmap.size(), 0);
@@ -479,8 +479,8 @@ void generateInitialMesh(
         }
     }
 
-    double time3 = getTimePast();
-    printf("generateInitialMesh: %.2lg + %.2lg + %.2lg = %.2lg secs\n",
+    float time3 = getTimePast();
+    printf("generateInitialMesh: %.2g + %.2g + %.2g = %.2g secs\n",
         time1-time0, time2-time1, time3-time2, time3-time0);
 }
 
@@ -670,72 +670,80 @@ bool isVolumeConsistent(
     return abs(Vs / Vt - 1.0) < 1e-4;
 }
 
-#if 0
 
 // Refine the mesh, requires positive volumes for all trigs
 void smoothMesh(
-    std::vector<vec2>& verts,
-    std::vector<ivec3>& trigs,
+    std::vector<vec3>& verts,
+    std::vector<ivec4>& tets,
     int nsteps,
     ScalarFieldFBatch F = nullptr,
-    std::function<vec2(vec2)> constraint = nullptr,  // add this to bring point back
-    std::vector<bool> isConstrained_[2] = nullptr
+    std::function<vec3(vec3)> constraint = nullptr,  // add this to bring point back
+    std::vector<bool> isConstrained_[3] = nullptr
 ) {
     int vn = (int)verts.size(), svn = 0;  // # of vertices; # on boundary
-    int tn = (int)trigs.size(), stn = 0;  // # of trigs; # on boundary
+    int tn = (int)tets.size(), stn = 0;  // # of trigs; # on boundary
 
-    // boundary
-    std::set<uint64_t> boundary;
-    for (ivec3 t : trigs) {
-        for (int i = 0; i < 3; i++) {
-            ivec2 e;
-            for (int _ = 0; _ < 2; _++)
-                e[_] = t[(i+_)%3];
-            uint64_t ei = ((uint64_t)e.x << 32) | (uint64_t)e.y;
-            assert(boundary.find(ei) == boundary.end());
-            uint64_t eo = ((uint64_t)e.y << 32) | (uint64_t)e.x;
-            if (boundary.find(eo) != boundary.end())
-                boundary.erase(eo);
-            else boundary.insert(ei);
+    float time0 = getTimePast();
+
+    // faces
+    std::unordered_set<ivec3> faces;
+    for (ivec4 t : tets) {
+        for (int i = 0; i < 4; i++) {
+            ivec3 f;
+            for (int _ = 0; _ < 3; _++)
+                f[_] = t[(i+_)%4];
+            if (i % 2 == 0)
+                std::swap(f[1], f[2]);
+            f = rotateIvec3(f);
+            assert(faces.find(f) == faces.end());
+            ivec3 fo = ivec3(f.x, f.z, f.y);
+            if (faces.find(fo) != faces.end())
+                faces.erase(fo);
+            else faces.insert(f);
         }
     }
+
+    float time1 = getTimePast();
 
     // geometry
     std::vector<int> compressedIndex(vn, -1);  // [vn] global -> near boundary
     std::vector<int> fullIndex;  // [svn] near boundary -> global
-    std::vector<int> boundaryTrigs;  // [stn] indices of trigs near boundary
-    std::vector<bool> isConstrained[3];  // [vn] constrained on domain boundary? (any, x, y)
+    std::vector<int> surfaceTets;  // [stn] indices of trigs near boundary
+    std::vector<bool> isConstrained[4];  // [vn] constrained on domain boundary? (any, x, y, z)
     std::vector<bool> applyBoundaryConstraints(vn, false);  // [vn] constrained on isoboundary?
     auto isOnBoundary = [&](int i) {
         return isConstrained[0][i] || applyBoundaryConstraints[i];
     };
     // geometry and values
-    std::vector<vec2> boundaryVertPs;  // [svn] positions
+    std::vector<vec3> boundaryVertPs;  // [svn] positions
     std::vector<float> boundaryVertVals;  // [svn] function values
-    std::vector<vec2> boundaryVertGrads, boundaryTrigGrads;  // [svn, stn] gradients
+    std::vector<vec3> boundaryVertGrads, boundaryTetGrads;  // [svn, stn] gradients
     std::vector<float> boundaryVertGradWeights;  // [svn] used to project trig gradients to verts
     // smoothing
-    std::vector<vec2> grads(vn);
+    std::vector<vec3> grads(vn);
     std::vector<float> maxFactor(vn), maxMovement(vn);
 
     // vertices near boundary
-    for (int _ = 0; _ < 3; _++)
+    for (int _ = 0; _ < 4; _++)
         isConstrained[_] = std::vector<bool>(vn, false);
     if (isConstrained_) {
-        assert(isConstrained[0].size() == vn && isConstrained[1].size() == vn);
+        assert(isConstrained[0].size() == vn
+             && isConstrained[1].size() == vn
+             && isConstrained[2].size() == vn);
         for (int i = 0; i < vn; i++) {
             isConstrained[1][i] = isConstrained_[0][i];
             isConstrained[2][i] = isConstrained_[1][i];
-            isConstrained[0][i] = isConstrained[1][i] || isConstrained[2][i];
+            isConstrained[3][i] = isConstrained_[2][i];
+            isConstrained[0][i] = isConstrained[1][i] || isConstrained[2][i] || isConstrained[3][i];
         }
     }
     if (F) {
         // on boundary
-        for (uint64_t f_ : boundary) {
-            ivec2 f = ivec2((int)(f_>>32), (int)f_);
+        for (ivec3 f : faces) {
             bool isC = isConstrained[0][f[0]]
-                && isConstrained[0][f[1]];
-            for (int _ = 0; _ < 2; _++) {
+                && isConstrained[0][f[1]]
+                && isConstrained[0][f[2]];
+            for (int _ = 0; _ < 3; _++) {
                 if (compressedIndex[f[_]] == -1) {
                     compressedIndex[f[_]] = svn;
                     fullIndex.push_back(f[_]);
@@ -748,16 +756,16 @@ void smoothMesh(
         // one layer
         int i0 = 0, i1 = svn;
         for (int ti = 0; ti < tn; ti++) {
-            ivec3 t = trigs[ti];
+            ivec4 t = tets[ti];
             int onboundary = 0;
-            for (int _ = 0; _ < 3; _++)
+            for (int _ = 0; _ < 4; _++)
                 if (compressedIndex[t[_]] >= i0 &&
                     compressedIndex[t[_]] < i1)
                     onboundary += 1;
             if (onboundary == 0)
                 continue;
-            boundaryTrigs.push_back(ti);
-            for (int _ = 0; _ < 3; _++)
+            surfaceTets.push_back(ti);
+            for (int _ = 0; _ < 4; _++)
                 if (compressedIndex[t[_]] == -1) {
                     compressedIndex[t[_]] = svn;
                     fullIndex.push_back(t[_]);
@@ -767,9 +775,9 @@ void smoothMesh(
         }
         // make sure isOnBoundary() works
         std::vector<bool> onBoundary(vn, false);
-        for (uint64_t f : boundary)
-            for (int _ = 0; _ < 2; _++)
-                onBoundary[((int*)&f)[_]] = true;
+        for (ivec3 f : faces)
+            for (int _ = 0; _ < 3; _++)
+                onBoundary[f[_]] = true;
         for (int i = 0; i < vn; i++)
             assert(onBoundary[i] == isOnBoundary(i));
     }
@@ -777,29 +785,35 @@ void smoothMesh(
     boundaryVertVals.resize(svn);
     boundaryVertGrads.resize(svn);
     boundaryVertGradWeights.resize(svn);
-    boundaryTrigGrads.resize(stn);
+    boundaryTetGrads.resize(stn);
+
+    float time2 = getTimePast();
 
     for (int stepi = 0; stepi < nsteps; stepi++) {
 
         /* Smoothing */
 
+        float time0 = getTimePast();
+
         // accumulate gradient
         for (int i = 0; i < vn; i++)
-            grads[i] = vec2(0.0);
-        for (ivec3 trig : trigs) {
-            vec2 v[3], g[3];
-            for (int _ = 0; _ < 3; _++)
-                v[_] = verts[trig[_]];
+            grads[i] = vec3(0.0);
+        for (ivec4 tet : tets) {
+            vec3 v[4], g[4];
+            for (int _ = 0; _ < 4; _++)
+                v[_] = verts[tet[_]];
             const float* vd = (const float*)&v[0];
             float val, size2;
             float* res[3] = { &val, (float*)g, &size2 };
-            MeshgenTetLoss::MESHGEN_TET_loss(&vd, res, nullptr, nullptr, 0);
-            for (int _ = 0; _ < 3; _++) {
-                vec2 dg = 0.1f * g[_] * size2;
+            MeshgenTetLoss::meshgen_tet_loss(&vd, res, nullptr, nullptr, 0);
+            for (int _ = 0; _ < 4; _++) {
+                vec3 dg = 0.01f * g[_] * size2;
                 if (std::isfinite(dot(dg, dg)))
-                    grads[trig[_]] -= dg;
+                    grads[tet[_]] -= dg;
             }
         }
+
+        float time1 = getTimePast();
 
         // force the mesh on the boundary
         if (F) {
@@ -812,32 +826,33 @@ void smoothMesh(
             F(svn, &boundaryVertPs[0], &boundaryVertVals[0]);
             // gradient on trigs
             for (int i = 0; i < stn; i++) {
-                vec2 x[3]; float v[3];
-                for (int _ = 0; _ < 3; _++) {
-                    int j = compressedIndex[trigs[boundaryTrigs[i]][_]];
+                vec3 x[4]; float v[4];
+                for (int _ = 0; _ < 4; _++) {
+                    int j = compressedIndex[tets[surfaceTets[i]][_]];
                     assert(j >= 0 && j < svn);
                     x[_] = boundaryVertPs[j];
                     v[_] = boundaryVertVals[j];
                 }
-                mat2 m(x[1]-x[0], x[2]-x[0]);
-                vec2 b(v[1]-v[0], v[2]-v[0]);
-                boundaryTrigGrads[i] = inverse(transpose(m)) * b;
+                mat3 m(x[1]-x[0], x[2]-x[0], x[3]-x[0]);
+                vec3 b(v[1]-v[0], v[2]-v[0], v[3]-v[0]);
+                boundaryTetGrads[i] = inverse(transpose(m)) * b;
             }
             // gradient on verts
             for (int i = 0; i < svn; i++) {
-                boundaryVertGradWeights[i] = 0.0;
-                boundaryVertGrads[i] = vec2(0.0);
+                boundaryVertGradWeights[i] = 0.0f;
+                boundaryVertGrads[i] = vec3(0.0f);
             }
             for (int i = 0; i < stn; i++) {
-                for (int _ = 0; _ < 3; _++) {
-                    int j = compressedIndex[trigs[boundaryTrigs[i]][_]];
-                    boundaryVertGrads[j] += boundaryTrigGrads[i];
-                    boundaryVertGradWeights[j] += 1.0;
+                for (int _ = 0; _ < 4; _++) {
+                    int j = compressedIndex[tets[surfaceTets[i]][_]];
+                    boundaryVertGrads[j] += boundaryTetGrads[i];
+                    boundaryVertGradWeights[j] += 1.0f;
                 }
             }
             for (int i = 0; i < svn; i++) {
-                if (boundaryVertGradWeights[i] <= 0.0) printf("%d %lf\n", i, boundaryVertGradWeights[i]);
-                assert(boundaryVertGradWeights[i] > 0.0);
+                if (boundaryVertGradWeights[i] <= 0.0f)
+                    printf("%d %f\n", i, boundaryVertGradWeights[i]);
+                assert(boundaryVertGradWeights[i] > 0.0f);
                 boundaryVertGrads[i] /= boundaryVertGradWeights[i];
             }
             // move the vertex to the boundary
@@ -847,14 +862,16 @@ void smoothMesh(
                 if (!applyBoundaryConstraints[fullIndex[i]])
                     continue;
                 float v = boundaryVertVals[i];
-                vec2 g = boundaryVertGrads[i];
+                vec3 g = boundaryVertGrads[i];
                 grads[fullIndex[i]] -= v * g / dot(g, g);
             }
         }
 
+        float time2 = getTimePast();
+
         // apply boundary constraints
         for (int i = 0; i < vn; i++) {
-            for (int _ = 0; _ < 2; _++)
+            for (int _ = 0; _ < 3; _++)
                 if (isConstrained[_ + 1][i])
                     ((float*)&grads[i])[_] = 0.0;
         }
@@ -863,48 +880,57 @@ void smoothMesh(
                 grads[i] += constraint(verts[i] + grads[i]);
         }
 
+        float time3 = getTimePast();
+
         // calculate maximum allowed vertex movement factor
         for (int i = 0; i < vn; i++)
             maxFactor[i] = 1.0, maxMovement[i] = 0.0;
-        for (ivec3 trig : trigs) {
+        for (ivec4 tet : tets) {
             // prevent going negative by passing through a face
-            // check boundary
-            vec2 v[3], g[3];
-            float mf[3] = { 1.0, 1.0, 1.0 };
-            for (int i = 0; i < 3; i++) {
-                for (int _ = 0; _ < 3; _++) {
-                    int j = trig[(i+_)%3];
+            const static int fvp[4][4] = {
+                {0,1,2,3}, {0,3,1,2}, {0,2,3,1}, {1,3,2,0}
+            };
+            // check faces
+            vec3 v[4], g[4];
+            float mf[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+            for (int i = 0; i < 4; i++) {
+                for (int _ = 0; _ < 4; _++) {
+                    int j = tet[fvp[i][_]];
                     v[_] = verts[j], g[_] = grads[j];
                 }
                 // plane normal and distance to the vertex
-                vec2 n = v[1] - v[0]; n = vec2(-n.y, n.x);
-                float d = dot(n, v[2] - v[0]);
-                if (!(d > 0.0)) printf("error: d = %f\n", d);
+                vec3 n = normalize(cross(v[1] - v[0], v[2] - v[0]));
+                float d = dot(n, v[3] - v[0]);
+                assert(d > 0.0f);
                 // how far you need to go to make it negative
-                float d3 = fmax(-dot(n, g[2]), 0.0f);
-                float k[3] = { 1, 1, 1 };
-                for (int _ = 0; _ < 2; _++) {
+                float d3 = fmax(-dot(n, g[3]), 0.0f);
+                float k[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                for (int _ = 0; _ < 3; _++) {
                     float d_ = fmax(dot(n, g[_]), 0.0f);
-                    float ds = fmax(d_ + d3, 0.0f);
+                    float ds = d_ + d3;
                     if (ds == 0.0) continue;
                     k[_] = fmin(k[_], d / ds);
                 }
-                k[2] = fmin(k[0], k[1]);
-                for (int _ = 0; _ < 3; _++)
-                    mf[(i+_)%3] = fmin(mf[(i+_)%3], k[_]);
+                k[3] = fmin(fmin(k[0], k[1]), k[2]);
+                for (int _ = 0; _ < 4; _++)
+                    mf[fvp[i][_]] = fmin(mf[fvp[i][_]], k[_]);
             }
-            for (int _ = 0; _ < 3; _++)
-                maxFactor[trig[_]] = fmin(maxFactor[trig[_]],
+            for (int _ = 0; _ < 4; _++)
+                maxFactor[tet[_]] = fmin(maxFactor[tet[_]],
                     mf[_] > 0.0f ? mf[_] : 1.0f);
             // prevent going crazy
-            float sl = sqrt(abs(determinant(mat2(v[1] - v[0], v[2] - v[0])) / 2.0f));
-            for (int _ = 0; _ < 3; _++)
-                maxMovement[trig[_]] = fmax(maxMovement[trig[_]], sl);
+            float sl = cbrt(abs(determinant(mat3(
+                v[1] - v[0], v[2] - v[0], v[3] - v[0]
+            )) / 6.0f));
+            for (int _ = 0; _ < 4; _++)
+                maxMovement[tet[_]] = fmax(maxMovement[tet[_]], sl);
         }
+
+        float time4 = getTimePast();
 
         // displacements
         for (int i = 0; i < vn; i++) {
-            vec2 g = 0.5f * maxFactor[i] * grads[i];
+            vec3 g = 0.9f * maxFactor[i] * grads[i];
             float gl = length(g);
             if (gl != 0.0f) {
                 float a = maxMovement[i];
@@ -927,43 +953,53 @@ void smoothMesh(
                 meanDisp += disp;
             else nanCount++;
         }
-        if (nanCount == 0)
-            printf("%.3g\n", meanDisp);
-        else
-            printf("%.3g (%d nan)\n", meanDisp, nanCount);
 
-        // reduce displacement if negative area occurs
+        float time5 = getTimePast();
+
+        // reduce displacement if negative volume occurs
         std::vector<bool> reduce(vn, true);
         for (int iter = 0; iter < 4; iter++) {
             // update vertex position
-            const float r = 0.8;
+            const float r = 0.8f;
             float k = (iter == 0 ? 1.0f : (r - 1.0f) * pow(r, iter - 1.0f));
             for (int i = 0; i < vn; i++) if (reduce[i]) {
-                vec2 dv = k * grads[i];
+                vec3 dv = k * grads[i];
                 if (std::isfinite(dot(dv, dv)))
                     verts[i] += dv;
             }
             // check if negative area occurs
             reduce = std::vector<bool>(vn, false);
             bool found = false;
-            for (ivec3 trig : trigs) {
-                vec2 v[3] = {
-                    verts[trig[0]], verts[trig[1]], verts[trig[2]]
+            for (ivec4 tet : tets) {
+                vec3 v[4] = {
+                    verts[tet[0]], verts[tet[1]], verts[tet[2]], verts[tet[3]]
                 };
-                if (determinant(mat2(v[1] - v[0], v[2] - v[0])) < 0.0) {
-                    reduce[trig[0]] = reduce[trig[1]] =
-                        reduce[trig[2]] = reduce[trig[3]] = true;
+                if (determinant(mat3(v[1]-v[0], v[2]-v[0], v[3]-v[0])) < 0.0f) {
+                    reduce[tet[0]] = reduce[tet[1]] =
+                        reduce[tet[2]] = reduce[tet[3]] = true;
                     found = true;
-                    printf("%d\n", iter);
+                    // printf("%d\n", iter);
                 }
             }
             if (!found) break;
         }
 
+        float time6 = getTimePast();
+
+        // verbose
+        char buf[1024];
+        sprintf(buf, "%.2g + %.2g + %.2g + %.2g + %.2g + %.2g = %.2g secs",
+            time1-time0, time2-time1, time3-time2, time4-time3, time5-time4, time6-time5, time6-time0);
+        if (nanCount == 0)
+            printf("%.3g: %s\n", meanDisp, buf);
+        else
+            printf("%.3g (%d nan): %s\n", meanDisp, nanCount, buf);
     }
 
-}
+    float time3 = getTimePast();
+    printf("smoothMesh: %.2g + %.2g + %.2g = %.2g secs\n",
+        time1-time0, time2-time1, time3-time2, time3-time0);
 
-#endif
+}
 
 MESHGEN_TET_IMPLICIT_NS_END

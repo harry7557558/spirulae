@@ -50,12 +50,15 @@ void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vec
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
         // ivec3(6, 7, 8), 2,
-        ivec3(32), 3,
+        ivec3(32), 2,
         // ivec3(16), 2,
         verts, tets, isConstrained
     );
     printf("%d verts, %d tets\n", (int)verts.size(), (int)tets.size());
     // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
+    MeshgenTetImplicit::smoothMesh(
+        verts, tets, 5, Fs,
+        constraint, isConstrained);
 #if 0
     float t1 = getTimePast();
     printf("Mesh generated in %.2g secs.\n", t1-t0);
@@ -83,7 +86,7 @@ namespace MeshParams {
 RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     RenderModel res;
 
-    double time0 = getTimePast();
+    float time0 = getTimePast();
 
     // model
     vec3 minv(1e10f), maxv(-1e10f);
@@ -92,7 +95,7 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
         maxv = glm::max(maxv, v);
     }
 
-    double time1 = getTimePast();
+    float time1 = getTimePast();
 
     // faces
     std::unordered_set<glm::ivec3> uniqueIndicesF;
@@ -112,7 +115,7 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     for (glm::ivec3 f : uniqueIndicesF)
         res.indicesF.push_back(f);
 
-    double time2 = getTimePast();
+    float time2 = getTimePast();
 
     // edges
     auto ivec2Cmp = [](glm::ivec2 a, glm::ivec2 b) {
@@ -133,7 +136,7 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
             res.indicesE.push_back(ec.first);
     }
 
-    double time3 = getTimePast();
+    float time3 = getTimePast();
 
     // remove unused vertices
     std::vector<int> vmap(verts.size(), -1);
@@ -158,7 +161,7 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
     int en = (int)res.indicesE.size();
     int fn = (int)res.indicesF.size();
 
-    double time4 = getTimePast();
+    float time4 = getTimePast();
 
     // normals
     res.normals = std::vector<vec3>(res.vertices.size(), vec3(0));
@@ -190,9 +193,9 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
         res.indicesF = indicesF1;
     }
 
-    double time5 = getTimePast();
+    float time5 = getTimePast();
 
-    printf("prepareMesh: %.2lg + %.2lg + %.2lg + %.2lg + %.2lg = %.2lg secs\n",
+    printf("prepareMesh: %.2g + %.2g + %.2g + %.2g + %.2g = %.2g secs\n",
         time1-time0, time2-time1, time3-time2, time4-time3, time5-time4, time5-time0);
     printf("(v e f v-e+f) = %d %d %d %d\n", vn, en, fn, vn-en+fn);
     return res;
