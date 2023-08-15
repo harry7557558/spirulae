@@ -55,6 +55,7 @@ void generateMesh(std::string funDeclaration, std::vector<vec3> &verts, std::vec
         verts, tets, isConstrained
     );
     printf("%d verts, %d tets\n", (int)verts.size(), (int)tets.size());
+    MeshgenTetImplicit::splitStickyVertices(verts, tets, isConstrained);
     // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
     MeshgenTetImplicit::smoothMesh(
         verts, tets, 5, Fs,
@@ -103,13 +104,11 @@ RenderModel prepareMesh(std::vector<vec3> verts, std::vector<ivec4> tets) {
         for (int _ = 0; _ < 4; _++) {
             ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
             if (_ % 2 == 0) std::swap(f.y, f.z);
-            int i = f[0] < f[1] && f[0] < f[2] ? 0 :
-                f[1] < f[2] && f[1] < f[0] ? 1 : 2;
-            glm::ivec3 f1(f[i], f[(i + 1) % 3], f[(i + 2) % 3]);
-            glm::ivec3 fo = glm::ivec3(f1.x, f1.z, f1.y);
+            f = MeshgenMisc::rotateIvec3(f);
+            glm::ivec3 fo = glm::ivec3(f.x, f.z, f.y);
             if (uniqueIndicesF.find(fo) != uniqueIndicesF.end())
                 uniqueIndicesF.erase(fo);
-            else uniqueIndicesF.insert(f1);
+            else uniqueIndicesF.insert(f);
         }
     }
     for (glm::ivec3 f : uniqueIndicesF)

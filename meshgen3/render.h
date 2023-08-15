@@ -55,8 +55,8 @@ float remap(float t, float k) { return pow(t,k) / (pow(t,k) + pow(1.-t,k)); }
 void main() {
     vec3 n = fragNormal==vec3(0) ? vec3(0): normalize(fragNormal);
     float amb = 1.0+0.3*max(-n.z,0.);
-    float dif = max(n.z,0.);
-    float spc = pow(max(n.z,0.), 40.0);
+    float dif = dot(n,normalize(vec3(-0.5,-0.5,1)));
+    float spc = pow(max(n.z,0.), 10.0);
     vec3 col = interpolatedColor.xyz;
     if (interpolatedColor.x < 0.0) {
         float maxv = abs(maxValue);
@@ -78,7 +78,7 @@ void main() {
         col = vec3(132.23,.39,-142.83)+vec3(-245.97,-1.4,270.69)*t+vec3(755.63,1.32,891.31)*cos(vec3(.3275,2.39,.3053)*t+vec3(-1.7461,-1.84,1.4092));
         if (isnan(dot(col,col))) col = vec3(0,1,0);
     }
-    fragColor = vec4(brightness*(0.2*amb+0.7*dif+0.1*spc)*col, 1);
+    fragColor = vec4(brightness*(0.6*amb+0.4*max(dif,0.)+0.1*max(-dif,0.)+0.1*spc)*col, 1);
     if (brightness < 0.0) fragColor.xyz = col;
 })""";
 
@@ -153,7 +153,7 @@ public:
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
         glDepthFunc(GL_LESS);
-        glClearColor(0.6f, 0.7f, 0.8f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -387,8 +387,8 @@ void mainGUI(void (*callback)(void)) {
         // draw
         viewport->initDraw3D();
         if (!renderModel.vertices.empty()) {
-            glm::vec4 colorsF(1.0, 0.8, 0.5, 1);
-            glm::vec4 colorsE(0.7, 0.5, 0.3, 1);
+            glm::vec4 colorsF(0.9, 0.9, 0.9, 1);
+            glm::vec4 colorsE(0.6, 0.6, 0.6, 1);
             viewport->drawVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesF,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsF));
@@ -405,6 +405,18 @@ void mainGUI(void (*callback)(void)) {
                 { vec4(1, 0, 0, 1), vec4(1, 0, 0, 1),
                   vec4(0, 0.5, 0, 1), vec4(0, 0.5, 0, 1),
                   vec4(0, 0, 1, 1), vec4(0, 0, 1, 1) },
+                1.0f, 1.0f, -1.0f
+            );
+            // cube
+            float s = 2.0;
+            if (1) viewport->drawLinesVBO(
+                { vec3(-s, -s, -s), vec3(s, -s, -s), vec3(s, s, -s), vec3(-s, s, -s),
+                  vec3(-s, -s, s), vec3(s, -s, s), vec3(s, s, s), vec3(-s, s, s) },
+                std::vector<vec3>(8, vec3(0, 0, 1)),
+                { ivec2(0, 1), ivec2(1, 2), ivec2(2, 3), ivec2(3, 0),
+                  ivec2(4, 5), ivec2(5, 6), ivec2(6, 7), ivec2(7, 4),
+                  ivec2(0, 4), ivec2(1, 5), ivec2(2, 6), ivec2(3, 7) },
+                std::vector<vec4>(8, vec4(1, 0.8, 0, 1)),
                 1.0f, 1.0f, -1.0f
             );
         }
