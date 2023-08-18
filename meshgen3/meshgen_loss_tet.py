@@ -1,4 +1,4 @@
-# generate meshgen_tet_loss.h
+# generate meshgen_loss_tet.h
 
 import numpy as np
 import scipy.optimize
@@ -43,12 +43,12 @@ val = -cs.log(cs.det(xu))  # independent of x0 wtf
 #print(cs.diag(cs.hessian(val, vs)[0]))
 
 loss = cs.Function(
-    'meshgen_tet_loss',
+    'meshgen_loss_tet',
     [vs],
     [val, cs.densify(cs.jacobian(val, vs)), size2]
 )
 losshess = cs.Function(
-    'meshgen_tet_loss_hess',
+    'meshgen_loss_tet_hess',
     [vs],
     [cs.densify(cs.hessian(val, vs)[0])]
 )  # seems like it's not positive definite
@@ -91,7 +91,7 @@ print(np.linalg.norm(losshess(2*vs.flatten())))
 
 # generate code
 
-sourcefile = 'meshgen_tet_loss.h'
+sourcefile = 'meshgen_loss_tet.h'
 C = cs.CodeGenerator(sourcefile)
 C.add(loss)
 C.generate()

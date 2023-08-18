@@ -16,7 +16,11 @@ MESHGEN_TET_IMPLICIT_NS_START
 using namespace MeshgenMisc;
 
 namespace MeshgenTetLoss {
-#include "meshgen_tet_loss.h"
+#include "meshgen_loss_tet.h"
+#undef CASADI_PREFIX
+#include "meshgen_loss_trig.h"
+#undef CASADI_PREFIX
+#include "meshgen_loss_edge.h"
 }
 
 
@@ -485,8 +489,57 @@ void generateInitialMesh(
 }
 
 
+void restoreSurface(
+    const std::vector<vec3> &verts, const std::vector<ivec4> &tets,
+    std::vector<ivec3> &faces, std::vector<ivec4> &edges
+) {
+    faces.clear(); edges.clear();
+
+    float time0 = getTimePast();
+
+    // faces
+    std::unordered_set<ivec3> uniqueIndicesF;
+    for (ivec4 t : tets) {
+        for (int _ = 0; _ < 4; _++) {
+            ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
+            if (_ % 2 == 0) std::swap(f.y, f.z);
+            f = MeshgenMisc::rotateIvec3(f);
+            ivec3 fo = ivec3(f.x, f.z, f.y);
+            if (uniqueIndicesF.find(fo) != uniqueIndicesF.end())
+                uniqueIndicesF.erase(fo);
+            else uniqueIndicesF.insert(f);
+        }
+    }
+    for (ivec3 f : uniqueIndicesF)
+        faces.push_back(f);
+
+    float time1 = getTimePast();
+
+    // edges
+    auto ivec2Cmp = [](ivec2 a, ivec2 b) {
+        return a.x != b.x ? a.x < b.x : a.y < b.y;
+    };
+    std::map<ivec2, ivec2, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
+    for (ivec3 t : faces) {
+        for (int _ = 0; _ < 3; _++) {
+            ivec2 e(t[_], t[(_+1)%3]);
+            int i = 0;
+            if (e.x > e.y)
+                std::swap(e.x, e.y), i = 1;
+            uniqueIndicesE[e][i] = t[(_+2)%3];
+        }
+    }
+    for (std::pair<ivec2, ivec2> e : uniqueIndicesE)
+        edges.push_back(ivec4(e.first, e.second));
+
+    float time2 = getTimePast();
+    printf("restoreSurface: %.2g + %.2g = %.2g secs\n",
+        time1-time0, time2-time1, time2-time0);
+}
+
+
 void splitStickyVertices(
-    std::vector<vec3> &vertices, std::vector<ivec4> &tets,
+    std::vector<vec3> &vertices, std::vector<ivec4> &tets, std::vector<ivec3> &faces,
     std::vector<bool> isConstrained[3]
 ) {
     int vn = (int)vertices.size();
@@ -517,7 +570,6 @@ void splitStickyVertices(
         }
     }
     printf("%d\n", (int)uniqueIndicesF.size());
-    std::vector<ivec3> faces(uniqueIndicesF.begin(), uniqueIndicesF.end());
 
     // get neighbors
     std::vector<std::vector<int>> neighbors(vn);
@@ -684,6 +736,7 @@ void splitStickyVertices(
                 faces[fi] = f;
             }
             assert(changedCount == (int)neighborFs[vi].size());
+            // To-do: edges
         }
         // restore neighbor map
         for (int i = 0; i < nn; i++)
@@ -770,7 +823,9 @@ bool isVolumeConsistent(
 // Refine the mesh, requires positive volumes for all trigs
 void smoothMesh(
     std::vector<vec3>& verts,
-    std::vector<ivec4>& tets,
+    const std::vector<ivec4> &tets,
+    const std::vector<ivec3> &faces,
+    const std::vector<ivec4> &edges,
     int nsteps,
     ScalarFieldFBatch F = nullptr,
     std::function<vec3(vec3)> constraint = nullptr,  // add this to bring point back
@@ -780,26 +835,6 @@ void smoothMesh(
     int tn = (int)tets.size(), stn = 0;  // # of trigs; # on boundary
 
     float time0 = getTimePast();
-
-    // faces
-    std::unordered_set<ivec3> faces;
-    for (ivec4 t : tets) {
-        for (int i = 0; i < 4; i++) {
-            ivec3 f;
-            for (int _ = 0; _ < 3; _++)
-                f[_] = t[(i+_)%4];
-            if (i % 2 == 0)
-                std::swap(f[1], f[2]);
-            f = rotateIvec3(f);
-            assert(faces.find(f) == faces.end());
-            ivec3 fo = ivec3(f.x, f.z, f.y);
-            if (faces.find(fo) != faces.end())
-                faces.erase(fo);
-            else faces.insert(f);
-        }
-    }
-
-    float time1 = getTimePast();
 
     // geometry
     std::vector<int> compressedIndex(vn, -1);  // [vn] global -> near boundary
@@ -883,7 +918,7 @@ void smoothMesh(
     boundaryVertGradWeights.resize(svn);
     boundaryTetGrads.resize(stn);
 
-    float time2 = getTimePast();
+    float time1 = getTimePast();
 
     for (int stepi = 0; stepi < nsteps; stepi++) {
 
@@ -901,11 +936,39 @@ void smoothMesh(
             const float* vd = (const float*)&v[0];
             float val, size2;
             float* res[3] = { &val, (float*)g, &size2 };
-            MeshgenTetLoss::meshgen_tet_loss(&vd, res, nullptr, nullptr, 0);
+            MeshgenTetLoss::meshgen_loss_tet(&vd, res, nullptr, nullptr, 0);
             for (int _ = 0; _ < 4; _++) {
-                vec3 dg = 0.01f * g[_] * size2;
+                vec3 dg = 0.005f * g[_] * size2;
                 if (std::isfinite(dot(dg, dg)))
                     grads[tet[_]] -= dg;
+            }
+        }
+        for (ivec3 f : faces) {
+            vec3 v[3], g[3];
+            for (int _ = 0; _ < 3; _++)
+                v[_] = verts[f[_]];
+            const float *vd = (const float*)&v[0];
+            float val, size2;
+            float* res[3] = { &val, (float*)g, &size2 };
+            MeshgenTetLoss::meshgen_loss_trig(&vd, res, nullptr, nullptr, 0);
+            for (int _ = 0; _ < 3; _++) {
+                vec3 dg = 0.02f * g[_] * size2;
+                if (std::isfinite(dot(dg, dg)))
+                    grads[f[_]] -= dg;
+            }
+        }
+        for (ivec4 e : edges) {
+            vec3 v[4], g[4];
+            for (int _ = 0; _ < 4; _++)
+                v[_] = verts[e[_]];
+            const float *vd = (const float*)&v[0];
+            float val, size2;
+            float* res[3] = { &val, (float*)g, &size2 };
+            MeshgenTetLoss::meshgen_loss_edge(&vd, res, nullptr, nullptr, 0);
+            for (int _ = 0; _ < 4; _++) {
+                vec3 dg = 0.02f * g[_] * size2;
+                if (std::isfinite(dot(dg, dg)))
+                    grads[e[_]] -= dg;
             }
         }
 
@@ -1092,9 +1155,9 @@ void smoothMesh(
             printf("%.3g (%d nan): %s\n", meanDisp, nanCount, buf);
     }
 
-    float time3 = getTimePast();
-    printf("smoothMesh: %.2g + %.2g + %.2g = %.2g secs\n",
-        time1-time0, time2-time1, time3-time2, time3-time0);
+    float time2 = getTimePast();
+    printf("smoothMesh: %.2g + %.2g = %.2g secs\n",
+        time1-time0, time2-time1, time2-time0);
 
 }
 

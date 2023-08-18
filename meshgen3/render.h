@@ -157,9 +157,13 @@ public:
         // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // glDisable(GL_DEPTH_TEST);
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+        if (0) {
+            // x-ray
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            // glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+            glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+        }
 
         glm::vec2 res = RenderParams::iResolution;
         transformMatrix = glm::perspective(0.2f * PIf, res.x / res.y, 0.1f / scale, 100.0f / scale);
