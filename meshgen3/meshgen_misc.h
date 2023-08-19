@@ -2,6 +2,8 @@
 
 #pragma once
 
+#define MESHGEN_TET_IMPLICIT_USE_GL 1
+
 #include <functional>
 #include <map>
 #include <set>
@@ -12,6 +14,10 @@
 #include <initializer_list>
 #include <bitset>
 #include "../include/elements.h"
+
+#if MESHGEN_TET_IMPLICIT_USE_GL
+#include "../include/gl.h"
+#endif
 
 
 #define MESHGEN_MISC_NS_START namespace MeshgenMisc {

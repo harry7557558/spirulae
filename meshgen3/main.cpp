@@ -63,7 +63,7 @@ void generateMesh(
         (int)verts.size(), (int)tets.size(), (int)faces.size(), (int)edges.size());
     // MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, isConstrained);
     // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
-    MeshgenTetImplicit::smoothMesh(
+    MeshgenTetImplicit::compressMesh(
         verts, tets, faces, edges, 5, Fs,
         constraint, isConstrained);
 #if 0
@@ -74,7 +74,7 @@ void generateMesh(
     MeshgenTetImplicit::isVolumeConsistent(verts, trigs);
     float t2 = getTimePast();
     printf("Mesh cleaned in %.2g secs.\n", t2-t1);
-    MeshgenTetImplicit::smoothMesh(
+    MeshgenTetImplicit::compressMesh(
         verts, trigs, 5, Fs,
         constraint, isConstrained);
     MeshgenTetImplicit::isVolumeConsistent(verts, trigs);
@@ -370,6 +370,8 @@ int main() {
 
     if (!initWindow())
         return -1;
+    MeshgenTetImplicit::initMeshGenerator();
+
     emscripten_run_script("wasmReady()");
     mainGUI(mainGUICallback);
 
@@ -377,6 +379,7 @@ int main() {
 
     if (!initWindow())
         return -1;
+    MeshgenTetImplicit::initMeshGenerator();
     updateShaderFunction("float funRaw(float x, float y, float z) { return length(vec3(x,y,z))-1.0; }");
     mainGUI(mainGUICallback);
 
