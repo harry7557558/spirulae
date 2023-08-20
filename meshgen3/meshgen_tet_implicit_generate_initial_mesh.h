@@ -4,6 +4,118 @@
 using namespace MeshgenMisc;
 
 
+// fast and stable, doesn't work well for saddles
+bool subdivCriterionSphere(
+    vec3 h, float e,
+    float v000, float v010, float v100, float v110,
+    float v001, float v011, float v101, float v111, float vccc
+) {
+    // Basic idea:
+    // - least squares fit to a sphere
+    //   - a (x^2+y^2+z^2) + b x + c y + d z + f
+    //   - [ccc 000 100 010 110 001 101 011 111]
+    // - compare the radius of the sphere to grid size
+    // MATLAB:
+    // - syms x y z
+    // - A = [0 0 0 0 1; x^2+y^2+z^2 -x -y -z 1; x^2+y^2+z^2 x -y -z 1; x^2+y^2+z^2 -x y -z 1; x^2+y^2+z^2 x y -z 1; x^2+y^2+z^2 -x -y z 1; x^2+y^2+z^2 x -y z 1; x^2+y^2+z^2 -x y z 1; x^2+y^2+z^2 x y z 1]
+    // - G = (A'*A)\A'
+    float a = (v000+v100+v010+v110+v001+v101+v011+v111 - 8.0f * vccc) / (8.0f * dot(h, h));
+    if (a == 0.0f)
+        return false;
+    float b = (-v000+v100-v010+v110-v001+v101-v011+v111) / (8.0f * h.x * a);
+    float c = (-v000-v100+v010+v110-v001-v101+v011+v111) / (8.0f * h.y * a);
+    float d = (-v000-v100-v010-v110+v001+v101+v011+v111) / (8.0f * h.z * a);
+    float f = vccc / a;
+    float x0 = -0.5f * b;
+    float y0 = -0.5f * c;
+    float z0 = -0.5f * d;
+    float r = sqrt(fmax(x0 * x0 + y0 * y0 + z0 * z0 - f, 0.0f));
+    float s = cbrt(h.x * h.y * h.z);
+    // return r < 10.0f * s;  // curvature
+    return s * s > 0.5f * e * r;  // error
+}
+
+// works for saddle points, can be numerically unstable, not well tested
+bool subdivCriterionPlanar(
+    vec3 h, float e,
+    float v000, float v010, float v100, float v110,
+    float v001, float v011, float v101, float v111, float vccc
+) {
+    // Basic idea:
+    // Find an orthonormal basis in R3 where one is in gradient direction
+    // In the orthonormal basis, fit A x^2 + B xy + C y^2 + D x + E y + F - G z
+
+    // orthonormal basis
+    float g2 = (v000+v100+v010+v110+v001+v101+v011+v111 - 8.0f*vccc) / (8.0f*dot(h, h));
+    float gx = (-v000+v100-v010+v110-v001+v101-v011+v111) / (8.0f*h.x);
+    float gy = (-v000-v100+v010+v110-v001-v101+v011+v111) / (8.0f*h.y);
+    float gz = (-v000-v100-v010-v110+v001+v101+v011+v111) / (8.0f*h.z);
+    if (gx == 0.0f && gy == 0.0f && gz == 0.0f)
+        return false;
+    vec3 g = vec3(gx, gy, gz);
+    if (g2*g2 < 1e-3f*dot(g, g))
+        return false;
+    vec3 n = normalize(g);
+    vec3 u = abs(n.z) == 1.0f ? vec3(1, 0, 0) : normalize(cross(n, vec3(0, 0, 1)));
+    vec3 v = cross(n, u);
+
+    // change of basis
+    vec3 ps[9] = {
+        vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(1, -1, -1), vec3(1, 1, -1),
+        vec3(-1, -1, 1), vec3(-1, 1, 1), vec3(1, -1, 1), vec3(1, 1, 1),
+        vec3(0, 0, 0)
+    };
+    float vs[9] = { v000, v010, v100, v110, v001, v011, v101, v111, vccc };
+    for (int i = 0; i < 9; i++) {
+        vec3 t = ps[i] * h;
+        ps[i] = vec3(dot(t, u), dot(t, v), dot(t, n));
+    }
+
+    // linear least squares
+    const int N = 7;
+    float A[N][N], b[N];
+    memset(&A[0][0], 0, N*N*sizeof(float));
+    memset(&b[0], 0, N*sizeof(float));
+    for (int k = 0; k < 9; k++) {
+        vec3 p = ps[k];
+        float c[N] = { p.x*p.x, p.x*p.y, p.y*p.y, p.x, p.y, 1.0f, p.z };
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                A[i][j] += c[i] * c[j];
+        for (int i = 0; i < N; i++)
+            b[i] += c[i] * vs[k];
+    }
+
+    // gaussian elimination
+    // to-do: cholesky
+    for (int i = 0; i < N; i++) {
+    	for (int j = 0; j < N; j++) if (j != i) {
+    	    double m = A[j][i] / A[i][i];
+    	    for (int k = i; k < N; k++)
+    	        A[j][k] -= m * A[i][k];
+    	    b[j] -= m * b[i];
+    	}
+        if (A[i][i] == 0.0f)
+            return false;
+    }
+    for (int i = 0; i < N; i++)
+        b[i] /= A[i][i];
+
+    // criteria
+    if (b[6] == 0.0)
+        return false;
+    for (int i = 0; i < N-1; i++)
+        b[i] /= b[6];
+    float d = sqrt((b[0]-b[2])*(b[0]-b[2])+b[1]*b[1]);
+    // float l = fmax(fabs(b[0]+b[2]-d), fabs(b[0]+b[2]+d));
+    float l = hypot(b[0]+b[2]-d, b[0]+b[2]+d) / sqrt(2.0f);
+    // printf("%f %f %f %f %f %f  %f\n", b[0], b[1], b[2], b[3], b[4], b[5], b[6]);
+    // printf("%f %f %f\n", l, length(vec3(gx, gy, gz)), g2);
+    float s = cbrt(h.x * h.y * h.z);
+    return s * s * l > 3.0f * e;
+}
+
+
 void generateInitialMesh(
     ScalarFieldFBatch Fs, vec3 b0, vec3 b1, ivec3 bn, int nd,
     std::vector<vec3> &vertices, std::vector<ivec4> &tets,
@@ -167,32 +279,13 @@ void generateInitialMesh(
                  8 * (int)std::isfinite(vccc)) <= 4)
                 continue;
         #if 1
-            // Basic idea:
-            // - least squares fit to a sphere
-            //   - a (x^2+y^2+z^2) + b x + c y + d z + f
-            //   - [ccc 000 100 010 110 001 101 011 111]
-            // - compare the radius of the sphere to grid size
-            // MATLAB:
-            // - syms x y z
-            // - A = [0 0 0 0 1; x^2+y^2+z^2 -x -y -z 1; x^2+y^2+z^2 x -y -z 1; x^2+y^2+z^2 -x y -z 1; x^2+y^2+z^2 x y -z 1; x^2+y^2+z^2 -x -y z 1; x^2+y^2+z^2 x -y z 1; x^2+y^2+z^2 -x y z 1; x^2+y^2+z^2 x y z 1]
-            // - G = (A'*A)\A'
-            float hx = 0.5f * (b1.x - b0.x) / (float)bnd.x * step;
-            float hy = 0.5f * (b1.y - b0.y) / (float)bnd.y * step;
-            float hz = 0.5f * (b1.z - b0.z) / (float)bnd.z * step;
-            float a = (v000+v100+v010+v110+v001+v101+v011+v111 - 8.0f * vccc) / (8.0f * (hx * hx + hy * hy + hz * hz));
-            if (a == 0.0f) continue;
-            float b = (-v000+v100-v010+v110-v001+v101-v011+v111) / (8.0f * hx * a);
-            float c = (-v000-v100+v010+v110-v001-v101+v011+v111) / (8.0f * hy * a);
-            float d = (-v000-v100-v010-v110+v001+v101+v011+v111) / (8.0f * hz * a);
-            float f = vccc / a;
-            float x0 = -0.5f * b;
-            float y0 = -0.5f * c;
-            float z0 = -0.5f * d;
-            float r = sqrt(fmax(x0 * x0 + y0 * y0 + z0 * z0 - f, 0.0f));
+            vec3 h = 0.5f * (b1 - b0) / vec3(bnd) * (float)step;
             float e = cbrt((b1.x-b0.x) * (b1.y-b0.y) * (b1.z-b0.z) / (bnd.x*bnd.y*bnd.z));
-            float s = cbrt(hx * hy * hz);
-            // if (r < 10.0f * s)  // curvature
-            if (s * s > 0.5f * e * r)  // error
+            if (subdivCriterionSphere(h, e,
+                v000, v010, v100, v110, v001, v011, v101, v111, vccc))
+                toDiv0[i] = true;
+            else if (subdivCriterionPlanar(h, e,
+                v000, v010, v100, v110, v001, v011, v101, v111, vccc))
                 toDiv0[i] = true;
         #else
             toDiv0[i] = true;

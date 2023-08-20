@@ -20,6 +20,8 @@ class GlMaxMovementEvaluator {
     GLuint shaderProgram;
     GLuint framebuffer, texture;
     int textureW, textureH;
+    GLuint vbo, vverts, vgrads;
+    std::vector<glm::vec2> coords;
 
 public:
     GlMaxMovementEvaluator();
@@ -100,9 +102,22 @@ void main() {
         throw "Failed to create framebuffer.";
     }
     glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &vverts);
+    glGenBuffers(1, &vgrads);
+
+    coords.resize(textureW*textureH);
+    for (int i = 0; i < textureW*textureH; i++) {
+        float x = i % textureW, y = i / textureW;
+        coords[i] = (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f;
+    }
 }
 
 GlMaxMovementEvaluator::~GlMaxMovementEvaluator() {
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &vverts);
+    glDeleteBuffers(1, &vgrads);
     glDeleteShader(shaderProgram);
     glDeleteTextures(1, &texture);
     glDeleteFramebuffers(1, &framebuffer);
@@ -125,23 +140,13 @@ void GlMaxMovementEvaluator::evaluate(
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    GLuint vverts;
-    glGenBuffers(1, &vverts);
-    GLuint vgrads;
-    glGenBuffers(1, &vgrads);
-
     size_t batch_size = textureW * textureH;
     for (size_t batchi = 0; batchi < pn; batchi += batch_size) {
         size_t batchn = std::min(batch_size, pn - batchi);
     
+        float t0 = getTimePast();
+
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        std::vector<glm::vec2> coords(batchn);
-        for (int i = 0; i < batchn; i++) {
-            float x = i % textureW, y = i / textureW;
-            coords[i] = (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f;
-        }
         glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * batchn, coords.data(), GL_STATIC_DRAW);
         GLint posAttrib = glGetAttribLocation(shaderProgram, "aPosition");
         glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -165,11 +170,15 @@ void GlMaxMovementEvaluator::evaluate(
 
         glDrawArrays(GL_POINTS, 0, batchn);
 
+        float t1 = getTimePast();
+
         std::vector<glm::vec4> pixels(batch_size);
         glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
         for (int i = 0; i < batchn; i++)
             mfs[batchi+i] = pixels[i];
-        // break;
+
+        float t2 = getTimePast();
+        // printf("%.2g %.2g ms\n", 1e3f*(t1-t0), 1e3f*(t2-t1));
 
         for (int _ = 0; _ < 4; _++) {
             glDisableVertexAttribArray(vertsAttrib+_);
@@ -177,9 +186,6 @@ void GlMaxMovementEvaluator::evaluate(
         }
     }
 
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &vverts);
-    glDeleteBuffers(1, &vgrads);
     glBindFramebuffer(GL_FRAMEBUFFER, NULL);
 
 }
@@ -325,7 +331,7 @@ void compressMesh(
 
         /* Smoothing */
 
-        float time0 = getTimePast();
+        float time0 = 1e3f*getTimePast();
 
         // accumulate gradient
         for (int i = 0; i < vn; i++)
@@ -344,6 +350,7 @@ void compressMesh(
                     grads[tet[_]] -= dg;
             }
         }
+        float time01 = 1e3f*getTimePast();
         for (ivec3 f : faces) {
             vec3 v[3], g[3];
             for (int _ = 0; _ < 3; _++)
@@ -358,6 +365,7 @@ void compressMesh(
                     grads[f[_]] -= dg;
             }
         }
+        float time02 = 1e3f*getTimePast();
         for (ivec4 e : edges) {
             vec3 v[4], g[4];
             for (int _ = 0; _ < 4; _++)
@@ -373,7 +381,7 @@ void compressMesh(
             }
         }
 
-        float time1 = getTimePast();
+        float time1 = 1e3f*getTimePast();
 
         // force the mesh on the boundary
         if (F) {
@@ -427,7 +435,7 @@ void compressMesh(
             }
         }
 
-        float time2 = getTimePast();
+        float time2 = 1e3f*getTimePast();
 
         // apply boundary constraints
         for (int i = 0; i < vn; i++) {
@@ -440,7 +448,8 @@ void compressMesh(
                 grads[i] += constraint(verts[i] + grads[i]);
         }
 
-        float time3 = getTimePast();
+        float time3 = 1e3f*getTimePast();
+        float time31 = time3, time32 = time3;
 
         // calculate maximum allowed vertex movement factor
         for (int i = 0; i < vn; i++)
@@ -459,7 +468,9 @@ void compressMesh(
             mfgrads.push_back(g);
         }
         std::vector<vec4> mfs(tets.size());
+        time31 = 1e3f*getTimePast();
         glMaxMovementEvaluator->evaluate(tets.size(), &mfverts[0], &mfgrads[0], &mfs[0]);
+        time32 = 1e3f*getTimePast();
         for (int i = 0; i < (int)tets.size(); i++) {
             ivec4 tet = tets[i];
             mat4x3 v = mfverts[i];
@@ -495,7 +506,7 @@ void compressMesh(
         }
     #endif
 
-        float time4 = getTimePast();
+        float time4 = 1e3f*getTimePast();
 
         // displacements
         for (int i = 0; i < vn; i++) {
@@ -523,7 +534,7 @@ void compressMesh(
             else nanCount++;
         }
 
-        float time5 = getTimePast();
+        float time5 = 1e3f*getTimePast();
 
         // reduce displacement if negative volume occurs
         std::vector<bool> reduce(vn, true);
@@ -553,12 +564,15 @@ void compressMesh(
             if (!found) break;
         }
 
-        float time6 = getTimePast();
+        float time6 = 1e3f*getTimePast();
 
         // verbose
         char buf[1024];
-        sprintf(buf, "%.2g + %.2g + %.2g + %.2g + %.2g + %.2g = %.2g secs",
-            time1-time0, time2-time1, time3-time2, time4-time3, time5-time4, time6-time5, time6-time0);
+        sprintf(buf, "(%.3g+%.3g+%.3g) + %.3g + %.3g + (%.3g+%.3g+%.3g) + %.3g + %.3g = %.3g ms",
+            time01-time0, time02-time01, time1-time02,
+            time2-time1, time3-time2,
+            time31-time3, time32-time31, time4-time32,
+            time5-time4, time6-time5, time6-time0);
         if (nanCount == 0)
             printf("%.3g: %s\n", meanDisp, buf);
         else

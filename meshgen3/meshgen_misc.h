@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <bitset>
+#include <memory.h>
 #include "../include/elements.h"
 
 #if MESHGEN_TET_IMPLICIT_USE_GL

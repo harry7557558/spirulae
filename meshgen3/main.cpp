@@ -53,7 +53,8 @@ void generateMesh(
     MeshgenTetImplicit::generateInitialMesh(
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
-        // ivec3(6, 7, 8), 2,
+        // ivec3(16), 1,
+        // ivec3(6, 7, 8), 1,
         ivec3(32), 2,
         // ivec3(16), 2,
         verts, tets, isConstrained
