@@ -23,6 +23,7 @@ const builtinFunctions = [
     ["Log Real", "log(re(((1/z)^12+1)((2/z)^6+1)"],
     ["LnGamma", "lngamma(4z)"],
     ["Riemann Zeta", "zeta(10z)"],
+    ["Power Fractal", "z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z"],
 ];
 
 

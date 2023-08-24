@@ -66,7 +66,20 @@ vec3 hslToRgb(float h, float s, float l) {
 void main(void) {
     vec2 uv = vXy;
     vec2 z = mix(xyMin, xyMax, 0.5+0.5*uv);
-    vec2 fz = fun(z);
+
+    vec3 tot_col = vec3(0.0);
+
+    #ifdef NO_AA
+    #define AA 1
+    #else
+    #define AA 2
+    #endif
+
+    for (int i = 0; i < AA; i++)
+        for (int j = 0; j < AA; j++) {
+            vec2 dz = ((vec2(i,j)+0.5)/float(AA)-0.5) * (xyMax-xyMin)/iResolution.xy;
+
+    vec2 fz = fun(z+dz);
 
     float h = atan(fz.y, fz.x) * 0.15915494309189535;
     float s = 1.0;
@@ -84,6 +97,10 @@ void main(void) {
     vec3 col = hslToRgb(h, s, l);
 
     if (isnan(dot(col, vec3(1)))) col = vec3(1);
+
+    tot_col += col;
+    }
+    vec3 col = tot_col/float(AA*AA);
 
 #if {%GRID%}
     col = mix(vec3(0.35,0.3,0.25), col, 0.1+0.9*pow(grid(z), 2.));

@@ -799,7 +799,8 @@ FunctionSubs.powEvalObjects = function (a, b, lang) {
             return b % 2 == 0 ? Math.pow(Math.abs(a), b) :
                 (a < 0. ? -1. : 1.) * Math.pow(Math.abs(a), b);
         }
-        var interval = new Interval(
+        var interval = n < 0 && a.range.containsZero() ?
+            new Interval() : new Interval(
             n % 2 == 0 && a.range.containsZero() ? 0.0 :
                 Math.min(spow(a.range.x0, n), spow(a.range.x1, n)),
             Math.max(spow(a.range.x0, n), spow(a.range.x1, n)));

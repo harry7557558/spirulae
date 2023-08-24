@@ -122,8 +122,9 @@ vec3 hslToRgb(float h, float s, float l) {
 vec3 colorDomain(vec2 z) {
     float h = atan(z.y, z.x) * 0.15915494309189535;
     float s = 1.0;
-    float k = 2.5-rBrightness;
-    float bri = pow(rBrightness,k)/(pow(rBrightness,k)+pow(1.-rBrightness,k));
+    float brightness = pow(rBrightness, 0.5);
+    float k = 2.5-brightness;
+    float bri = pow(brightness,k)/(pow(brightness,k)+pow(1.-brightness,k));
     float l = 1.0 - pow(1.0-bri, log(log(length(z) + 1.0) + 1.05));
     l = mix(0.1, 0.8, l);
     return max(hslToRgb(h, s, l), 0.);

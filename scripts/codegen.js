@@ -179,11 +179,11 @@ CodeGenerator.langs.glslc = {
         },
         {
             name: 'mc_zeta',
-            source: ""
+            source: "#define NO_AA"
         },
         {
             name: 'mc_lzeta',
-            source: ""
+            source: "#define NO_AA"
         }
     ],
 };

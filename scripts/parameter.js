@@ -276,7 +276,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         extraVariables.delete('π');
         if (extraVariables.size != 0)
             errmsg = "Definition not found: " + Array.from(extraVariables);
-        if (!UpdateFunctionInputConfig.equationMode) {
+        if (!UpdateFunctionInputConfig.implicitMode) {
             for (var i = 0; i < parsed.latex.length; i++)
                 parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
         }

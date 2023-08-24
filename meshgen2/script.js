@@ -24,6 +24,8 @@ const builtinFunctions = [
     ["Tangent", "(y-tan(2x))tan(y)"],
     ["Grid", "cos(10x)cos(10y)=0.7"],
     ["Mesh", "min(cos(10x-cos(5y)),cos(10y+cos(5x)))+0.5"],
+    ["Wavy Droplet", "max(x^2-(1+y)y^2,x^2+y^2-1,sin(14(2x-0.1sin(20y)))-0.8)"],
+    ["Double Spiral", "f(x,y)=(xcos(2piln(hypot(x,y)))+ysin(2piln(hypot(x,y))));f(1-2x,-1+2y)f(1+2x,-1-2y)"],
     ["Eyes", "a=3(y+x+1);b=3(y-x+1);sin(min(a*sin(b),b*sin(a)))-cos(max(a*cos(b),b*cos(a)))=(3-2y)/9+((2x^2+y^2)/6)^3"],
     ["Fractal Sine", "sin(x)sin(y)+sin(2x)sin(2y)/2+sin(4x)sin(4y)/3+sin(8x)sin(8y)/4+sin(17x)sin(16y)/5+sin(32x)sin(32y)/6"],
     ["Mandelbrot Set", "u(x,y)=x^2-y^2;v(x,y)=2xy;u1(x,y)=u(u(x,y)+x,v(x,y)+y);v1(x,y)=v(u(x,y)+x,v(x,y)+y);u2(x,y)=u(u1(x,y)+x,v1(x,y)+y);v2(x,y)=v(u1(x,y)+x,v1(x,y)+y);u3(x,y)=u(u2(x,y)+x,v2(x,y)+y);v3(x,y)=v(u2(x,y)+x,v2(x,y)+y);u4(x,y)=u(u3(x,y)+x,v3(x,y)+y);v4(x,y)=v(u3(x,y)+x,v3(x,y)+y;u5(x,y)=u(u4(x,y)+x,v4(x,y)+y);v5(x,y)=v(u4(x,y)+x,v4(x,y)+y);u6(x,y)=u(u5(x,y)+x,v5(x,y)+y);v6(x,y)=v(u5(x,y)+x,v5(x,y)+y);sin(log(2,log(2,hypot(u6(x-1/2,y),v6(x-1/2,y))+1)))"],
