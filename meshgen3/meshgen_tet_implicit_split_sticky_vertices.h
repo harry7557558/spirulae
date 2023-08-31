@@ -5,61 +5,64 @@ using namespace MeshgenMisc;
 
 
 void splitStickyVertices(
-    std::vector<vec3> &vertices, std::vector<ivec4> &tets, std::vector<ivec3> &faces,
+    std::vector<vec3> &vertices, std::vector<ivec4> &tets,
+    std::vector<ivec3> &faces, std::vector<ivec4> &edges,
     std::vector<bool> isConstrained[3]
 ) {
     int vn = (int)vertices.size();
     assert(vn == isConstrained[0].size() && vn == isConstrained[1].size());
+    int tn = (int)tets.size();
+
+    float time0 = getTimePast();
 
     // get tets on surface
-    std::vector<bool> isSurfaceTet(tets.size(), false);
-    std::unordered_set<ivec3> uniqueIndicesF;
-    for (ivec4 t : tets) {
-        for (int _ = 0; _ < 4; _++) {
-            ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
-            if (_ % 2 == 0) std::swap(f.y, f.z);
-            f = rotateIvec3(f);
-            ivec3 fo = ivec3(f.x, f.z, f.y);
-            if (uniqueIndicesF.find(fo) != uniqueIndicesF.end())
-                uniqueIndicesF.erase(fo);
-            else uniqueIndicesF.insert(f);
-        }
+    std::vector<bool> isSurfaceVert(vn, false);
+    for (ivec3 f : faces) {
+        for (int _ = 0; _ < 3; _++)
+            isSurfaceVert[f[_]] = true;
     }
-    for (int i = 0; i < (int)tets.size(); i++) {
-        ivec4 t = tets[i];
-        for (int _ = 0; _ < 4; _++) {
-            ivec3 f = ivec3(t[_], t[(_+1)%4], t[(_+2)%4]);
-            if (_ % 2 == 0) std::swap(f.y, f.z);
-            f = rotateIvec3(f);
-            if (uniqueIndicesF.find(f) != uniqueIndicesF.end())
-                isSurfaceTet[i] = true;
-        }
-    }
-    printf("%d\n", (int)uniqueIndicesF.size());
 
     // get neighbors
-    std::vector<std::vector<int>> neighbors(vn);
-    std::vector<std::vector<int>> neighborTs(vn);
-    std::vector<std::vector<int>> neighborFs(vn);
-    for (int ti = 0; ti < (int)tets.size(); ti++) {
-        ivec4 t = tets[ti];
-        for (int i = 0; i < 4; i++) {
-            neighborTs[t[i]].push_back(ti);
-        }
-    }
-    for (int fi = 0; fi < (int)faces.size(); fi++) {
-        ivec3 f = faces[fi];
-        for (int i = 0; i < 3; i++) {
-            neighborFs[f[i]].push_back(fi);
-            for (int j = 0; j < 3; j++) if (j != i) {
-                bool has = false;
-                for (int v : neighbors[f[i]])
-                    if (v == f[j]) has = true;
-                if (!has)
-                    neighbors[f[i]].push_back(f[j]);
+    std::vector<std::vector<int>> neighbors, neighborTs, neighborFs, neighborEs;
+    auto push_back = [](std::vector<int> &v, int i) {
+        for (int j : v)
+            if (i == j) return;
+        v.push_back(i);
+    };
+    auto vec_erase = [](std::vector<int> &v, int i) {
+        std::vector<int> v1;
+        for (int j : v)
+            if (i != j) v1.push_back(j);
+        v = v1;
+    };
+    auto recomputeNeighbors = [&]() {
+        // have this as a callable function for easy checking neighbor update correctness
+        neighbors = std::vector<std::vector<int>>(vertices.size());
+        neighborTs = std::vector<std::vector<int>>(vertices.size());
+        neighborFs = std::vector<std::vector<int>>(vertices.size());
+        neighborEs = std::vector<std::vector<int>>(vertices.size());
+        for (int i = 0; i < (int)tets.size(); i++) {
+            ivec4 t = tets[i];
+            for (int _ = 0; _ < 4; _++) {
+                neighborTs[t[_]].push_back(i);
             }
         }
-    }
+        for (int i = 0; i < (int)faces.size(); i++) {
+            ivec3 f = faces[i];
+            for (int _ = 0; _ < 3; _++) {
+                neighborFs[f[_]].push_back(i);
+            }
+        }
+        for (int i = 0; i < (int)edges.size(); i++) {
+            ivec4 e = edges[i];
+            for (int _ = 0; _ < 4; _++) {
+                neighborEs[e[_]].push_back(i);
+            }
+            push_back(neighbors[e[0]], e[1]);
+            push_back(neighbors[e[1]], e[0]);
+        }
+    };
+    recomputeNeighbors();
 
     // break some constraints
     for (int vi = 0; vi < vn; vi++) {
@@ -76,69 +79,35 @@ void splitStickyVertices(
         }
     }
 
-    // for each vertex
+    float time1 = getTimePast();
+
+    // split sticky verts
     std::vector<int> neighborMap(vn, -1);
-    std::vector<int> additionalMap(vn);
-    for (int i = 0; i < vn; i++)
-        additionalMap[i] = i;
     for (int vi = 0; vi < vn; vi++) {
-        // printf("%d/%d\n", vi, vn);
-        std::vector<int> nb = neighbors[vi];
-        int nn = (int)nb.size();
+        // neighborMap = std::vector<int>(vertices.size(), -1);
+        // recomputeNeighbors();
+
+        // init neighbor map
+        std::vector<int> nb0 = neighbors[vi];
+        int nn = (int)nb0.size();
+        if (!nn) continue;
         for (int i = 0; i < nn; i++)
-            neighborMap[nb[i]] = i;
-        neighborMap[vi] = nn;
+            neighborMap[nb0[i]] = i;
+
         // find disjoint components
         DisjointSet dsj(nn);
-        std::map<uint64_t, int> bridges;
         for (int fi : neighborFs[vi]) {
             ivec3 f = faces[fi];
             for (int _ = 0; _ < 3; _++) {
-                int a = neighborMap[additionalMap[f[_]]];
-                int b = neighborMap[additionalMap[f[(_+1)%3]]];
+                int a = f[_];
+                int b = f[(_+1)%3];
+                if (a == vi || b == vi) continue;
+                a = neighborMap[a], b = neighborMap[b];
                 assert(a != -1 && b != -1);
-                if (a > b) std::swap(a, b);
-                bridges[((uint64_t)a<<32)|(uint64_t)b] += 1;
+                dsj.unionSet(a, b);
             }
         }
-        int skipCount = 0;
-        std::vector<bool> skips(nn, false);
-        for (std::pair<uint64_t, int> ec : bridges) {
-            int a = (int)(ec.first>>32);
-            int b = (int)ec.first;
-            if (ec.second > 2) {
-                assert(a == nn || b == nn);
-                assert(ec.second % 2 == 0);
-                printf("%d  %d %d /%d\n", ec.second, a, b, nn);
-                skips[a+b-nn] = true;
-                skipCount++;
-            }
-        }
-        for (std::pair<uint64_t, int> ec : bridges) {
-            int a = (int)(ec.first>>32);
-            int b = (int)ec.first;
-            // if (ec.second == 1) {
-            //     assert(a != nn && b != nn);
-            if (a != nn && b != nn) {
-                if (!skips[a] && !skips[b]) {
-                    // if (skipCount == 1) printf("u %d %d\n", a, b);
-                    dsj.unionSet(a, b);
-                }
-            }
-        }
-        // for (int fi : neighborFs[vi]) {
-        //     ivec3 f = faces[fi];
-        //     for (int i = 0; i < 3; i++)
-        //         f[i] = neighborMap[additionalMap[f[i]]];
-        //     if (skips[f[0]] || skips[f[1]] || skips[f[2]])
-        //         continue;
-        //     for (int _ = 0; _ < 3; _++) {
-        //         int a = f[_];
-        //         int b = f[(_+1)%3];
-        //         if (a != -1 && b != -1 && a < nn && b < nn)
-        //             dsj.unionSet(a, b);
-        //     }
-        // }
+
         // map disjoint components
         int dsjCount = 0;
         std::vector<int> newVi(nn, -1);
@@ -146,67 +115,110 @@ void splitStickyVertices(
             int rep = dsj.findRep(i);
             if (rep == i) {
                 dsjCount++;
-                if (skips[i]) {
-                    newVi[rep] = vi;
-                    continue;
-                }
                 if (dsjCount > 1) {
                     newVi[rep] = (int)vertices.size();
                     vertices.push_back(vertices[vi]);
+                    neighbors.push_back(std::vector<int>());
+                    neighborTs.push_back(std::vector<int>());
+                    neighborFs.push_back(std::vector<int>());
+                    neighborEs.push_back(std::vector<int>());
                     for (int _ = 0; _ < 3; _++)
                         isConstrained[_].push_back(isConstrained[_][vi]);
-                    additionalMap.push_back(vi);
+                    neighborMap.push_back(-1);
                 }
                 else newVi[rep] = vi;
             }
         }
-        if (skipCount) {
-            printf("%d %d\n", dsjCount, skipCount);
-            for (int fi : neighborFs[vi]) {
-                ivec3 f = faces[fi];
-                for (int i = 0; i < 3; i++)
-                    f[i] = neighborMap[additionalMap[f[i]]];
-                printf("%d %d %d\n", f[0], f[1], f[2]);
-            }
-            // if (skipCount == 1) exit(0);
+        assert(dsjCount >= 1);
+        if (dsjCount == 1) {
+            for (int i = 0; i < nn; i++)
+                neighborMap[nb0[i]] = -1;
+            continue;
         }
+
         // update tets
-        if (dsjCount > 1) {
-            // tets
-            for (int ti : neighborTs[vi]) {
-                ivec4 t = tets[ti];
-                for (int i = 0; i < 4; i++) {
-                    if (t[i] != vi) continue;
-                    for (int _ = 0; _ < 4; _++) if (i != _) {
-                        int ji = neighborMap[additionalMap[t[_]]];
-                        if (ji == -1) continue;
-                        t[i] = newVi[dsj.findRep(ji)];
-                        break;
-                    }
+        for (int ti : neighborTs[vi]) {
+            ivec4 t = tets[ti];
+            for (int i = 0; i < 4; i++) {
+                if (t[i] != vi) continue;
+                for (int _ = 0; _ < 4; _++) {
+                    int ji = neighborMap[t[_]];
+                    if (ji == -1) continue;
+                    t[i] = newVi[dsj.findRep(ji)];
+                    break;
                 }
-                tets[ti] = t;
             }
-            // faces
-            int changedCount = 0;
-            for (int fi : neighborFs[vi]) {
-                ivec3 f = faces[fi];
-                for (int i = 0; i < 3; i++) {
-                    if (f[i] != vi) continue;
-                    for (int _ = 0; _ < 3; _++) if (i != _) {
-                        int ji = neighborMap[additionalMap[f[_]]];
-                        f[i] = newVi[dsj.findRep(ji)];
-                        changedCount += 1;
-                        break;
-                    }
-                }
-                faces[fi] = f;
-            }
-            assert(changedCount == (int)neighborFs[vi].size());
-            // To-do: edges
+            tets[ti] = t;
         }
+
+        // update faces
+        int changedCount = 0;
+        for (int fi : neighborFs[vi]) {
+            ivec3 f = faces[fi];
+            for (int i = 0; i < 3; i++) {
+                if (f[i] != vi) continue;
+                for (int _ = 0; _ < 3; _++) {
+                    int ji = neighborMap[f[_]];
+                    if (ji == -1) continue;
+                    f[i] = newVi[dsj.findRep(ji)];
+                    changedCount += 1;
+                    break;
+                }
+            }
+            faces[fi] = f;
+        }
+        assert(changedCount == (int)neighborFs[vi].size());
+
+        // update edges
+        for (int ei : neighborEs[vi]) {
+            ivec4 e = edges[ei];
+            for (int i = 0; i < 4; i++) {
+                if (e[i] != vi) continue;
+                for (int _ = 0; _ < 4; _++) {
+                    int ji = neighborMap[e[_]];
+                    if (ji == -1) continue;
+                    e[i] = newVi[dsj.findRep(ji)];
+                    break;
+                }
+            }
+            edges[ei] = e;
+        }
+
+        // recompute neighbors
+        std::vector<int> nbs = neighbors[vi];
+        std::vector<int> nbts = neighborTs[vi];
+        std::vector<int> nbfs = neighborFs[vi];
+        std::vector<int> nbes = neighborEs[vi];
+        neighbors[vi].clear(), neighborTs[vi].clear(), neighborFs[vi].clear(), neighborEs[vi].clear();
+        for (int i : nbs) {
+            vec_erase(neighbors[i], vi);
+        }
+        for (int i : nbts) {
+            ivec4 t = tets[i];
+            for (int _ = 0; _ < 4; _++)
+                push_back(neighborTs[t[_]], i);
+        }
+        for (int i : nbfs) {
+            ivec3 f = faces[i];
+            for (int _ = 0; _ < 3; _++)
+                push_back(neighborFs[f[_]], i);
+        }
+        for (int i : nbes) {
+            ivec4 e = edges[i];
+            for (int _ = 0; _ < 4; _++)
+                push_back(neighborEs[e[_]], i);
+            push_back(neighbors[e[0]], e[1]);
+            push_back(neighbors[e[1]], e[0]);
+        }
+
         // restore neighbor map
         for (int i = 0; i < nn; i++)
-            neighborMap[nb[i]] = -1;
-        neighborMap[vi] = -1;
+            neighborMap[nb0[i]] = -1;
     }
+
+    vn = (int)vertices.size();
+
+    float time2 = getTimePast();
+    printf("splitStickyVertices: %.2g + %.2g = %.2g secs\n",
+        time1-time0, time2-time1, time2-time0);
 }

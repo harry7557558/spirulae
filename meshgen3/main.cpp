@@ -53,7 +53,7 @@ void generateMesh(
     MeshgenTetImplicit::generateInitialMesh(
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
-        // ivec3(16), 1,
+        // ivec3(16), 0,
         // ivec3(6, 7, 8), 1,
         ivec3(32), 2,
         // ivec3(16), 2,
@@ -62,7 +62,7 @@ void generateMesh(
     MeshgenTetImplicit::restoreSurface(verts, tets, faces, edges);
     printf("%d verts, %d tets, %d faces, %d edges\n",
         (int)verts.size(), (int)tets.size(), (int)faces.size(), (int)edges.size());
-    // MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, isConstrained);
+    MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, edges, isConstrained);
     // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
     MeshgenTetImplicit::compressMesh(
         verts, tets, faces, edges, 5, Fs,

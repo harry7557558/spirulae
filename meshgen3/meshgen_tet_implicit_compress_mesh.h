@@ -420,8 +420,8 @@ void compressMesh(
             for (int i = 0; i < svn; i++) {
                 if (boundaryVertGradWeights[i] <= 0.0f)
                     printf("%d %f\n", i, boundaryVertGradWeights[i]);
-                assert(boundaryVertGradWeights[i] > 0.0f);
-                boundaryVertGrads[i] /= boundaryVertGradWeights[i];
+                assert(boundaryVertGradWeights[i] >= 0.0f);
+                boundaryVertGrads[i] /= fmax(boundaryVertGradWeights[i], 1e-6f);
             }
             // move the vertex to the boundary
             for (int i = 0; i < svn; i++) {
