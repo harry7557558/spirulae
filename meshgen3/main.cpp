@@ -49,23 +49,31 @@ void generateMesh(
 
     float t0 = getTimePast();
     verts.clear(), tets.clear(), faces.clear();
-    std::vector<bool> isConstrained[3];
+    std::vector<bool> isConstrained0[3];
     MeshgenTetImplicit::generateInitialMesh(
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
         // ivec3(16), 0,
         // ivec3(6, 7, 8), 1,
-        ivec3(32), 2,
+        ivec3(32), 1,
         // ivec3(16), 2,
-        verts, tets, isConstrained
+        verts, tets, isConstrained0
     );
+    std::vector<float> funvals(verts.size());
+    Fs(verts.size(), &verts[0], &funvals[0]);
+    std::vector<bool> isConstrained[3];
+    MeshgenTetImplicit::cutIsosurface(
+        std::vector<vec3>(verts), funvals, std::vector<ivec4>(tets), isConstrained0,
+        verts, tets, isConstrained);
+    for (int _ = 0; _ < 3; _++)
+        isConstrained[_].resize(verts.size());
     MeshgenTetImplicit::restoreSurface(verts, tets, faces, edges);
     printf("%d verts, %d tets, %d faces, %d edges\n",
         (int)verts.size(), (int)tets.size(), (int)faces.size(), (int)edges.size());
-    MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, edges, isConstrained);
-    // assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
+    // MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, edges, isConstrained);
+    assert(MeshgenTetImplicit::isVolumeConsistent(verts, tets));
     MeshgenTetImplicit::compressMesh(
-        verts, tets, faces, edges, 5, Fs,
+        verts, tets, faces, edges, 8, Fs,
         constraint, isConstrained);
 #if 0
     float t1 = getTimePast();
