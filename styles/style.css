@@ -29,9 +29,16 @@
 
 #axes {
     display: block;
-    pointer-events: none;
     margin-top: 5px;
     margin-left: -2px;
+}
+
+svg:hover .axis-3d-active {
+    fill: rgba(196, 128, 48, 0.6);
+}
+
+#axis-x, #axis-y, #axis-z, #legend-text {
+    pointer-events: none;
 }
 
 #control {

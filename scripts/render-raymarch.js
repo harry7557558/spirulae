@@ -119,6 +119,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         state.clipSize[0], state.clipSize[1], state.clipSize[2]);
     gl.uniform3f(gl.getUniformLocation(renderer.raymarchProgram, "LDIR"),
         lightDir[0], lightDir[1], lightDir[2]);
+    gl.uniform1i(gl.getUniformLocation(renderer.raymarchProgram, "lAxes"), state.lAxes);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rZScale"), calcZScale());
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rBrightness"), state.rBrightness);
     renderPass();

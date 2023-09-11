@@ -90,6 +90,32 @@ function UniformSlider(name, id, vmin, vmax, v0) {
     });
 }
 
+// add one on click
+function ClickableObject(name, id, period) {
+    this.name = name;
+    this.element = document.getElementById(id);
+    this.period = period;
+    this.count = 0;
+    var clicker = this;
+    this.getValue = function () {
+        return clicker.count % period;
+    };
+    this.setValue = function(value) {
+        if (isFinite(value))
+            clicker.count = value % period;
+        state[clicker.name] = clicker.count;
+        state.renderNeeded = true;
+    };
+    this.element.addEventListener('pointerdown', function() {
+        clicker.count = (clicker.count + 1) % period;
+        state[clicker.name] = clicker.count;
+        state.renderNeeded = true;
+        updateFunctionInput(false, false);
+    });
+    state[clicker.name] = clicker.count;
+    state.renderNeeded = true;
+}
+
 var RawParameters = [];
 var RawUniformSliders = [];
 

@@ -104,6 +104,7 @@ document.body.onload = function (event) {
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, Math.PI / 6.0),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, Math.PI / 6.0),
+        new ClickableObject('lAxes', 'axis-circle', 4),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
