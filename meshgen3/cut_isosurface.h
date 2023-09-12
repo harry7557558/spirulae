@@ -69,7 +69,7 @@ const int LUT_MARCH_F[8][2][6] = {
 
 
 void cutIsosurface(
-    const std::vector<vec3>& verts, const std::vector<float>& funvals,
+    const std::vector<vec3>& verts, std::vector<float> funvals, std::vector<bool> toCut,
     const std::vector<ivec4>& tets, const std::vector<bool> isConstrained[3],
     std::vector<vec3>& resVerts, std::vector<ivec4>& resTets, std::vector<bool> resIsConstrained[3]
 ) {
@@ -79,6 +79,10 @@ void cutIsosurface(
     resTets.clear();
     for (int _ = 0; _ < 3; _++)
         resIsConstrained[_].clear();
+    
+    if (!toCut.empty())
+        for (size_t i = 0; i < verts.size(); i++)
+            funvals[i] = toCut[i] ? 1.0f : -1.0f;
 
     float time0 = getTimePast();
 
@@ -116,7 +120,9 @@ void cutIsosurface(
                 if (eMap.find(ivec2(i, j)) == eMap.end()) {
                     eMap[ivec2(i, j)] = (int)resVerts.size();
                     vec3 x0 = verts[i], x1 = verts[j];
+                    float t0 = funvals[i], t1 = funvals[j];
                     resVerts.push_back(0.5f*(x0+x1));
+                    // resVerts.push_back(mix(x0, x1, -t0/(t1-t0)));
                     for (int _ = 0; _ < 3; _++)
                         resIsConstrained[_].push_back(isConstrained[_][i] && isConstrained[_][j]);
                 }

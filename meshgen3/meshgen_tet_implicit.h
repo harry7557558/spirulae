@@ -15,11 +15,12 @@ MESHGEN_TET_IMPLICIT_NS_START
 
 using namespace MeshgenMisc;
 
-#include "meshgen_tet_implicit_generate_initial_mesh.h"
-#include "meshgen_tet_implicit_cut_isosurface.h"
-#include "meshgen_tet_implicit_restore_surface.h"
-#include "meshgen_tet_implicit_split_sticky_vertices.h"
-#include "meshgen_tet_implicit_compress_mesh.h"
+#include "generate_initial_mesh.h"
+#include "find_sticky_vertices.h"
+#include "cut_isosurface.h"
+#include "restore_surface.h"
+#include "split_sticky_vertices.h"
+#include "compress_mesh.h"
 
 
 void initMeshGenerator() {
