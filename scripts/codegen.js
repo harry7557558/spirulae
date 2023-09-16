@@ -9,7 +9,7 @@ let CodeGenerator = {
         @inherit: inherit math function definitions from these languages if not specified
         @extensions: additional required functions/definitions, don't inherit
     */
-    langsOrder: ['glsl', 'glslc', 'cppf', 'cppd'],
+    langsOrder: ['glsl', 'glslc', 'cppf', 'cppd', 'js'],
     langs: {}
 };
 
@@ -297,6 +297,33 @@ CodeGenerator.langs.cppd = {
             name: 'iTime',
             source: "double iTime = 0.0;"
         },
+        {
+            name: 'erfinv',
+            source: "double erfinv(double x) {\n\
+    float u = log(1.0-x*x);\n\
+    float c = 0.5*u+4.3307;\n\
+    return (x>0.?1.:-1.)*sqrt(sqrt(c*c-u/0.147)-c);\n\
+}"
+        }
+    ],
+};
+
+// JavaScript
+CodeGenerator.langs.js = {
+    inherit: ['cppd'],
+    config: null,
+    presets: {
+        implicit2: {
+            fun: "function(x, y) {\n\
+{%funbody%}\n\
+    return {%val%};\n\
+}",
+            prefix: 'v',
+            def: "    var {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
+    },
+    extensions: [
         {
             name: 'erfinv',
             source: "double erfinv(double x) {\n\

@@ -433,6 +433,7 @@ function initRenderer() {
 
 function updateShaderFunction(funCode, funGradCode, params) {
     let gl = renderer.gl;
+    state.renderNeeded = true;  // update cursor
 
     function sub(shaderSource) {
         shaderSource = shaderSource.replaceAll("{%FUN%}", funCode);
@@ -510,5 +511,4 @@ function updateShaderFunction(funCode, funGradCode, params) {
     }
 
     console.timeEnd("compile shader");
-    state.renderNeeded = true;
 }

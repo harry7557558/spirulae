@@ -8,6 +8,10 @@
     touch-action: none;
 }
 
+.cursor-crosshair {
+    cursor: crosshair;
+}
+
 #legend {
     position: fixed;
     left: 0;
@@ -64,6 +68,10 @@ svg:hover .axis-3d-active {
     padding: 0.2em 0.3em;
     white-space: normal;
     margin-bottom: 0
+}
+
+#value-display {
+    font-family: monospace;
 }
 
 #equation-input {

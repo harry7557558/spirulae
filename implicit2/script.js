@@ -162,6 +162,7 @@ document.body.onload = function (event) {
     // init code generator
     initLangpack();
     CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit2_compact;
+    CodeGenerator.langs.js.config = CodeGenerator.langs.js.presets.implicit2;
 
     // init parameters
     initParameters([
@@ -172,6 +173,7 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
+    UpdateFunctionInputConfig.jsFunName = "funRawJS";
 
     // main
     initMain([

@@ -88,6 +88,14 @@ function resizeState() {
     state.width = width, state.height = height;
 }
 
+// get location from state
+function screenToWorld(screenX, screenY) {
+    return {
+        x: state.xmin + (state.xmax-state.xmin) * screenX / state.width,
+        y: state.ymin + (state.ymax-state.ymin) * (1.0 - screenY / state.height)
+    };
+}
+
 // render legend
 function renderLegend() {
     var scale = state.width / (state.xmax - state.xmin);
@@ -134,7 +142,7 @@ async function drawScene(state) {
         renderer.canvas.style.cursor = "not-allowed";
         return;
     }
-    else renderer.canvas.style.cursor = "default";
+    else renderer.canvas.style.cursor = null;
     let gl = renderer.gl;
     let antiAliaser = renderer.antiAliaser;
 
@@ -386,6 +394,17 @@ function initRenderer() {
             state.renderNeeded = true;
         }
     });
+    canvas.addEventListener("mousemove", function (event) {
+        let display = document.getElementById("value-display");
+        if (display && window.funRawJS) {
+            var world = screenToWorld(event.clientX, event.clientY);
+            display.innerHTML = (world.x, world.y, funRawJS(world.x, world.y));
+            display.innerHTML = '(' + world.x.toPrecision(4) + ',' +
+                world.y.toPrecision(4) + ') -> ' +
+                funRawJS(world.x, world.y).toPrecision(4);
+            display.style.display = 'block';
+        }
+    });
     canvas.addEventListener("touchstart", function (event) {
         if (event.touches.length == 2) {
             var fingerPos0 = [event.touches[0].pageX, event.touches[0].pageY];
@@ -425,6 +444,7 @@ function initRenderer() {
 
 function updateShaderFunction(funCode, funGradCode, params) {
     let gl = renderer.gl;
+    state.renderNeeded = true;  // update cursor
 
     if (funCode == null) {
         if (renderer.shaderProgram != null) {
@@ -466,5 +486,4 @@ function updateShaderFunction(funCode, funGradCode, params) {
     }
 
     console.timeEnd("compile shader");
-    state.renderNeeded = true;
 }

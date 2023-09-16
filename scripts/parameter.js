@@ -255,6 +255,7 @@ var UpdateFunctionInputConfig = {
     implicitMode: true,  // add =0 to the end
     enableMain: true,  // requires a main equation
     warnNaN: true,
+    jsFunName: null
 };
 
 var WarningStack = [];
@@ -337,6 +338,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex);
         }
+        // shader function
         var expr = {};
         if (UpdateFunctionInputConfig.enableMain)
             expr.val = parsed.val;
@@ -357,6 +359,18 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         if (WarningStack.length != 0)
             messageWarning(WarningStack.join('\n'));
         updateShaderFunction(code, null, parameters);
+        // JS function
+        if (UpdateFunctionInputConfig.jsFunName) {
+            var funname = UpdateFunctionInputConfig.jsFunName;
+            try {
+                var result = CodeGenerator.postfixToSource([expr], [funname], 'js');
+                eval('window.'+funname+'='+result.source);
+            } catch(e) {
+                window[funname] = null;
+            };
+            let display = document.getElementById("value-display");
+            if (display) display.style.display = 'none';
+        }
     } catch (e) {
         console.error(e);
         messageError(e);
