@@ -262,7 +262,6 @@ var UpdateFunctionInputConfig = {
 var WarningStack = [];
 
 function updateFunctionInput(forceRecompile = false, updateFunction = true) {
-    console.log('hi');
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let texContainer = document.getElementById("mathjax-preview");
@@ -278,7 +277,6 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     } catch (e) { console.error(e); }
     if (!updateFunction) return;
     WarningStack = [];
-    console.log('hi');
 
     // parse input
     var parsed = null;

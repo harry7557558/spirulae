@@ -41,7 +41,7 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span title="Show axes and grid"><input type="checkbox" id="checkbox-grid" checked />grid</span>&ensp;
+        <span title="Show axes and grid"><input type="checkbox" id="checkbox-grid" checked disabled />grid</span>&ensp;
         <span title="Light theme"><input type="checkbox" id="checkbox-light" checked disabled />☼</span>
         <br />
         <p id="value-display"></p>
@@ -70,6 +70,8 @@
             loadScript("../scripts/render-gl.js");
             loadScript("../scripts/render-canvas.js");
             loadScript("../scripts/latex.js");
+            loadScript("odeint.js");
+            loadScript("app.js");
             loadScript("script.js");
         })();
     </script>

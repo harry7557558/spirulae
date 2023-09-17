@@ -144,7 +144,19 @@ function drawLine(x1, y1, x2, y2) {
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.closePath();
+    ctx.stroke();
+}
+function drawPolyline(points, closed=false) {
+    let ctx = renderer.ctx;
+    ctx.beginPath();
+    var p0 = worldToScreen(points[0].x, points[0].y);
+    ctx.moveTo(p0.x, p0.y);
+    for (var i = 1; i < points.length; i++) {
+        var p = worldToScreen(points[i].x, points[i].y);
+        ctx.lineTo(p.x, p.y);
+    }
+    if (closed)
+        ctx.closePath();
     ctx.stroke();
 }
 
@@ -157,45 +169,7 @@ async function drawScene(state) {
     }
     else renderer.canvas.style.cursor = null;
 
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, state.width, state.height);
-
-    // grid
-    var sc = 0.05*Math.max(state.xmax-state.xmin, state.ymax-state.ymin);
-    sc = Math.pow(10, Math.round(Math.log10(sc)));
-    ctx.strokeStyle = 'rgb(192,192,192)';
-    ctx.lineWidth = 1;
-    for (var i = Math.ceil(state.ymin/sc); i <= Math.floor(state.ymax/sc); i++) {
-        drawLine(state.xmin, sc*i, state.xmax, sc*i);
-    }
-    for (var i = Math.ceil(state.xmin/sc); i <= Math.floor(state.xmax/sc); i++) {
-        drawLine(sc*i, state.ymin, sc*i, state.ymax);
-    }
-
-    // axes
-    ctx.strokeStyle = 'rgb(128,128,128)';
-    ctx.lineWidth = 4;
-    drawLine(state.xmin, 0.0, state.xmax, 0.0);
-    drawLine(0.0, state.ymin, 0.0, state.ymax);
-
-    // vector field
-    ctx.lineWidth = 2;
-    sc = 0.02*Math.max(state.xmax-state.xmin, state.ymax-state.ymin);
-    for (var j = Math.ceil(state.ymin/sc); j <= Math.floor(state.ymax/sc); j++) {
-        for (var i = Math.ceil(state.xmin/sc); i <= Math.floor(state.xmax/sc); i++) {
-            var x = i*sc, y = j*sc;
-            var d = funRaw(x, y);
-            var dxdt = d.dxdt, dydt = d.dydt;
-            var l = Math.hypot(dxdt, dydt);
-            var t = Math.tanh(0.5*l);
-            var r = Math.round(255*t);
-            var g = Math.round(128);
-            var b = Math.round(255-255*t);
-            ctx.strokeStyle = 'rgb('+r+','+g+','+b+')';
-            var k = 0.5*sc/l;
-            drawLine(x-k*dxdt, y-k*dydt, x+k*dxdt, y+k*dydt);
-        }
-    }
+    onDraw();
 }
 
 
@@ -348,6 +322,8 @@ function initRenderer() {
     document.getElementById("fps").addEventListener("click", function () {
         state.iTime = -1.0;
     });
+
+    initApp();
 }
 
 function updateShaderFunction(funCode, funGradCode, params) {
@@ -373,4 +349,6 @@ function updateShaderFunction(funCode, funGradCode, params) {
         prevCode.shaderSource = shaderSource;
     }
 
+    if (window.hasOwnProperty('onUpdate'))
+        onUpdate();
 }

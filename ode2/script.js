@@ -6,11 +6,15 @@ const NAME = "spirulae.ode2.";
 // https://discord.gg/hNtrWCTwwa
 const builtinFunctions = [
     ["Cooling", "k=3;T0=1;x_t=1;y_t=-k(y-T0)"],
+    ["Asymptotes", "x_t=1;y_t=y^4-y^3-3*y^2+y+2"],
     ["Circulation", "x_t=y;y_t=-x"],
     ["Swirl", "x_t=sin(x+y);y_t=cos(x-y)"],
     ["Swirl 2", "x_t=sin(x+y)+y;y_t=cos(x-y)"],
     ["Electric Field", "d1=(x-1)^2+y^2;d2=(x+1)^2+y^2;x_t=(x-1)/d1-(x+1)/d2;y_t=y/d1-y/d2"],
     ["Lotka-Volterra", "x_t=x-xy;y_t=xy-y"],
+    ["Spiral", "x_t=y+0.2x;y_t=0.2y-x"],
+    ["Spiral Flower", "a=1+10sin(10atan2(y,x));x_t=y+0.2xa;y_t=0.2ya-x"],
+    ["L-V Spiral", "x_t=x-xy+0.1y;y_t=xy-y+0.1x"],
 ];
 
 
