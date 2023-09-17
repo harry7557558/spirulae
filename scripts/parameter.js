@@ -255,12 +255,14 @@ var UpdateFunctionInputConfig = {
     implicitMode: true,  // add =0 to the end
     enableMain: true,  // requires a main equation
     warnNaN: true,
-    jsFunName: null
+    useGL: true,
+    jsFunName: null,
 };
 
 var WarningStack = [];
 
 function updateFunctionInput(forceRecompile = false, updateFunction = true) {
+    console.log('hi');
     let checkboxLatex = document.getElementById("checkbox-latex");
     let checkboxAutoCompile = document.getElementById("checkbox-auto-compile");
     let texContainer = document.getElementById("mathjax-preview");
@@ -276,6 +278,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     } catch (e) { console.error(e); }
     if (!updateFunction) return;
     WarningStack = [];
+    console.log('hi');
 
     // parse input
     var parsed = null;
@@ -345,31 +348,31 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         for (var varname in MathParser.DependentVariables)
             if (parsed.hasOwnProperty(varname))
                 expr[varname] = parsed[varname];
-        result = CodeGenerator.postfixToSource(
-            [expr], ["funRaw"],
-            UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
-        );
-        var code = result.source;
-        console.log(code);
-        code = "uniform float iTime;\n\n" + code;
-        if (UpdateFunctionInputConfig.warnNaN && !result.isCompatible[0])
-            console.warn("Graph may be incorrect due to undefined values.");
-        if (result.exts.length != 0)
-            console.warn("Function evaluation involves numerical approximation.");
-        if (WarningStack.length != 0)
-            messageWarning(WarningStack.join('\n'));
-        updateShaderFunction(code, null, parameters);
+        if (UpdateFunctionInputConfig.useGL) {
+            result = CodeGenerator.postfixToSource(
+                [expr], ["funRaw"],
+                UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
+            );
+            var code = result.source;
+            console.log(code);
+            code = "uniform float iTime;\n\n" + code;
+            if (UpdateFunctionInputConfig.warnNaN && !result.isCompatible[0])
+                console.warn("Graph may be incorrect due to undefined values.");
+            if (result.exts.length != 0)
+                console.warn("Function evaluation involves numerical approximation.");
+            if (WarningStack.length != 0)
+                messageWarning(WarningStack.join('\n'));
+            updateShaderFunction(code, null, parameters);
+        }
         // JS function
         if (UpdateFunctionInputConfig.jsFunName) {
             var funname = UpdateFunctionInputConfig.jsFunName;
-            try {
-                var result = CodeGenerator.postfixToSource([expr], [funname], 'js');
-                eval('window.'+funname+'='+result.source);
-            } catch(e) {
-                window[funname] = null;
-            };
+            var result = CodeGenerator.postfixToSource([expr], [funname], 'js');
+            eval('window.'+funname+'='+result.source);
             let display = document.getElementById("value-display");
             if (display) display.style.display = 'none';
+            if (!UpdateFunctionInputConfig.useGL)
+                updateShaderFunction(result.source, null, parameters);
         }
     } catch (e) {
         console.error(e);
@@ -398,7 +401,11 @@ function initMain(preloadShaderSources) {
     console.warn = myCustomWarn;
 
     // load shaders and init WebGL
-    if (typeof window.state !== 'undefined') {
+    if (typeof window.state == 'undefined') {
+        initMathjax();
+        return;
+    }
+    if (UpdateFunctionInputConfig.useGL) {
         loadShaderSources(preloadShaderSources, function () {
             console.log("shaders loaded");
             try {
@@ -411,8 +418,19 @@ function initMain(preloadShaderSources) {
                 document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
             }
         });
+        initMathjax();
+    }
+    else {
+        initMathjax();
+        try {
+            state.name = NAME + "state";
+            initRenderer0();
+            updateFunctionInput(true);
+            initRenderer();
+        } catch (e) {
+            console.error(e);
+            document.body.innerHTML = "<h1 style='color:red;'>" + e + "</h1>";
+        }
     }
 
-    // MathJax - do this at the end
-    initMathjax();
 }

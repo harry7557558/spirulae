@@ -322,6 +322,15 @@ CodeGenerator.langs.js = {
             def: "    var {%varname%} = {%expr%};",
             joiner: "\n"
         },
+        ode2: {
+            fun: "function(x, y) {\n\
+{%funbody%}\n\
+    return { dxdt: {%x_t%}, dydt: {%y_t%} };\n\
+}",
+            prefix: 'v',
+            def: "    var {%varname%} = {%expr%};",
+            joiner: "\n"
+        },
     },
     extensions: [
         {
