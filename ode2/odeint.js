@@ -1,5 +1,6 @@
 // autonomous ODE with two variables
 
+// deprecated
 function rk4(fun, u0, dt, n, bound) {
     var res = [u0];
     var u = u0;
@@ -23,8 +24,9 @@ function rk4(fun, u0, dt, n, bound) {
     return res;
 }
 
-function rk4as(fun, u0, dt, n, bound, maxstep) {
-    var res = [u0];
+// adaptive step runge kutta
+function rkas(fun, u0, dt, n, bound, maxstep) {
+    var res = [u0], dres = [], dts = [];
     var u = u0;
     var h = Math.abs(dt);
     var err0 = null;
@@ -57,7 +59,7 @@ function rk4as(fun, u0, dt, n, bound, maxstep) {
             y: u.y + (k1.y*b1_ + k2.y*b2_ + k3.y*b3_ + k4.y*b4_ + k5.y*b5_ + k6.y*b6_ + k7.y*b7_) * dt
         };
         // adaptive step
-        const atol = 4e-6, rtol = 4e-6;
+        const atol = 1e-6*maxstep, rtol = 1e-6*maxstep;
         var err = Math.hypot(
             (y.x-y_.x)/(atol+Math.hypot(u.x,y.x)*rtol),
             (y.y-y_.y)/(atol+Math.hypot(u.y,y.y)*rtol)) / 1.414;
@@ -75,11 +77,16 @@ function rk4as(fun, u0, dt, n, bound, maxstep) {
         // termination
         if (bound && !(u.x >= bound.xmin && u.x <= bound.xmax
                 && u.y >= bound.ymin && u.y <= bound.ymax)) {
-                    if (isFinite(u.x*u.x+u.y*u.y))
+                    if (isFinite(u.x*u.x+u.y*u.y)) {
                         res.push(u);
+                        dres.push(k1);
+                        dts.push(Math.abs(dt));
+                    }
                     break;
                 }
         res.push(u);
+        dres.push(k1);
+        dts.push(Math.abs(dt));
         var delta = Math.hypot(u.x-u0.x, u.y-u0.y);
         deltas.push(delta);
         if (delta < 1e-6 * maxstep) {
@@ -88,6 +95,11 @@ function rk4as(fun, u0, dt, n, bound, maxstep) {
         }
         else small_delta_count = 0;
     }
-    // console.log(deltas);
-    return res;
+    dres.push(fun(u.x, u.y));
+    return {
+        length: res.length,
+        x: res,
+        dxdt: dres,
+        dt: dts
+    };
 }

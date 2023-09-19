@@ -33,14 +33,48 @@ function getSolution() {
         ymin: ymid-2.5*yrange,
         ymax: ymid+2.5*yrange
     }
-    let maxstep = 0.05 * Math.sqrt(xrange*yrange);
-    var fwd = rk4as(funRaw, App.mousePosW, 0.1, 200, bound, maxstep);
-    var bck = rk4as(funRaw, App.mousePosW, -0.1, 200, bound, maxstep);
+    let maxstep = 0.1 * Math.sqrt(xrange*yrange);
+    var fwd = rkas(funRaw, App.mousePosW, 0.1, 600, bound, maxstep);
+    var bck = rkas(funRaw, App.mousePosW, -0.1, 600, bound, maxstep);
     var res = [];
-    for (var i = 0; i < bck.length; i++)
-        res.push(bck[bck.length - i - 1]);
-    for (var i = 1; i < fwd.length; i++)
-        res.push(fwd[i]);
+    for (var i = bck.length-1; i >= 0; i--) {
+        var x = bck.x[i];
+        var dxdt = bck.dxdt[i];
+        if (i < bck.length-1) {
+            var dt = bck.dt[i];
+            res.push({
+                x: x.x-dxdt.x*dt/3,
+                y: x.y-dxdt.y*dt/3
+            });
+        }
+        res.push(x);
+        if (i > 0) {
+            var dt = bck.dt[i-1];
+            res.push({
+                x: x.x+dxdt.x*dt/3,
+                y: x.y+dxdt.y*dt/3
+            });
+        }
+    }
+    for (var i = 0; i < fwd.length; i++) {
+        var x = fwd.x[i];
+        var dxdt = fwd.dxdt[i];
+        if (i > 0) {
+            var dt = fwd.dt[i-1];
+            res.push({
+                x: x.x-dxdt.x*dt/3,
+                y: x.y-dxdt.y*dt/3
+            });
+            res.push(x);
+        }
+        if (i < fwd.length-1) {
+            var dt = fwd.dt[i];
+            res.push({
+                x: x.x+dxdt.x*dt/3,
+                y: x.y+dxdt.y*dt/3
+            });
+        }
+    }
     return res;
 }
 
@@ -77,7 +111,7 @@ function onDraw() {
         (state.xmax-state.xmin)/window.innerWidth,
         (state.ymax-state.ymin)/window.innerHeight);
     var lines = [];
-    var totl = 0.0;
+    var all_ls = [];
     for (var j = Math.ceil(state.ymin/sc); j <= Math.floor(state.ymax/sc); j++) {
         for (var i = Math.ceil(state.xmin/sc); i <= Math.floor(state.xmax/sc); i++) {
             var x = i*sc, y = j*sc;
@@ -89,10 +123,15 @@ function onDraw() {
                 x: x, y: y,
                 dxdt: dxdt, dydt: dydt
             })
-            totl += l;
+            all_ls.push(l);
         }
     }
-    totl /= lines.length;
+    all_ls.sort();
+    var totl = 0.0, totn = 0;
+    for (var i = Math.round(0.1*all_ls.length); i < 0.9*all_ls.length; i++)
+        if (isFinite(all_ls[i]))
+            totl += all_ls[i], totn += 1;
+    totl /= totn;
     for (var i = 0; i < lines.length; i++) {
         var t = Math.tanh(lines[i].l / totl);
         var r = Math.round(255*t);
@@ -110,11 +149,11 @@ function onDraw() {
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
     if (App.mousePosW) {
-        drawPolyline(getSolution());
+        drawBezierSpline(getSolution());
     }
     ctx.strokeStyle = 'rgb(255,0,0)';
     ctx.lineWidth = 2;
     for (var i = 0; i < App.solutions.length; i++) {
-        drawPolyline(App.solutions[i]);
+        drawBezierSpline(App.solutions[i]);
     }
 }
