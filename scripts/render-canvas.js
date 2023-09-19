@@ -137,6 +137,7 @@ var renderer = {
 };
 
 // all coordinates in world
+
 function drawLine(x1, y1, x2, y2) {
     let ctx = renderer.ctx;
     var p1 = worldToScreen(x1, y1);
@@ -146,6 +147,31 @@ function drawLine(x1, y1, x2, y2) {
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 }
+
+function drawArrow(x1, y1, x2, y2) {
+    let ctx = renderer.ctx;
+    var p1 = worldToScreen(x1, y1);
+    var p2 = worldToScreen(x2, y2);
+    // line
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+    // tip
+    ctx.beginPath();
+    var a = Math.atan2(p2.y-p1.y, p2.x-p1.x);
+    var l = 2.0 * Number(ctx.lineWidth);
+    var h = 1.0 * Number(ctx.lineWidth);
+    var o = 0.15 * Math.PI;
+    var x = p2.x+h*Math.cos(a);
+    var y = p2.y+h*Math.sin(a)
+    ctx.moveTo(x-l*Math.cos(a-o), y-l*Math.sin(a-o));
+    ctx.lineTo(x, y);
+    ctx.lineTo(x-l*Math.cos(a+o), y-l*Math.sin(a+o));
+    ctx.closePath();
+    ctx.stroke();
+}
+
 function drawPolyline(points, closed=false) {
     let ctx = renderer.ctx;
     ctx.beginPath();
@@ -159,6 +185,7 @@ function drawPolyline(points, closed=false) {
         ctx.closePath();
     ctx.stroke();
 }
+
 function drawBezierSpline(points) {
     let ctx = renderer.ctx;
     ctx.beginPath();
@@ -287,17 +314,6 @@ function initRenderer() {
             var v = fingerDist == -1 ? 1.0 : 0.4;
             translateState({ x: v * event.movementX, y: v * event.movementY });
             state.renderNeeded = true;
-        }
-    });
-    canvas.addEventListener("mousemove", function (event) {
-        let display = document.getElementById("value-display");
-        if (display && window.funRawJS) {
-            var world = screenToWorld(event.clientX, event.clientY);
-            display.innerHTML = (world.x, world.y, funRawJS(world.x, world.y));
-            display.innerHTML = '(' + world.x.toPrecision(4) + ',' +
-                world.y.toPrecision(4) + ') -> ' +
-                funRawJS(world.x, world.y).toPrecision(4);
-            display.style.display = 'block';
         }
     });
     canvas.addEventListener("touchstart", function (event) {

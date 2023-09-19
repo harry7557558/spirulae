@@ -20,6 +20,16 @@ function initApp() {
         App.mousePosW = screenToWorld(x, y);
         state.renderNeeded = true;
     });
+    canvas.addEventListener("mousemove", function (event) {
+        let display = document.getElementById("value-display");
+        var world = screenToWorld(event.clientX, event.clientY);
+        var dxdt = funRaw(world.x, world.y);
+        display.innerHTML = 'x = ' + world.x.toPrecision(4) + ', ' +
+            'y = ' + world.y.toPrecision(4) + '<br/>' +
+            "x' = " + dxdt.x.toPrecision(4) + ', ' +
+            "y' = " + dxdt.y.toPrecision(4);
+        display.style.display = 'block';
+    });
 }
 
 function getSolution() {
@@ -106,8 +116,11 @@ function onDraw() {
     drawLine(0.0, state.ymin, 0.0, state.ymax);
 
     // vector field
-    ctx.lineWidth = 2;
-    sc = 40.0*Math.max(
+    let parameters = parameterToDict(RawParameters);
+    let field = parameters.sField;
+    let density = parameters.rField;
+    ctx.lineWidth = 1.5;
+    sc = 60.0*(0.5+0.5*Math.pow(-density,3.0))*Math.max(
         (state.xmax-state.xmin)/window.innerWidth,
         (state.ymax-state.ymin)/window.innerHeight);
     var lines = [];
@@ -141,7 +154,12 @@ function onDraw() {
         var k = 0.4*sc/lines[i].l;
         var x = lines[i].x, y = lines[i].y;
         var dxdt = lines[i].dxdt, dydt = lines[i].dydt;
-        drawLine(x-k*dxdt, y-k*dydt, x+k*dxdt, y+k*dydt);
+        if (field == 'slope')
+            drawLine(x-k*dxdt, y-k*dydt, x+k*dxdt, y+k*dydt);
+        if (field == 'direction')
+            drawArrow(x-k*dxdt, y-k*dydt, x+k*dxdt, y+k*dydt);
+        if (field == 'vector')
+            drawArrow(x, y, x+dxdt, y+dydt);
     }
 
     // solution through mouse cursor

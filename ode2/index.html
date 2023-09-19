@@ -41,9 +41,17 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span title="Show axes and grid"><input type="checkbox" id="checkbox-grid" checked disabled />grid</span>&ensp;
-        <span title="Light theme"><input type="checkbox" id="checkbox-light" checked disabled />☼</span>
+        <span><select id="select-field">
+                <option value="slope">slope</option>
+                <option value="direction" selected>direction</option>
+                <option value="vector">vector</option>
+            </select>field</span>&ensp;
+        <span title="field density"><input type="range" id="slider-field"
+                style="width:100px" />+</span>
         <br />
+        <!-- <span><input type="checkbox" id="checkbox-grid" checked disabled />grid</span>&ensp;
+        <span title="Light theme"><input type="checkbox" id="checkbox-light" checked disabled />☼</span> -->
+        <!-- <br /> -->
         <p id="value-display"></p>
         <p id="error-message" style="display:none"></p>
     </div>
@@ -51,7 +59,7 @@
     <div id="mathjax-preview" style="left:0px;top:0px;display:none"></div>
 
     <div id="help-menu" style="visibility:hidden">
-        <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
+        <div id="help-menu-hide" onclick='document.gereviewtElementById("help-menu").style.visibility="hidden"'>×</div>
     </div>
 
     <script>

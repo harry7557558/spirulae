@@ -7,7 +7,7 @@ const NAME = "spirulae.ode2.";
 const builtinFunctions = [
     ["Cooling", "k=3;T0=1;x_t=1;y_t=-k(y-T0)"],
     ["Asymptotes", "x_t=1;y_t=y^4-y^3-3*y^2+y+2"],
-    ["Circulation", "x_t=y;y_t=-x"],
+    ["Circulation", "x_t=-y;y_t=x"],
     ["Swirl", "x_t=sin(x+y);y_t=cos(x-y)"],
     ["Swirl 2", "x_t=sin(x+y)+y;y_t=cos(x-y)"],
     ["Pendulum", "#&#32;x:&#32;a;#&#32;y:&#32;a\';x_t=y;y_t=-sin(x)"],
@@ -46,8 +46,10 @@ document.body.onload = function (event) {
     initParameters([
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
-        new GraphingParameter("bGrid", "checkbox-grid"),
-        new GraphingParameter("bLight", "checkbox-light"),
+        // new GraphingParameter("bGrid", "checkbox-grid"),
+        // new GraphingParameter("bLight", "checkbox-light"),
+        new GraphingParameter("sField", "select-field"),
+        new UniformSlider("rField", "slider-field", -1.4, 0.88, 0.0),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = false;
