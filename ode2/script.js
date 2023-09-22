@@ -47,9 +47,9 @@ document.body.onload = function (event) {
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         // new GraphingParameter("bGrid", "checkbox-grid"),
-        // new GraphingParameter("bLight", "checkbox-light"),
+        new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("sField", "select-field"),
-        new UniformSlider("rField", "slider-field", -1.4, 0.88, 0.0),
+        new UniformSlider("rField", "slider-field", -1.4, 0.8, 0.0),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = false;

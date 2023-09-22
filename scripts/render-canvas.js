@@ -148,6 +148,23 @@ function drawLine(x1, y1, x2, y2) {
     ctx.stroke();
 }
 
+function drawArrowTip(p, a, s=2.0) {
+    a = -a;
+    let ctx = renderer.ctx;
+    ctx.beginPath();
+    p = worldToScreen(p.x, p.y);
+    var l = s * Number(ctx.lineWidth);
+    var h = 0.5*l;
+    var o = 0.15 * Math.PI;
+    var x = p.x+h*Math.cos(a);
+    var y = p.y+h*Math.sin(a)
+    ctx.moveTo(x-l*Math.cos(a-o), y-l*Math.sin(a-o));
+    ctx.lineTo(x, y);
+    ctx.lineTo(x-l*Math.cos(a+o), y-l*Math.sin(a+o));
+    ctx.closePath();
+    ctx.stroke();
+}
+
 function drawArrow(x1, y1, x2, y2) {
     let ctx = renderer.ctx;
     var p1 = worldToScreen(x1, y1);
@@ -158,18 +175,8 @@ function drawArrow(x1, y1, x2, y2) {
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
     // tip
-    ctx.beginPath();
-    var a = Math.atan2(p2.y-p1.y, p2.x-p1.x);
-    var l = 2.0 * Number(ctx.lineWidth);
-    var h = 1.0 * Number(ctx.lineWidth);
-    var o = 0.15 * Math.PI;
-    var x = p2.x+h*Math.cos(a);
-    var y = p2.y+h*Math.sin(a)
-    ctx.moveTo(x-l*Math.cos(a-o), y-l*Math.sin(a-o));
-    ctx.lineTo(x, y);
-    ctx.lineTo(x-l*Math.cos(a+o), y-l*Math.sin(a+o));
-    ctx.closePath();
-    ctx.stroke();
+    var a = Math.atan2(y2-y1, x2-x1);
+    drawArrowTip({ x: x2, y: y2 }, a);
 }
 
 function drawPolyline(points, closed=false) {
@@ -373,11 +380,13 @@ function updateShaderFunction(funCode, funGradCode, params) {
     let shaderSource = funCode;
 
     // shader program(s)
-    if (prevCode.shaderSource != shaderSource || renderer.ctx == null) {
+    var recompile =
+        prevCode.shaderSource != shaderSource || renderer.ctx == null;
+    if (recompile) {
         renderer.ctx = renderer.canvas.getContext('2d');
         prevCode.shaderSource = shaderSource;
     }
 
     if (window.hasOwnProperty('onUpdate'))
-        onUpdate();
+        onUpdate(recompile);
 }
