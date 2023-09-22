@@ -112,13 +112,13 @@ function getStreamlines(density) {
         ymin: ymid-1.01*yrange,
         ymax: ymid+1.01*yrange
     }
-    sc = 1.0 * fieldDensityToSc(density)*Math.max(
+    sc = 0.75 * fieldDensityToSc(density)*Math.max(
         (state.xmax-state.xmin)/window.innerWidth,
         (state.ymax-state.ymin)/window.innerHeight);
 
     // avoid streamlines that are too close
     var streamlines = [];
-    var sg = 0.5*sc;
+    var sg = 0.6*sc;
     var gi0 = Math.ceil(state.xmin/sg);
     var gi1 = Math.floor(state.xmax/sg);
     var gj0 = Math.ceil(state.ymin/sg);
@@ -129,14 +129,16 @@ function getStreamlines(density) {
         return '' + (j * (gi1-gi0+1) + i);
     }
     function isOccupied(i, j) {
+        i = Math.min(Math.max(i, gi0), gi1);
+        j = Math.min(Math.max(j, gj0), gj1);
         var idx = getIdx(i, j);
         return occupancyList.hasOwnProperty(idx);
     }
     function terminateP(x, y) {
         var i = Math.round(x/sg);
         var j = Math.round(y/sg);
-        if (i < gi0 || i > gi1 || j < gj0 || j > gj1)
-            return false;
+        // if (i < gi0 || i > gi1 || j < gj0 || j > gj1)
+        //     return false;
         for (var di = -1; di <= 1; di++) {
             for (var dj = -1; dj <= 1; dj++) {
                 if (Math.hypot(di, dj) <= 1 && isOccupied(i+di, j+dj))
@@ -144,8 +146,22 @@ function getStreamlines(density) {
             }
         }
         tempOccupancyList[getIdx(i, j)] = true;
+        if (terminateP.prev != null) {
+            var n = 3;
+            for (var i = 1; i < n; i++) {
+                var t = i / n;
+                var xt = terminateP.prev.x * (1.0-t) + x * t;
+                var yt = terminateP.prev.y * (1.0-t) + y * t;
+                var it = Math.round(xt/sg);
+                var jt = Math.round(yt/sg);
+                if (it < gi0 || it > gi1 || jt < gj0 || jt > gj1)
+                    tempOccupancyList[getIdx(it, jt)] = true;
+            }
+        }
+        terminateP.prev = { x: x, y: y };
         return false;
     }
+    terminateP.prev = null;
 
     // normalize the vector field for stable integration
     function funNormalized(x, y) {
@@ -156,20 +172,21 @@ function getStreamlines(density) {
     function pushStreamline(p) {
         if (terminateP(p.x, p.y))
             return;
-        let maxstep = 0.05 * Math.sqrt(xrange*yrange);
-        var fwd = rkas(funNormalized, p, 0.2*maxstep, 100, bound, maxstep, terminateP);
-        var bck = rkas(funNormalized, p, -0.2*maxstep, 100, bound, maxstep, terminateP);
+        var fwd = rkas(funNormalized, p, 0.2*sc, 100, bound, sc, terminateP);
+        terminateP.prev = null;
+        var bck = rkas(funNormalized, p, -0.2*sc, 100, bound, sc, terminateP);
+        terminateP.prev = null;
         // avoid short streamlines
         var sl = solverReturnToBezier(fwd, bck);
         var length = 0.0;
         for (var i = 3; i < sl.length; i += 3)
             length += Math.hypot(sl[i].x-sl[i-3].x, sl[i].y-sl[i-3].y);
-        if (length > 3.0*maxstep)
+        if (length > 4.0*sc || sl.length > 40)
             streamlines.push(sl);
         // update occupancy list
         for (var idx in tempOccupancyList)
             occupancyList[idx] = true;
-        tempOccupancyList[idx] = {};
+        tempOccupancyList = {};
     }
 
     // add streamlines from outer to inner
@@ -198,6 +215,12 @@ function getStreamlines(density) {
         }
     }
     return streamlines;
+}
+ctx.strokeStyle = 'rgb(128,128,128)';
+ctx.lineWidth = 1;
+for (var i = 0; i < streamlines.length; i++) {
+    var sl = streamlines[i];
+    drawPolyline(sl);
 }
 
 
@@ -279,14 +302,22 @@ function onDraw() {
     }
 
     if (field == 'streamline') {
-        ctx.strokeStyle = 'rgb(0,128,0)';
         var streamlines = getStreamlines(density);
-        for (var i = 0; i < streamlines.length; i++) {
-            var sl = streamlines[i];
+        ctx.strokeStyle = 'rgb(0,128,0)';
+        for (var si = 0; si < streamlines.length; si++) {
+            var sl = streamlines[si];
             drawBezierSpline(sl);
-            var j = Math.floor(sl.length / 6);
-            if (j >= 1) {
-                var p = sl[3*j];
+            // draw arrow at the middle of streamline by arc length
+            var lengthPsa = [0.0], length = 0.0;
+            for (var i = 3; i < sl.length; i += 3) {
+                length += Math.hypot(sl[i].x-sl[i-3].x, sl[i].y-sl[i-3].y);
+                lengthPsa.push(length);
+            }
+            var i = 0;
+            while (lengthPsa[i] < 0.5*lengthPsa[lengthPsa.length-1])
+                i += 1;
+            if (i > 0 && i < lengthPsa.length-1) {
+                var p = sl[3*i];
                 var d = funRaw(p.x, p.y);
                 var a = Math.atan2(d.y, d.x);
                 drawArrowTip(p, a, 3.0);

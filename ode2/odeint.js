@@ -75,8 +75,9 @@ function rkas(fun, u0, dt, n, bound, maxstep, terminateP = null) {
         }
         u0 = u, u = y, err0 = err;
         // termination
-        if (terminateP && terminateP(u.x, u.y))
-            break;
+        if (terminateP && terminateP(u.x, u.y)) {
+            u = u0; break;
+        }
         if (bound && !(u.x >= bound.xmin && u.x <= bound.xmax
                 && u.y >= bound.ymin && u.y <= bound.ymax)) {
                     if (isFinite(u.x*u.x+u.y*u.y)) {
