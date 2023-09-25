@@ -2,7 +2,7 @@
 
 <p>By Harry Chen (harry7557558) - Complex domain coloring. Integrating <a href="https://harry7557558.github.io/tools/complex_webgl.html" target="_blank">a domain coloring tool I created before</a> and the powerful input parser of Spirulae. I created this tool primarily because I found the domain coloring graphs of complex functions to be visually cool.</p>
 
-<img src="../src/gallery-complex-trigs.jpg" alt="gallery-complex-trigs.jpg" />
+<img src="../home/gallery-complex-trigs.jpg" alt="gallery-complex-trigs.jpg" />
 
 <p>This tool visualizes complex-variable math functions based on user inputs. Type equations in the input box, or look at some examples. Drag the canvas to move, and scroll to zoom in/out. Reset the viewport by switching to an example and switching back (you may want to back up your input).</p>
 

@@ -9,7 +9,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/" />
 
-    <link rel="stylesheet" href="./src/style.css" />
+    <link rel="stylesheet" href="./home/style.css" />
+
+    <style>
+      .a {
+         display: inline-block;
+         text-align: center;
+         width: 48%;
+         margin: 5px 0;
+      }
+    </style>
 
 </head>
 
@@ -18,38 +27,48 @@
     <div id="container">
 
         <h1><center>Spirulae</center></h1>
-        <center style="color:#555"><em>by Harry Chen - updated July 2023</em></center>
+        <center style="color:#555"><em>by Harry Chen - updated September 2023</em></center>
         <br/>
-        
-        <a href="implicit3/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-implicit3.jpg" style="width:100%"></img>
+
+        <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
+           <img src="home/img-implicit3.jpg" style="width:100%"></img>
            <br/>
            3D Implicit Surface Grapher
         </a>
-        <a href="paramsurf/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-paramsurf.jpg" style="width:100%"></img>
+        <a href="https://harry7557558.github.io/spirulae/paramsurf/" class="a">
+           <img src="home/img-paramsurf.jpg" style="width:100%"></img>
            <br/>
            3D Parametric Surface Grapher
         </a>
-        <a href="complex/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-complex.jpg" style="width:100%"></img>
+        <a href="https://harry7557558.github.io/spirulae/complex/" class="a">
+           <img src="home/img-complex.jpg" style="width:100%"></img>
            <br/>
            Complex Domain Coloring Grapher
         </a>
-        <a href="complex3/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-complex3.jpg" style="width:100%"></img>
+        <a href="https://harry7557558.github.io/spirulae/complex3/" class="a">
+           <img src="home/img-complex3.jpg" style="width:100%"></img>
            <br/>
            3D Complex Function Grapher
         </a>
-        <a href="implicit3-rt/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-implicit3-rt.jpg" style="width:100%"></img>
+        <a href="https://harry7557558.github.io/spirulae/implicit3-rt/" class="a">
+           <img src="home/img-implicit3-rt.jpg" style="width:100%"></img>
            <br/>
            Implicit Surface Path Tracer (beta)
         </a>
-        <a href="meshgen2/" style="display:inline-block;text-align:center;width:48%">
-           <img src="src/img-meshgen2.jpg" style="width:100%"></img>
+        <a href="https://harry7557558.github.io/spirulae/meshgen3/" class="a">
+           <img src="home/img-meshgen3.jpg" style="width:100%"></img>
            <br/>
-           2D to 3D Mesh Generator (beta)
+           3D Implicit Mesh Generator (dev)
+        </a>
+        <a href="https://harry7557558.github.io/spirulae/ode2/" class="a">
+           <img src="home/img-ode2.jpg" style="width:100%"></img>
+           <br/>
+           2D Vector Field Grapher (dev)
+        </a>
+        <a href="https://harry7557558.github.io/spirulae/meshgen2/" class="a">
+           <img src="home/img-meshgen2.jpg" style="width:100%"></img>
+           <br/>
+           2D to 3D Mesh Generator (dev)
         </a>
 
         <p>GPU-accelerated function graphers in a web browser, both 3D and 2D.</p>
@@ -105,14 +124,15 @@
 <h2>Working in Progress</h2>
 <p>Spirulae is under active development. Tools and features that are being developed include:</p>
 <ul>
-<li>2D mesh generation (<code>/meshgen2</code>, beta)</li>
-<li>Ray tracing (<code>/implicit3-rt</code>, beta)</li>
-<li>Automatic differentiation (<code>/autodiff</code>)</li>
 <li>3D mesh generation (<code>/meshgen3</code>)</li>
+<li>2D mesh generation (<code>/meshgen2</code>)</li>
+<li>2D vector field (<code>/ode2</code>)</li>
+<li>Automatic differentiation (<code>/autodiff</code>)</li>
 </ul>
 <p>Features that may be implemented in the future (ordered approximately by priority):</p>
 <ul>
 <li>Vectors and complex numbers</li>
+<li>Differentiation in function definition</li>
 <li>Mathematically-defined custom colors</li>
 <li>Iteratively improve rendering quality</li>
 <li>More viewport control parameters</li>
@@ -124,7 +144,7 @@
 </ul>
 <hr />
 <h2>Frequently Asked Questions</h2>
-<p><strong>Q: Is Spirulae completely written from scratch?</strong></p>
+<p><strong>Q: Is Spirulae written from scratch?</strong></p>
 <p><em>Largely</em>. I tried to make Spirulae with as little dependency as possible, and therefore I wrote the equation parser and renderer from scratch without external libraries and frameworks, although it still uses native browser APIs like WebGL and WebAssembly. Spirulae uses <a href="https://www.mathjax.org/">MathJax</a> to display equations, which can be considered its only dependency.</p>
 <p><strong>Q: How to draw shapes using equations?</strong></p>
 <p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
@@ -133,19 +153,19 @@
 <hr />
 <h2>Gallery</h2>
 <p>Complex domain coloring</p>
-<p><a href="complex/"><img alt="" src="./src/gallery-complex-trigs.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/complex/"><img alt="" src="./home/gallery-complex-trigs.jpg" /></a></p>
 <p>The gamma function in 3D</p>
-<p><a href="complex3/"><img alt="" src="./src/gallery-complex3-gamma-2.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/complex3/"><img alt="" src="./home/gallery-complex3-gamma-2.jpg" /></a></p>
 <p>A sextic algebraic surface</p>
-<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-barth6.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-barth6.jpg" /></a></p>
 <p>A fractal with scalar field visualized</p>
-<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-roots-field.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-roots-field.jpg" /></a></p>
 <p>A clipped quintic implicit surface, with volumetrics showing isosurfaces</p>
-<p><a href="implicit3/"><img alt="" src="./src/gallery-implicit3-field.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-field.jpg" /></a></p>
 <p>A parametric surface rendered in X-ray mode</p>
-<p><a href="paramsurf/"><img alt="" src="./src/gallery-paramsurf-twist.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/paramsurf/"><img alt="" src="./home/gallery-paramsurf-twist.jpg" /></a></p>
 <p>A path-traced fractal</p>
-<p><img alt="" src="./src/gallery-implicit3-rt-mandeltorus.jpg" /></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./home/gallery-implicit3-rt-mandeltorus.jpg" /></a></p>
 
     </div>
 

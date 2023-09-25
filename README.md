@@ -1,8 +1,8 @@
-# Spirulae
+<h1><a style='color:inherit;text-decoration:none' href="https://harry7557558.github.io/spirulae/">Spirulae</a></h1>
 
-*by Harry Chen - updated July 2023*
+*by Harry Chen - updated September 2023*
 
-[![spirulae.jpg](src/spirulae.jpg)](implicit3/)
+[![spirulae.jpg](home/spirulae.jpg)](https://harry7557558.github.io/spirulae/)
 
 GPU-accelerated function graphers in a web browser, both 3D and 2D.
 
@@ -65,14 +65,15 @@ These tools have the following known issues:
 
 Spirulae is under active development. Tools and features that are being developed include:
 
- - 2D mesh generation (`/meshgen2`, beta)
- - Ray tracing (`/implicit3-rt`, beta)
- - Automatic differentiation (`/autodiff`)
  - 3D mesh generation (`/meshgen3`)
+ - 2D mesh generation (`/meshgen2`)
+ - 2D vector field (`/ode2`)
+ - Automatic differentiation (`/autodiff`)
 
 Features that may be implemented in the future (ordered approximately by priority):
 
  - Vectors and complex numbers
+ - Differentiation in function definition
  - Mathematically-defined custom colors
  - Iteratively improve rendering quality
  - More viewport control parameters
@@ -86,7 +87,7 @@ Features that may be implemented in the future (ordered approximately by priorit
 
 ## Frequently Asked Questions
 
-**Q: Is Spirulae completely written from scratch?**
+**Q: Is Spirulae written from scratch?**
 
 *Largely*. I tried to make Spirulae with as little dependency as possible, and therefore I wrote the equation parser and renderer from scratch without external libraries and frameworks, although it still uses native browser APIs like WebGL and WebAssembly. Spirulae uses [MathJax](https://www.mathjax.org/) to display equations, which can be considered its only dependency.
 
@@ -106,28 +107,28 @@ For readers with technical background, Spirulae recompiles shader every time the
 
 Complex domain coloring
 
-[![](./src/gallery-complex-trigs.jpg)](complex/)
+[![](./home/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirulae/complex/)
 
 The gamma function in 3D
 
-[![](./src/gallery-complex3-gamma-2.jpg)](complex3/)
+[![](./home/gallery-complex3-gamma-2.jpg)](https://harry7557558.github.io/spirulae/complex3/)
 
 A sextic algebraic surface
 
-[![](./src/gallery-implicit3-barth6.jpg)](implicit3/)
+[![](./home/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
 A fractal with scalar field visualized
 
-[![](./src/gallery-implicit3-roots-field.jpg)](implicit3/)
+[![](./home/gallery-implicit3-roots-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
 A clipped quintic implicit surface, with volumetrics showing isosurfaces
 
-[![](./src/gallery-implicit3-field.jpg)](implicit3/)
+[![](./home/gallery-implicit3-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
 A parametric surface rendered in X-ray mode
 
-[![](./src/gallery-paramsurf-twist.jpg)](paramsurf/)
+[![](./home/gallery-paramsurf-twist.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
 
 A path-traced fractal
 
-![](./src/gallery-implicit3-rt-mandeltorus.jpg)
+[![](./home/gallery-implicit3-rt-mandeltorus.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)

@@ -193,6 +193,18 @@ function drawPolyline(points, closed=false) {
     ctx.stroke();
 }
 
+function drawBezierCurve(p1, c1, c2, p2) {
+    let ctx = renderer.ctx;
+    p1 = worldToScreen(p1.x, p1.y);
+    c1 = worldToScreen(c1.x, c1.y);
+    c2 = worldToScreen(c2.x, c2.y);
+    p2 = worldToScreen(p2.x, p2.y);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p2.x, p2.y);
+    ctx.stroke();
+}
+
 function drawBezierSpline(points) {
     let ctx = renderer.ctx;
     ctx.beginPath();

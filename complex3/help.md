@@ -2,7 +2,7 @@
 
 <p>By Harry Chen (harry7557558) - Complex domain coloring in 3D. This is a combination of the <a href="../complex/">domain coloring grapher</a> and the <a href="../implicit3/">implicit surface grapher</a>. I created this tool for no reason other than finding the graphs of complex functions to be visually cool.</p>
 
-<img src="../src/gallery-complex3-tan.jpg" alt="gallery-complex3-tan.jpg" />
+<img src="../home/gallery-complex3-tan.jpg" alt="gallery-complex3-tan.jpg" />
 
 <p>This tool visualizes complex-variable math functions in 3D based on user inputs. Type equations in the input box, or look at some examples. Drag the canvas to rotate the surface, and scroll to zoom in/out. Drag while holding <code>Shift</code> to move the graph on the screen. Reset the viewport by switching to an example and switching back (you may want to back up your input). Try to play with selectors, checkboxes, and sliders.</p>
 
