@@ -1,18 +1,18 @@
 var App = {
     mousePosW: null,
-    solutions: [],
+    solutionPoints: [],
 };
 
 function initApp() {
     canvas.addEventListener('pointerdown', function(event) {
         var x = event.clientX, y = event.clientY;
         App.mousePosW = screenToWorld(x, y);
-        App.solutions.push(getSolution());
+        App.solutionPoints.push(App.mousePosW);
         state.renderNeeded = true;
     });
     canvas.addEventListener('contextmenu', function(event) {
         event.preventDefault();
-        App.solutions = [];
+        App.solutionPoints = [];
         state.renderNeeded = true;
     });
     canvas.addEventListener('pointermove', function(event) {
@@ -37,7 +37,40 @@ function initApp() {
 }
 
 
-function solverReturnToBezier(fwd, bck) {
+function solverReturnToBezier(fwd, bck, clean) {
+    function cleanReturn(ret) {
+        var res = {
+            x: [ret.x[0]],
+            dxdt: [ret.dxdt[0]],
+            dt: []
+        };
+        var eps = 1.0 * Math.min(
+            (state.xmax-state.xmin)/state.width,
+            (state.ymax-state.ymin)/state.height);
+        var dt = 0.0;
+        for (var i = 1; i < ret.length; i++) {
+            var a = res.x[res.x.length-1];
+            var b = ret.x[i];
+            var da = res.dxdt[res.dxdt.length-1];
+            var db = ret.dxdt[i];
+            var l = Math.hypot(b.x-a.x, b.y-a.y);
+            var t = (da.x*db.y-da.y*db.x) / Math.hypot(da.x,da.y) / Math.hypot(db.x,db.y);
+            dt += ret.dt[i-1];
+            if (l*Math.abs(t) > eps || i == ret.length - 1) {
+                res.x.push(ret.x[i]);
+                res.dxdt.push(ret.dxdt[i]);
+                res.dt.push(dt);
+                dt = 0.0;
+            }
+        }
+        res.length = res.x.length;
+        return res;
+    }
+    if (clean) {
+        fwd = cleanReturn(fwd);
+        bck = cleanReturn(bck);
+    }
+    // get
     var res = [];
     for (var i = bck.length-1; i >= 0; i--) {
         var x = bck.x[i];
@@ -80,7 +113,7 @@ function solverReturnToBezier(fwd, bck) {
     return res;
 }
 
-function getSolution() {
+function getSolution(p0, clean) {
     var xmid = 0.5*(state.xmin+state.xmax);
     var xrange = 0.5*(state.xmax-state.xmin);
     var ymid = 0.5*(state.ymin+state.ymax);
@@ -92,9 +125,14 @@ function getSolution() {
         ymax: ymid+2.5*yrange
     }
     let maxstep = 0.1 * Math.sqrt(xrange*yrange);
-    var fwd = rkas(funRaw, App.mousePosW, 0.1, 600, bound, maxstep);
-    var bck = rkas(funRaw, App.mousePosW, -0.1, 600, bound, maxstep);
-    return solverReturnToBezier(fwd, bck);
+    function funNormalized(x, y) {
+        var r = funRaw(x, y);
+        var l = Math.hypot(r.x, r.y);
+        return { x: r.x/l, y: r.y/l };
+    }
+    var fwd = rkas(funNormalized, p0, 0.1, 1000, bound, maxstep);
+    var bck = rkas(funNormalized, p0, -0.1, 1000, bound, maxstep);
+    return solverReturnToBezier(fwd, bck, clean);
 }
 
 function fieldDensityToSc(density) {
@@ -177,7 +215,7 @@ function getStreamlines(density) {
         var bck = rkas(funNormalized, p, -0.2*sc, 100, bound, sc, terminateP);
         terminateP.prev = null;
         // avoid short streamlines
-        var sl = solverReturnToBezier(fwd, bck);
+        var sl = solverReturnToBezier(fwd, bck, true);
         var length = 0.0;
         for (var i = 3; i < sl.length; i += 3)
             length += Math.hypot(sl[i].x-sl[i-3].x, sl[i].y-sl[i-3].y);
@@ -226,7 +264,7 @@ for (var i = 0; i < streamlines.length; i++) {
 
 function onUpdate(recompile) {
     if (recompile)
-        App.solutions = [];
+        App.solutionPoints = [];
 }
 
 function onDraw() {
@@ -258,6 +296,7 @@ function onDraw() {
     let density = parameters.rField;
 
     ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
 
     sc = fieldDensityToSc(density)*Math.max(
         (state.xmax-state.xmin)/window.innerWidth,
@@ -284,13 +323,17 @@ function onDraw() {
         if (isFinite(all_ls[i]))
             totl += all_ls[i], totn += 1;
     totl /= totn;
-    for (var i = 0; i < lines.length; i++) {
-        var t = Math.tanh(lines[i].l / totl);
+    function getColor(l) {
+        var t = Math.tanh(l/totl);
         var r = Math.round(255*t);
         var g = Math.round(128);
         var b = Math.round(255-255*t);
-        ctx.strokeStyle = 'rgb('+r+','+g+','+b+')';
+        return 'rgb('+r+','+g+','+b+')';
+    }
+    for (var i = 0; i < lines.length; i++) {
+        ctx.strokeStyle = getColor(lines[i].l);
         var k = 0.4*sc/lines[i].l;
+        var s = 0.6*sc/totl;
         var x = lines[i].x, y = lines[i].y;
         var dxdt = lines[i].dxdt, dydt = lines[i].dydt;
         if (field == 'slope')
@@ -298,15 +341,28 @@ function onDraw() {
         if (field == 'direction')
             drawArrow(x-k*dxdt, y-k*dydt, x+k*dxdt, y+k*dydt);
         if (field == 'vector')
-            drawArrow(x, y, x+dxdt, y+dydt);
+            drawArrow(x, y, x+s*dxdt, y+s*dydt);
     }
 
     if (field == 'streamline') {
+        var count = 0;
         var streamlines = getStreamlines(density);
-        ctx.strokeStyle = 'rgb(0,128,0)';
+        var bezierCurves = {};
         for (var si = 0; si < streamlines.length; si++) {
             var sl = streamlines[si];
-            drawBezierSpline(sl);
+            // drawBezierSpline(sl);
+            for (var i = 0; i+1 < sl.length; i += 3) {
+                var c = {
+                    x: 0.25 * (sl[i].x+sl[i+1].x+sl[i+2].x+sl[i+3].x),
+                    y: 0.25 * (sl[i].y+sl[i+1].y+sl[i+2].y+sl[i+3].y)
+                };
+                var d = funRaw(c.x, c.y);
+                var color = getColor(Math.hypot(d.x, d.y));
+                if (!bezierCurves.hasOwnProperty(color))
+                    bezierCurves[color] = [];
+                bezierCurves[color].push([sl[i], sl[i+1], sl[i+2], sl[i+3]]);
+                count += 1;
+            }
             // draw arrow at the middle of streamline by arc length
             var lengthPsa = [0.0], length = 0.0;
             for (var i = 3; i < sl.length; i += 3) {
@@ -320,9 +376,24 @@ function onDraw() {
                 var p = sl[3*i];
                 var d = funRaw(p.x, p.y);
                 var a = Math.atan2(d.y, d.x);
+                ctx.strokeStyle = getColor(Math.hypot(d.x, d.y));
                 drawArrowTip(p, a, 3.0);
             }
         }
+        for (var color in bezierCurves) {
+            var curves = bezierCurves[color];
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            for (var i = 0; i < curves.length; i++) {
+                var c = curves[i];
+                for (var _ = 0; _ < 4; _++)
+                    c[_] = worldToScreen(c[_].x, c[_].y);
+                ctx.moveTo(c[0].x, c[0].y);
+                ctx.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y);
+            }
+            ctx.stroke();
+        }
+        // console.log(count);
     }
 
     // solution through mouse cursor
@@ -330,11 +401,13 @@ function onDraw() {
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
     if (App.mousePosW) {
-        drawBezierSpline(getSolution());
+        drawBezierSpline(getSolution(App.mousePosW, false));
     }
-    ctx.strokeStyle = 'rgb(255,0,0)';
+    ctx.strokeStyle = 'rgb(0,128,0)';
     ctx.lineWidth = 2;
-    for (var i = 0; i < App.solutions.length; i++) {
-        drawBezierSpline(App.solutions[i]);
+    for (var i = 0; i < App.solutionPoints.length; i++) {
+        var p = App.solutionPoints[i];
+        var sol = getSolution(p, false);
+        drawBezierSpline(sol);
     }
 }
