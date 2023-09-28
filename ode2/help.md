@@ -1,4 +1,4 @@
-<h2>3D Vector Field Grapher</h2>
+<h2>2D Vector Field Grapher</h2>
 
 <p>A tool to visualize first-order differential equations with up to 2 independent variables.Working in progress.</p>
 

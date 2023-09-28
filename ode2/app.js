@@ -151,8 +151,8 @@ function getStreamlines(density) {
         ymax: ymid+1.01*yrange
     }
     sc = 0.75 * fieldDensityToSc(density)*Math.max(
-        (state.xmax-state.xmin)/window.innerWidth,
-        (state.ymax-state.ymin)/window.innerHeight);
+        (state.xmax-state.xmin)/state.width,
+        (state.ymax-state.ymin)/state.height);
 
     // avoid streamlines that are too close
     var streamlines = [];
@@ -299,8 +299,8 @@ function onDraw() {
     ctx.lineCap = 'round';
 
     sc = fieldDensityToSc(density)*Math.max(
-        (state.xmax-state.xmin)/window.innerWidth,
-        (state.ymax-state.ymin)/window.innerHeight);
+        (state.xmax-state.xmin)/state.width,
+        (state.ymax-state.ymin)/state.height);
     var lines = [];
     var all_ls = [];
     for (var j = Math.ceil(state.ymin/sc); j <= Math.floor(state.ymax/sc); j++) {
@@ -325,9 +325,9 @@ function onDraw() {
     totl /= totn;
     function getColor(l) {
         var t = Math.tanh(l/totl);
-        var r = Math.round(255*t);
+        var r = Math.round(64+191*t);
         var g = Math.round(128);
-        var b = Math.round(255-255*t);
+        var b = Math.round(255-191*t);
         return 'rgb('+r+','+g+','+b+')';
     }
     for (var i = 0; i < lines.length; i++) {
@@ -396,18 +396,19 @@ function onDraw() {
         // console.log(count);
     }
 
+    // stacked solutions
+    ctx.strokeStyle = 'rgb(0,128,0)';
+    ctx.lineWidth = 3;
+    for (var i = 0; i < App.solutionPoints.length; i++) {
+        var p = App.solutionPoints[i];
+        var sol = getSolution(p, true);
+        drawBezierSpline(sol);
+    }
     // solution through mouse cursor
     ctx.strokeStyle = 'rgb(255,0,255)';
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
     if (App.mousePosW) {
-        drawBezierSpline(getSolution(App.mousePosW, false));
-    }
-    ctx.strokeStyle = 'rgb(0,128,0)';
-    ctx.lineWidth = 2;
-    for (var i = 0; i < App.solutionPoints.length; i++) {
-        var p = App.solutionPoints[i];
-        var sol = getSolution(p, false);
-        drawBezierSpline(sol);
+        drawBezierSpline(getSolution(App.mousePosW, true));
     }
 }
