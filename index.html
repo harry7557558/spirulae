@@ -27,7 +27,7 @@
     <div id="container">
 
         <h1><center>Spirulae</center></h1>
-        <center style="color:#555"><em>by Harry Chen - updated September 2023</em></center>
+        <center style="color:#555"><em>by Harry Chen - updated October 2023</em></center>
         <br/>
 
         <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
@@ -85,7 +85,7 @@
 <li>Real-time shader generation</li>
 <li>Special functions</li>
 </ul>
-<p>The 3D graphers implements the following parameters/features:</p>
+<p>The 3D graphers have the following features implemented:</p>
 <ul>
 <li>Infinite and bounded domain</li>
 <li>Scalar field visualization</li>
@@ -93,14 +93,45 @@
 <li>Multiple shading and grid modes</li>
 <li>Dark and light color themes</li>
 <li>Semi-transparent surface shading</li>
+<li>Anti-aliasing</li>
 <li>Lighting control</li>
 <li>Red highlight discontinuity</li>
-<li>Anti-aliasing</li>
+<li>etc.</li>
 </ul>
 <p>Experimental features (subject to change):</p>
 <ul>
 <li>Animation via <code>iTime(0)</code></li>
 <li>Export C++ code for 3D implicit grapher, via <code>exportCurrentFunction('cppd')</code> in the browser JS console</li>
+</ul>
+<hr />
+<h2>Working in Progress</h2>
+<p>Spirulae is under active development. Tools and features that are being developed include:</p>
+<ul>
+<li>3D mesh generation (<code>/meshgen3</code>)</li>
+<li>2D mesh generation (<code>/meshgen2</code>)</li>
+<li>2D vector field (<code>/ode2</code>)
+ <!-- - Automatic differentiation (`/autodiff`) -->
+</li>
+</ul>
+<p>Features that may be implemented in the future (ordered approximately by priority):</p>
+<ul>
+<li>Vectors and complex numbers</li>
+<li>Automatic differentiation</li>
+<li>More robust parsing for copy-paste equations</li>
+<li>Mathematically-defined custom colors</li>
+<li>More flexible viewport control</li>
+<li>Variable sliders</li>
+<li>Graph sharing via URL, <code>&lt;iframe&gt;</code> embed for webpages</li>
+<li>Better expression editor (highlighting, bracket matching, etc.)
+ <!-- - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers -->
+</li>
+</ul>
+<p>Ongoing and proposed research topics (ordered approximately by progress):</p>
+<ul>
+<li>Mesh generation and simplification</li>
+<li>Denoising of path-traced images via deep learning</li>
+<li>Finite element analysis of physically based models</li>
+<li>Visualization of 3D vector and tensor fields</li>
 </ul>
 <hr />
 <h2>Limitations</h2>
@@ -116,31 +147,9 @@
 </ul>
 <p>These tools have the following known issues:</p>
 <ul>
-<li>Incompatibility across devices for functions with overflow and NaN</li>
-<li>Reduced quality when rendering implicit surfaces with transparency</li>
+<li>GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior</li>
 <li>The parser has ambiguity in resolving conflicting variable names</li>
-</ul>
-<hr />
-<h2>Working in Progress</h2>
-<p>Spirulae is under active development. Tools and features that are being developed include:</p>
-<ul>
-<li>3D mesh generation (<code>/meshgen3</code>)</li>
-<li>2D mesh generation (<code>/meshgen2</code>)</li>
-<li>2D vector field (<code>/ode2</code>)</li>
-<li>Automatic differentiation (<code>/autodiff</code>)</li>
-</ul>
-<p>Features that may be implemented in the future (ordered approximately by priority):</p>
-<ul>
-<li>Vectors and complex numbers</li>
-<li>Differentiation in function definition</li>
-<li>Mathematically-defined custom colors</li>
-<li>Iteratively improve rendering quality</li>
-<li>More viewport control parameters</li>
-<li>Variable sliders</li>
-<li>Graph sharing via URL</li>
-<li><code>&lt;iframe&gt;</code> embed for webpages</li>
-<li>Better expression editor (highlighting, bracket matching, etc.)</li>
-<li>More <a href="https://en.wikipedia.org/wiki/Domain_coloring">domain coloring parameters</a> for complex graphers</li>
+<li>Incomplete documentation for some graphers</li>
 </ul>
 <hr />
 <h2>Frequently Asked Questions</h2>

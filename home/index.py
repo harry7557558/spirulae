@@ -5,6 +5,7 @@ html = open("home/index_base.html").read()
 readme = open("home/readme_base.md").read()
 
 md = open("home/index.md").read()
+# md = '\n'.join([line for line in md.split('\n') if not line.startswith('[//]')])
 
 html = html.replace("{%index.md%}", markdown.markdown(md))
 readme = readme.replace("{%index.md%}", md)

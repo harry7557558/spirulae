@@ -14,10 +14,19 @@ let MathParser = {
         return MathParser.IndependentVariables.hasOwnProperty(name);
     },
     // dependent variables, one letter
-    DependentVariables: {},  // name: bool required
+    DependentVariables: {},  // name: bool required, number for groups
     DependentFunctions: {},
     isDependentVariable: function (name) {
-        return MathParser.DependentVariables.hasOwnProperty(name);
+        let dvars = MathParser.DependentVariables;
+        if (dvars.hasOwnProperty(name))
+            return true;
+        for (var i in dvars) {
+            if (/^\d/.test(i)) {
+                if (dvars[i].hasOwnProperty(name))
+                    return true;
+            }
+        }
+        return false;
     },
     isDependentFunction: function (name) {
         return MathParser.DependentFunctions.hasOwnProperty(name);
@@ -651,11 +660,50 @@ MathParser.parseInput = function (input) {
     var result = {
         val: mainEqus,
     };
-    for (var varname in MathParser.DependentVariables) {
-        if (mainVariables.hasOwnProperty(varname))
-            result[varname] = dfs(variables[varname].postfix, variables);
-        else if (MathParser.DependentVariables[varname])
-            throw "Definition for `" + varname + "` not found.";
+    let dvars = MathParser.DependentVariables;
+    var groupFound = [];
+    var hasGroup = [];
+    for (var varname in dvars) {
+        if (/^\d/.test(varname)) {
+            hasGroup.push(varname);
+            var result1 = {};
+            var good = true;
+            for (var varname1 in dvars[varname]) {
+                if (mainVariables.hasOwnProperty(varname1))
+                    result1[varname1] = null;
+                else if (dvars[varname][varname1]) {
+                    good = false;
+                    break;
+                }
+            }
+            if (good) {
+                for (var varname1 in result1) {
+                    result[varname1] = dfs(variables[varname1].postfix, variables);
+                }
+                groupFound.push(varname)
+            }
+        }
+        else {
+            if (mainVariables.hasOwnProperty(varname))
+                result[varname] = dfs(variables[varname].postfix, variables);
+            else if (dvars[varname])
+                throw "Definition for `" + varname + "` not found.";
+        }
+    }
+    if (hasGroup.length > 0 && groupFound.length != 1) {
+        var groups = [];
+        if (groupFound.length > 0)
+            hasGroup = groupFound;
+        for (var group in hasGroup) {
+            var varnames = [];
+            for (var varname in dvars[group])
+                varnames.push(varname);
+            groups.push('[' + varnames.join(', ') + ']');
+        }
+        groups = groups.join(', ');
+        if (groupFound.length > 0)
+            throw "Conflicting dependent variable combinations: " + groups;
+        throw "Possible dependent variable combinations are: " + groups;
     }
 
     // latex

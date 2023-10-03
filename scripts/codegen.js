@@ -323,10 +323,15 @@ CodeGenerator.langs.js = {
             joiner: "\n"
         },
         ode2: {
-            fun: "function(x, y) {\n\
+            fun: [
+                "function(x, y) {\n\
 {%funbody%}\n\
     return { x: {%x_t%}, y: {%y_t%} };\n\
 }",
+                "function(x, y) {\n\
+{%funbody%}\n\
+    return { x: 1.0, y: {%y_x%} };\n\
+}"],
             prefix: 'v',
             def: "    var {%varname%} = {%expr%};",
             joiner: "\n"
@@ -816,7 +821,24 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             .replaceAll("{%expr%}", replaceUsed(intermediates[i].obj.code));
         lines.push(v);
     }
-    result.code = langpack.config.fun
+    result.code = "";
+    if (typeof langpack.config.fun == 'string')
+        result.code = langpack.config.fun;
+    else {
+        for (var fi = 0; fi < langpack.config.fun.length; fi++) {
+            var code = langpack.config.fun[fi];
+            var isAllHave = true;
+            for (var qi in queues) {
+                if (code.search("{%"+qi+"%}") == -1)
+                    isAllHave = false;
+            }
+            if (isAllHave) {
+                result.code = code;
+                break;
+            }
+        }
+    }
+    result.code = result.code
         .replaceAll("{%funname%}", funname)
         .replaceAll("{%funbody%}", lines.join(langpack.config.joiner));
     for (var qi in queues) {
@@ -842,16 +864,16 @@ CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
 
     // get required gradients
     var grads = [];
-    var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
-    if (matches != null) {
-        for (var i = 0; i < matches.length; i++) {
-            var mi = matches[i];
-            mi = mi.slice(2, mi.length - 2);
-            if (/;/.test(mi)) {
-                grads.push(mi.split(';')[1].split(','));
-            }
-        }
-    }
+    // var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
+    // if (matches != null) {
+    //     for (var i = 0; i < matches.length; i++) {
+    //         var mi = matches[i];
+    //         mi = mi.slice(2, mi.length - 2);
+    //         if (/;/.test(mi)) {
+    //             grads.push(mi.split(';')[1].split(','));
+    //         }
+    //     }
+    // }
 
     // extension counter
     var extensionMap = {};

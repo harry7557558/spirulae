@@ -18,7 +18,7 @@ The equation parser implements the following features:
  - Real-time shader generation
  - Special functions
 
-The 3D graphers implements the following parameters/features:
+The 3D graphers have the following features implemented:
 
  - Infinite and bounded domain
  - Scalar field visualization
@@ -26,14 +26,45 @@ The 3D graphers implements the following parameters/features:
  - Multiple shading and grid modes
  - Dark and light color themes
  - Semi-transparent surface shading
+ - Anti-aliasing
  - Lighting control
  - Red highlight discontinuity
- - Anti-aliasing
+ - etc.
 
 Experimental features (subject to change):
 
  - Animation via `iTime(0)`
  - Export C++ code for 3D implicit grapher, via `exportCurrentFunction('cppd')` in the browser JS console
+
+----
+
+## Working in Progress
+
+Spirulae is under active development. Tools and features that are being developed include:
+
+ - 3D mesh generation (`/meshgen3`)
+ - 2D mesh generation (`/meshgen2`)
+ - 2D vector field (`/ode2`)
+ <!-- - Automatic differentiation (`/autodiff`) -->
+
+Features that may be implemented in the future (ordered approximately by priority):
+
+ - Vectors and complex numbers
+ - Automatic differentiation
+ - More robust parsing for copy-paste equations
+ - Mathematically-defined custom colors
+ - More flexible viewport control
+ - Variable sliders
+ - Graph sharing via URL, `<iframe>` embed for webpages
+ - Better expression editor (highlighting, bracket matching, etc.)
+ <!-- - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers -->
+
+Ongoing and proposed research topics (ordered approximately by progress):
+
+ - Mesh generation and simplification
+ - Denoising of path-traced images via deep learning
+ - Finite element analysis of physically based models
+ - Visualization of 3D vector and tensor fields
 
 ----
 
@@ -49,33 +80,9 @@ These tools have the following dependencies:
 
 These tools have the following known issues:
 
- - Incompatibility across devices for functions with overflow and NaN
- - Reduced quality when rendering implicit surfaces with transparency
+ - GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior
  - The parser has ambiguity in resolving conflicting variable names
-
-----
-
-## Working in Progress
-
-Spirulae is under active development. Tools and features that are being developed include:
-
- - 3D mesh generation (`/meshgen3`)
- - 2D mesh generation (`/meshgen2`)
- - 2D vector field (`/ode2`)
- - Automatic differentiation (`/autodiff`)
-
-Features that may be implemented in the future (ordered approximately by priority):
-
- - Vectors and complex numbers
- - Differentiation in function definition
- - Mathematically-defined custom colors
- - Iteratively improve rendering quality
- - More viewport control parameters
- - Variable sliders
- - Graph sharing via URL
- - `<iframe>` embed for webpages
- - Better expression editor (highlighting, bracket matching, etc.)
- - More [domain coloring parameters](https://en.wikipedia.org/wiki/Domain_coloring) for complex graphers
+ - Incomplete documentation for some graphers
 
 ----
 

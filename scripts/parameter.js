@@ -343,8 +343,8 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         var expr = {};
         if (UpdateFunctionInputConfig.enableMain)
             expr.val = parsed.val;
-        for (var varname in MathParser.DependentVariables)
-            if (parsed.hasOwnProperty(varname))
+        for (var varname in parsed)
+            if (varname != 'val' && varname != 'latex')
                 expr[varname] = parsed[varname];
         if (UpdateFunctionInputConfig.useGL) {
             result = CodeGenerator.postfixToSource(

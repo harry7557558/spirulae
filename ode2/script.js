@@ -6,8 +6,8 @@ const NAME = "spirulae.ode2.";
 // https://discord.gg/hNtrWCTwwa
 const builtinFunctions = [
     ["Swirl", "x_t=sin(x+y)+y;y_t=cos(x-y)"],
-    ["Cooling", "k=3;T0=1;x_t=1;y_t=-k(y-T0)"],
-    ["Asymptotes", "x_t=1;y_t=y^4-y^3-3*y^2+y+2"],
+    ["Cooling", "k=3;T0=1;y_x=-k(y-T0)"],
+    ["Asymptotes", "y_x=y^4-y^3-3*y^2+y+2"],
     ["Circulation", "x_t=-y;y_t=x"],
     ["Swirls", "x_t=sin(x+y);y_t=cos(x-y)"],
     ["Pendulum", "#&#32;x:&#32;a;#&#32;y:&#32;a\';x_t=y;y_t=-sin(x)"],
@@ -36,8 +36,13 @@ document.body.onload = function (event) {
         'y': "y"
     };
     MathParser.DependentVariables = {
-        'x_t': true,
-        'y_t': true
+        0: {
+            'x_t': true,
+            'y_t': true
+        },
+        1: {
+            'y_x': true
+        }
     };
 
     // init code generator
