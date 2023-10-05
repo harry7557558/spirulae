@@ -176,7 +176,7 @@ function initParameters(parameters) {
         setTimeout(function () {  // comment input when WebGL context lost
             var input = funInput.value.split('\n');
             for (var i = 0; i < input.length; i++) {
-                if (MathParser.parseLine(input[i]).type == "main")
+                if (MathParser.testLine(input[i]).type == "main")
                     input[i] = '####' + input[i];
             }
             input = input.join('\n');

@@ -141,9 +141,96 @@ MathParser.balanceParenthesis = function (expr) {
 }
 
 
+// "sinx" -> "sin x"
+MathParser.addFunctionParenthesis = function (expr) {
+    expr = expr.replaceAll(/\s+/g, ' ');
+    const MINFL = 2;  // minimum function length
+    const MAXFL = 5;  // maximum function length
+    var res = "";  // result string
+    var fun = "";  // function name, nonempty if inside function
+    var tmp = "";  // temp string
+    var close = "";  // close parenthesis
+    for (var ci = 0; ci <= expr.length; ci++) {
+        var c = ci == expr.length ? '' : expr[ci];
+        // console.log(c, res, fun, tmp, close);
+        if (/[A-Za-z0-9_\.]/.test(c)) {
+            tmp += c;
+            // erf inv -> erfinv
+            if (fun != "" && MathFunctions.hasOwnProperty(fun+tmp)
+                // && MathFunctions[fun+tmp].hasOwnProperty(1)
+            ) {
+                fun += tmp;
+                tmp = "";
+                continue;
+            }
+            // check function name match
+            for (var l = MAXFL; l >= MINFL; l--) {
+                if (l > tmp.length)
+                    continue;
+                var name = tmp.slice(tmp.length-l);
+                var pre = tmp.slice(0, tmp.length-l);
+                if (MathFunctions.hasOwnProperty(name) &&
+                    MathFunctions[name].hasOwnProperty(1)
+                ) {
+                    if (fun != "") {
+                        // sinxcos -> sin(x)cos(
+                        if (tmp.length > l && !/^[\d\.]+$/.test(pre)) {
+                            res += fun + "(" + pre + close;
+                            fun = name;
+                            tmp = "";
+                            close = ")";
+                        }
+                        // lnsin -> ln(sin(
+                        else {
+                            res += fun + "(" + pre;
+                            fun = name;
+                            tmp = "";
+                            close += ")";
+                        }
+                    }
+                    // xsin -> x*sin(
+                    else {
+                        res += pre;
+                        fun = name;
+                        tmp = "";
+                        close += ")";
+                    }
+                    break;
+                }
+            }
+        }
+        else {
+            // sin( -> sin(
+            if (c == "(" && fun != "" && tmp == "") {
+                res += fun + c;
+                fun = "";
+                close = close.slice(1);
+            }
+            // sin x -> sin(x
+            else if (/\s/.test(c) && fun != "" && tmp == "") {
+                continue;
+            }
+            // exit function
+            else {
+                if (fun != "") {
+                    res += fun + "(" + tmp + close;
+                    close = "";
+                }
+                else res += tmp;
+                res += c;
+                tmp = fun = "";
+            }
+        }
+    }
+    // console.log(res);
+    return res;
+}
+
+
 // Parse a human math expression to postfix notation
 MathParser.exprToPostfix = function (expr, mathFunctions) {
     expr = MathParser.balanceParenthesis(expr);
+    expr = MathParser.addFunctionParenthesis(expr);
 
     // subtraction sign
     var expr1s = [{ s: "", pc: 0 }];
@@ -372,7 +459,7 @@ MathParser.getVariables = function (postfix, excludeIndependent) {
 
 
 // Parse one line, determines type
-MathParser.parseLine = function (line) {
+MathParser.testLine = function (line) {
     var res = {
         type: "",
         main: { left: "", right: "" },
@@ -505,7 +592,7 @@ MathParser.parseInput = function (input) {
     var mainEqusLr = [];  // main equation left/right
     var mainVariables = {};
     for (var i = 0; i < input.length; i++) {
-        var res = MathParser.parseLine(input[i]);
+        var res = MathParser.testLine(input[i]);
         if (res.type == "main") {
             mainEqusLr.push(res.main);
             continue;
