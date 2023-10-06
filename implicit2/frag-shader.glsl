@@ -9,16 +9,25 @@ uniform vec2 xyMin;
 uniform vec2 xyMax;
 
 
+#define DIFF_ORDER 1
+
 // function
 {%FUN%}
+#line 17
 
 float fun(vec2 p) {
+#if DIFF_ORDER == 0
     return funRaw(p.x, p.y);
+#elif DIFF_ORDER == 1
+    return funRaw(p.x, p.y).z;
+#elif DIFF_ORDER == 2
+    return funRaw(p.x, p.y)[2][2];
+#endif
 }
 
 // numerical gradient
 vec2 funGradN(vec2 p) {
-    float h = 0.002*length(p);
+    float h = 0.001*length(p);
     return vec2(
         fun(p+vec2(h,0)) - fun(p-vec2(h,0)),
         fun(p+vec2(0,h)) - fun(p-vec2(0,h))
@@ -27,9 +36,42 @@ vec2 funGradN(vec2 p) {
 
 // analytical gradient
 vec3 funGrad(vec2 p) {
+#if DIFF_ORDER == 0
     return vec3(funGradN(p), fun(p));
+#elif DIFF_ORDER == 1
+    return funRaw(p.x, p.y);
+#elif DIFF_ORDER == 2
+    return funRaw(p.x, p.y)[2];
+#endif
 }
-#line 33
+
+// numerical hessian
+mat2 funHessN(vec2 p) {
+    float h = 0.002*length(p);
+    float f = fun(p);
+    float fxx = (fun(p+vec2(h,0))+fun(p-vec2(h,0))-2.0*f)/(h*h);
+    float fyy = (fun(p+vec2(0,h))+fun(p-vec2(0,h))-2.0*f)/(h*h);
+    float fxy = (fun(p+vec2(h,h))+fun(p-vec2(h,h))-fun(p-vec2(h,-h))-fun(p-vec2(-h,h)))/(4.0*h*h);
+    return mat2(fxx, fxy, fxy, fyy);
+}
+
+#if DIFF_ORDER == 2
+// analytical hessian
+mat2 funHess(vec2 p) {
+    return mat2(2, 0, 0, 0);
+    return mat2(2.0, 0, 0, 2.0);
+    {
+        float x = p.x, y = p.y;
+        float a = x*x+y*y-1.0;
+        float fxx = 6.0*a*a+24.0*x*x*a-4.0*y*y*y;
+        float fyy = 6.0*a*a+24.0*y*y*a-12.0*x*x*y;
+        float fxy = 24.0*x*y*a-12.0*x*y*y;
+        return mat2(fxx, fxy, fxy, fyy);
+    }
+    return mat2(funRaw(p.x, p.y));
+}
+#endif
+
 
 // grid
 float grid1(vec2 p, float w) {
@@ -77,6 +119,15 @@ void main(void) {
     vec3 col = d < 0. ? vec3(0.6,0.7,1) : vec3(1,0.7,0.6);
     col = mix(vec3(0), col, clamp(abs(d)-1., 0.3, 1.));
     if (isnan(dot(g,g))) col = vec3(0,0.6,0);
+
+#if DIFF_ORDER == 1
+    col *= 1e2 * length(funGrad(xy).xy-funGradN(xy)) / abs(v);
+#elif DIFF_ORDER == 2
+    mat2 dH = funHess(xy)-funHessN(xy);
+    col *= 1e1 * length(vec4(dH[0], dH[1])) / abs(v);
+    // col *= 1e1 * length(vec2(dH[0][0], dH[1][1])) / abs(v);
+    // col *= 1e1 * abs(dH[1][1]) / abs(v);
+#endif
 
 #if {%GRID%}
     col *= grid(xy);

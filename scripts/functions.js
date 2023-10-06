@@ -4,12 +4,12 @@
 const PI = Math.PI;
 
 
-function Token(type, str) {
+function Token(type, str, numArgs=0) {
     console.assert(type == 'number' || type == 'variable' ||
         type == 'operator' || type == 'function' || type == null);
     this.type = type;  // type of the token
     this.str = str;  // name of the token represented as a string
-    this.numArgs = 0;  // number of arguments for functions
+    this.numArgs = numArgs;  // number of arguments for functions
 }
 
 
@@ -53,7 +53,7 @@ function EvalObject(
     this.isNumeric = isNumeric;  // zero gradient
     this.range = range;  // non-negative
     this.isCompatible = isCompatible;  // has no NAN
-    this.grad = {};  // { varname: EvalObject }
+    this.grad = {};  // { varname: EvalObject }, first order derivative only
 }
 
 function EvalLatexObject(postfix, latex, precedence) {
@@ -130,7 +130,7 @@ function MathFunction(
             isCompatible = isCompatible && args[i].isCompatible;
         }
         var result = new EvalObject(
-            postfix.concat([new Token('function', names[0])]),
+            postfix.concat([new Token('function', names[0], args.length)]),
             code, isNumeric, new Interval(this.range.x0, this.range.x1), isCompatible);
         if (args.length == 1) {
             const eps = 1e-8;
@@ -736,7 +736,7 @@ FunctionSubs.addEvalObjects = function (a, b, lang) {
     if (b.range.equals(0.0))
         return a;
     return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '+')])),
+        a.postfix.concat(b.postfix.concat([new Token('operator', '+', 2)])),
         MathFunctions['ADD'][2].langs[lang]
             .replaceAll('%1', a.code).replaceAll('%2', b.code),
         a.isNumeric && b.isNumeric,
@@ -752,7 +752,7 @@ FunctionSubs.subEvalObjects = function (a, b, lang) {
         a.range.x0 - b.range.x1,
         a.range.x1 - b.range.x0);
     return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '-')])),
+        a.postfix.concat(b.postfix.concat([new Token('operator', '-', 2)])),
         a.range.x0 == 0.0 && a.range.x1 == 0.0 ? '-' + b.code :
             MathFunctions['SUB'][2].langs[lang]
                 .replaceAll('%1', a.code).replaceAll('%2', b.code),
@@ -776,7 +776,7 @@ FunctionSubs.mulEvalObjects = function (a, b, lang) {
         a.range.x1 * b.range.x0, a.range.x1 * b.range.x1
     ].filter(x => !isNaN(x));
     return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '*')])),
+        a.postfix.concat(b.postfix.concat([new Token('operator', '*', 2)])),
         MathFunctions['MUL'][2].langs[lang]
             .replaceAll('%1', a.code).replaceAll('%2', b.code),
         a.isNumeric && b.isNumeric,
@@ -822,7 +822,7 @@ FunctionSubs.divEvalObjects = function (a, b, lang) {
         );
     }
     return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '/')])),
+        a.postfix.concat(b.postfix.concat([new Token('operator', '/', 2)])),
         MathFunctions['DIV'][2].langs[lang]
             .replaceAll('%1', a.code).replaceAll('%2', b.code),
         a.isNumeric && b.isNumeric,
@@ -836,7 +836,7 @@ FunctionSubs.powEvalObjects = function (a, b, lang) {
         a.code == MathFunctions['CONST']['1'].langs[lang]
             .replaceAll("%1", Math.E)) {
         return new EvalObject(
-            a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
+            a.postfix.concat(b.postfix.concat([new Token('operator', '^', 2)])),
             MathFunctions['exp']['1'].subSource([b], lang).code,
             b.isNumeric,
             new Interval(Math.exp(b.range.x0), Math.exp(b.range.x1)),
@@ -867,10 +867,10 @@ FunctionSubs.powEvalObjects = function (a, b, lang) {
             ) : MathFunctions['pow']['2'].langs[lang]
                 .replaceAll('%1', a.code).replaceAll('%2', b.code);
         return new EvalObject(
-            a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
+            a.postfix.concat(b.postfix.concat([new Token('operator', '^', 2)])),
             code,
             a.isNumeric, interval, a.isCompatible
-        )
+        );
     }
     var interval = new Interval();
     if (a.range.isPositive()) interval = new Interval(
@@ -878,7 +878,7 @@ FunctionSubs.powEvalObjects = function (a, b, lang) {
         Math.pow(a.range.x1, b.range.x1)
     );
     return new EvalObject(
-        a.postfix.concat(b.postfix.concat([new Token('operator', '^')])),
+        a.postfix.concat(b.postfix.concat([new Token('operator', '^', 2)])),
         MathFunctions['pow'][2].langs[lang]
             .replaceAll('%1', a.code).replaceAll('%2', b.code),
         a.isNumeric && b.isNumeric,
@@ -891,7 +891,7 @@ FunctionSubs.rootEvalObjects = function (args, lang) {
     this.assertArgs(args);
     return new EvalObject(
         args[0].postfix.concat(args[1].postfix)
-            .concat([new Token('function', this.names[0])]),
+            .concat([new Token('function', this.names[0], args.length)]),
         this.langs[lang].replaceAll("%1", args[0].code).replaceAll("%2", args[1].code),
         args[0].isNumeric && args[1].isNumeric,
         args[1].range.isPositive() ? new Interval(
@@ -913,7 +913,7 @@ FunctionSubs.maxMinEvalObjects = function (args, lang) {
                 .replaceAll("%2", args[i + 1].code);
             args1.push(new EvalObject(
                 args[i].postfix.concat(args[i + 1].postfix)
-                    .concat([new Token('function', this.names[0])]),
+                    .concat([new Token('function', this.names[0], 2)]),
                 code, args[i].isNumeric && args[i + 1].isNumeric,
                 this.names[0] == 'max' ? new Interval(
                     Math.max(args[i].range.x0, args[i + 1].range.x0),
@@ -945,7 +945,9 @@ FunctionSubs.hypotLatex = function (args) {
 FunctionSubs.hypotEvalObjects = function (args, lang) {
     if (args.length < 2)
         throw "To few argument for function " + this.names[0];
-    let two = new EvalObject([], "", true, new Interval(2, 2), true);
+    let two = new EvalObject(
+        [new Token("number", "2.0")],
+        "", true, new Interval(2, 2), true);
     var res = null;
     for (var i = 0; i < args.length; i += 1) {
         var a2 = FunctionSubs.powEvalObjects(args[i], two, lang);
@@ -997,7 +999,7 @@ FunctionSubs.atan2EvalObjects = function (args, lang) {
     }
     return new EvalObject(
         args[0].postfix.concat(args[1].postfix)
-            .concat([new Token('function', this.names[0])]),
+            .concat([new Token('function', this.names[0], args.length)]),
         this.langs[lang].replaceAll("%1", args[0].code).replaceAll("%2", args[1].code),
         args[0].isNumeric && args[1].isNumeric,
         range,
@@ -1045,7 +1047,7 @@ FunctionSubs.ifEvalObjects = function (args, lang) {
         Math.max(args[1].range.x1, args[2].range.x1)
     );
     return new EvalObject(
-        postfix.concat([new Token('function', 'if')]),
+        postfix.concat([new Token('function', 'if', args.length)]),
         code, isNumeric || (range.x0 == range.x1),
         range, isCompatible);
 };

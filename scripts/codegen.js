@@ -493,16 +493,19 @@ CodeGenerator.postfixToLatex = function (queue) {
 // Convert a single postfix math expression to source code, used by `postfixToSource`
 CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensionMap) {
     let langpack = this.langs[lang];
+    let constexpr = MathFunctions['CONST'][1].langs[lang];
 
     // handle repeated evaluations
     var subtreesLength = 0;
-    var subtrees = {};
-    var intermediates = [];
-    function addSubtree(evalobj, evalobjAlt = null) {
+    var subtrees = {};  // key and id in intermediates
+    var intermediates = [];  // EvalObjects
+
+    // may return an object, or a string id for intermediates look up
+    function addSubtree(evalobj, evalobjAlt, diffvar = null) {
         // returns object
         if (MathParser.isIndependentVariable(evalobj.code))
             return evalobj;
-        if (evalobj.range.isConstant()) {
+        if (evalobj.range.x0 == evalobj.range.x1) {
             let constexpr = MathFunctions['CONST'][1].langs[lang];
             var x = evalobj.range.x0;
             var xr = 1e-8 * Math.round(1e8 * x);
@@ -525,6 +528,20 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 keyAlt.push(postfixAlt[i].str);
             keyAlt = keyAlt.join(',');
         }
+        // check if feasible
+        var feasible = true;
+        if (subtrees.hasOwnProperty(key) && diffvar !== null) {
+            var intm = intermediates[Number(subtrees[key].slice(1))].obj;
+            if (!intm.grad.hasOwnProperty(diffvar))
+                intm.grad[diffvar] = evalobj.grad[diffvar];
+                // feasible = false;
+        }
+        if (subtrees.hasOwnProperty(keyAlt) && diffvar !== null) {
+            var intm = intermediates[Number(subtrees[keyAlt].slice(1))].obj;
+            if (!intm.grad.hasOwnProperty(diffvar))
+                intm.grad[diffvar] = evalobjAlt.grad[diffvar];
+                // feasible = false;
+        }
         if (!subtrees.hasOwnProperty(key) &&
             (evalobjAlt == null || !subtrees.hasOwnProperty(keyAlt))
         ) {
@@ -534,11 +551,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                         return '$' + evalobj.code.slice(1);
                 }
             var id = '$' + subtreesLength;
-            subtrees[key] = {
-                id: id,
-                length: postfix.length,
-                postfix: postfix,
-            };
+            subtrees[key] = id;
             intermediates.push({
                 id: id,
                 obj: { ...evalobj }
@@ -546,12 +559,44 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             subtreesLength += 1;
         }
         return subtrees.hasOwnProperty(key) ?
-            subtrees[key].id : subtrees[keyAlt].id;
+            subtrees[key] : subtrees[keyAlt];
     }
 
-    function addToken(stack, token, gradOrders = [], args = null) {
-        let constexpr = MathFunctions['CONST'][1].langs[lang];
-        var obj = null, fun = null;
+    function subFunctionGradient(fun, funArgs, diffvar) {
+        if (fun.grad === null) {
+            throw new Error("Function `" + fun.names[0] + "` does not support differentiation.");
+        }
+        var fungrad = typeof(fun.grad) == "function" ?
+            CodeGenerator.parseGradient(fun.grad(funArgs.length)) :
+            fun.grad.slice();
+
+        // handle function gradient
+        var dfunArgs = [];
+        for (var i = 0; i < funArgs.length; i++) {
+            if (!funArgs[i].grad.hasOwnProperty(diffvar))
+                throw new Error("Internal error: funarg has no grad.");
+            dfunArgs.push(funArgs[i].grad[diffvar]);
+        }
+        var stack1 = [];
+        for (var i = 0; i < fungrad.length; i++) {
+            if (fungrad[i].type == "variable" && /@/.test(fungrad[i].str)) {
+                var parts = fungrad[i].str.split('@');
+                var parami = Number(parts[1]) - 1;
+                if (parts[0] == 'g') stack1.push(dfunArgs[parami]);
+                else stack1.push(funArgs[parami]);
+            }
+            // else if (fungrad[i].type == "variable" && /\$\d+/.test(fungrad[i].str)) {
+            //     stack1.push(fungrad[i]);
+            // }
+            else addToken(stack1, { ...fungrad[i] }, null);
+        }
+        if (stack1.length != 1)
+            throw new Error("Result1 stack length is not 1");
+        return stack1[0];
+    }
+
+    function addToken(stack, token, diffvar) {
+        var obj = null, objAlt = null, fun = null;
         var funArgs = [];
         // ??
         if (token.type == "variable" && /@/.test(token.str)) {
@@ -565,9 +610,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 constexpr.replaceAll("%1", s),
                 true, new Interval(Number(s), Number(s)), true);
             // grad
-            for (var vi = 0; vi < gradOrders.length; vi++) {
-                var gradname = gradOrders.slice(0, vi + 1).join(',');
-                obj.grad[gradname] = new EvalObject(
+            if (diffvar !== null || true) {
+                obj.grad[diffvar] = new EvalObject(
                     [new Token("number", '0.0')],
                     constexpr.replaceAll("%1", "0.0"),
                     true, new Interval(0, 0), true);
@@ -599,27 +643,21 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             obj = new EvalObject(
                 [token], s, isNumeric, interval, true);
             // grad
-            var sofar = 2.0;
-            for (var vi = 0; vi < gradOrders.length; vi++) {
-                var gradname = gradOrders.slice(0, vi + 1).join(',');
-                var v = gradOrders[vi];
-                if (v == s) sofar = Math.max(sofar - 1.0, 0.0);
-                else sofar = 0.0;
-                obj.grad[gradname] = new EvalObject(
-                    [new Token("number", sofar.toFixed(1))],
-                    constexpr.replaceAll("%1", sofar.toFixed(1)),
-                    true, new Interval(sofar, sofar), true);
+            if (diffvar !== null || true) {
+                var g = s == diffvar ? 1.0 : 0.0;
+                obj.grad[diffvar] = new EvalObject(
+                    [new Token("number", g.toFixed(1))],
+                    constexpr.replaceAll("%1", g.toFixed(1)),
+                    true, new Interval(g, g), true);
             }
             stack.push(obj);
             return;
         }
         // operators
         else if (token.type == "operator") {
-            var objAlt = null;
             var v1 = stack[stack.length - 2];
             var v2 = stack[stack.length - 1];
             stack.pop(); stack.pop();
-            funArgs = [v1, v2];
             // get object
             if (token.str == "^") {
                 obj = FunctionSubs.powEvalObjects(v1, v2, lang);
@@ -643,12 +681,15 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 obj = FunctionSubs.divEvalObjects(v1, v2, lang);
                 fun = MathFunctions[v2.isNumeric ? "divconst" : "DIV"][2];
             }
-            // get gradient expression
-            var id = addSubtree(obj, objAlt);
+            if (diffvar !== null) {
+                obj.grad[diffvar] = subFunctionGradient(fun, [v1, v2], diffvar);
+                if (objAlt !== null)
+                    objAlt.grad[diffvar] = subFunctionGradient(fun, [v2, v1], diffvar);
+            }
+            var id = addSubtree(obj, objAlt, diffvar);
             if (typeof(id) == "string") {
                 obj.postfix = [new Token('variable', id)];
                 obj.code = id;
-                obj.grad = intermediates[Number(id.slice(1))].obj.grad;
             }
             else obj = id;
         }
@@ -670,99 +711,79 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                     extensionMap[exts[_]].used = true;
             }
             obj = fun.subSource(funArgs, lang);
-            var id = addSubtree(obj);
+            if (fun.names[0] == "iTime")
+                obj.isNumeric = false;
+            if (diffvar !== null)
+                obj.grad[diffvar] = subFunctionGradient(fun, funArgs, diffvar);
+            var id = addSubtree(obj, null, diffvar);
             if (typeof(id) == "string") {
                 obj.postfix = [new Token('variable', id)];
                 obj.code = id;
-                obj.grad = intermediates[Number(id.slice(1))].obj.grad;
             }
-            if (fun.names[0] == "iTime")
-                obj.isNumeric = false;
         }
         else {
             throw new Error("Unrecognized token `" + token + "`");
         }
 
-        if (gradOrders.length == 0) {
-            stack.push(obj);
-            return;
-        }
-        if (fun.grad == null) {
-            throw new Error("Function `" + fun.names[0] + "` does not support differentiation.");
-        }
-        var fungrad = typeof(fun.grad) == "function" ?
-            CodeGenerator.parseGradient(fun.grad(funArgs.length)) :
-            fun.grad.slice();
-
-        // handle function gradient
-        var diffs = [];
-        // first time differentiate
-        for (var vi = 0; vi <= gradOrders.length; vi++) {
-            var gradname = gradOrders.slice(0, vi).join(',');
-            var args1 = [];
-            for (var i = 0; i < funArgs.length; i++) {
-                args1.push(vi == 0 ? funArgs[i] : funArgs[i].grad[gradname]);
-            }
-            diffs.push(args1);
-        }
-        // console.log(diffs.slice());
-        var diffs1 = [];
-        for (var vi = 0; vi + 1 < diffs.length; vi++) {
-            var v = gradOrders[vi];
-            var gradname = gradOrders.slice(0, vi + 1).join(',');
-            var grad = fungrad.slice();
-            var stack1 = [];
-            for (var i = 0; i < grad.length; i++) {
-                if (grad[i].type == "variable" && /@/.test(grad[i].str)) {
-                    var parts = grad[i].str.split('@');
-                    var parami = Number(parts[1]) - 1;
-                    stack1.push(diffs[vi + (parts[0] == 'g')][parami]);
-                }
-                else addToken(stack1, grad[i], [], args1);
-            }
-            if (stack1.length != 1)
-                throw new Error("Result1 stack length is not 1");
-            obj.grad[gradname] = stack1[0];
-            diffs1.push(stack1[0]);
-        }
-        // console.log(diffs1.slice());
-        // if (gradOrders.length > 0)
-        //     console.log(token.str, obj.code);
         stack.push(obj);
-        for (var ui = 0; ui < gradOrders.length; ui++) {
+        return;
+    }
+
+    function getObjectGradient(obj, diffvar) {
+        if (obj.grad.hasOwnProperty(diffvar))
+            return obj.grad[diffvar];
+        var stack = [];
+        function addPostfixToStack(postfix) {
+            for (var ti = 0; ti < postfix.length; ti++) {
+                var token = postfix[ti];
+                if (token.type == 'variable' && /\$\d+/.test(token.str)) {
+                    var id = Number(token.str.slice(1));
+                    addPostfixToStack(intermediates[id].obj.postfix);
+                    intermediates[id].obj.grad[diffvar] = stack[stack.length-1];
+                }
+                else addToken(stack, { ...token }, diffvar);
+            }
         }
+        addPostfixToStack(obj.postfix);
+        if (stack.length != 1)
+            throw new Error("Result stack length is not 1");
+        return stack[0].grad[diffvar];
     }
 
     // postfix evaluation
     var qmap = {};
     var isCompatible = true;
-    grads = [[]].concat(grads);
-    for (var gi in grads) {
-        var grad = grads[gi];
-        for (var qi in queues) {
-            var queue = queues[qi];
-            var stack = [];  // EvalObject objects
-            for (var i = 0; i < queue.length; i++) {
-                addToken(stack, { ...queue[i] }, grad, null);
-            }
-            if (stack.length != 1)
-                throw new Error("Result stack length is not 1");
-            // console.log(stack[0]);
-            qmap[qi] = stack[0];
-            isCompatible = isCompatible && stack[0].isCompatible;
+    for (var qi in queues) {
+        var queue = queues[qi];
+        var stack = [];  // EvalObject objects
+        for (var i = 0; i < queue.length; i++) {
+            addToken(stack, { ...queue[i] }, null);
         }
+        if (stack.length != 1)
+            throw new Error("Result stack length is not 1");
+        // console.log(stack[0]);
+        qmap[qi] = stack[0];
+        isCompatible = isCompatible && stack[0].isCompatible;
     }
     // console.log(subtrees);
+    // console.log(intermediates);
+
+    // gradient evaluation
+    for (var gi in grads) {
+        var varname = grads[gi].varname;
+        var diffs = grads[gi].diff;
+        var grad = getObjectGradient(qmap[varname], diffs[0]);
+        console.log(varname+';'+diffs.join(','));
+        console.log(grad);
+        qmap[varname+';'+diffs.join(',')] = grad;
+    }
+    // console.log(qmap);
 
     // check what intermediates are used
     var used = new Array(intermediates.length).fill(false);
     var rescode = [];
-    for (var qi in queues) {
+    for (var qi in qmap) {
         rescode.push(qmap[qi].code);
-        for (var j = 1; j < grads.length; j++) {
-            var gv = grads[j].join(',');
-            rescode.push(qmap[qi].grad[gv].code);
-        }
     }
     var visited = [];
     for (var i = 0; i < rescode.length; i++) {
@@ -841,15 +862,9 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
     result.code = result.code
         .replaceAll("{%funname%}", funname)
         .replaceAll("{%funbody%}", lines.join(langpack.config.joiner));
-    for (var qi in queues) {
+    for (var qi in qmap) {
         result.code = result.code.replaceAll("{%" + qi + "%}",
             replaceUsed(qmap[qi].code));
-        for (var j = 1; j < grads.length; j++) {
-            var gv = grads[j].join(',');
-            var s = "{%" + qi + ";" + gv + "%}";
-            result.code = result.code.replaceAll(s,
-                replaceUsed(qmap[qi].grad[gv].code));
-        }
     }
     return result;
 }
@@ -864,16 +879,26 @@ CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
 
     // get required gradients
     var grads = [];
-    // var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
-    // if (matches != null) {
-    //     for (var i = 0; i < matches.length; i++) {
-    //         var mi = matches[i];
-    //         mi = mi.slice(2, mi.length - 2);
-    //         if (/;/.test(mi)) {
-    //             grads.push(mi.split(';')[1].split(','));
-    //         }
-    //     }
-    // }
+    var matches = null;
+    if (typeof langpack.config.fun == 'string') {
+        var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
+    }
+    if (matches != null) {
+        var norepeat = {};
+        for (var i = 0; i < matches.length; i++) {
+            var mi = matches[i];
+            mi = mi.slice(2, mi.length - 2);
+            if (/;/.test(mi)) {
+                if (!norepeat.hasOwnProperty(mi)) {
+                    grads.push({
+                        varname: mi.split(';')[0],
+                        diff: mi.split(';')[1].split(',')
+                    });
+                    norepeat[mi] = null;
+                }
+            }
+        }
+    }
 
     // extension counter
     var extensionMap = {};

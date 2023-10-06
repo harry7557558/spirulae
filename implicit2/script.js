@@ -58,7 +58,27 @@ function initLangpack() {
     CodeGenerator.langs.glsl.presets.implicit2g_compact = {
         fun: "vec3 {%funname%}(float x, float y) {\n\
     float {%funbody%};\n\
-    return vec4({%val;x%}, {%val;y%}, {%val%});\n\
+    return vec3({%val;x%}, {%val;y%}, {%val%});\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    CodeGenerator.langs.glsl.presets.implicit2h = {
+        fun: "mat3 {%funname%}(float x, float y) {\n\
+{%funbody%}\n\
+    return mat3({%val;x,x%}, {%val;x,y%}, {%val;x%},\n\
+                {%val;y,x%}, {%val;y,y%}, {%val;y%},\n\
+                {%val;x%}, {%val;y%}, {%val%});\n\
+}",
+        prefix: 'v',
+        def: "    float {%varname%} = {%expr%};",
+        joiner: "\n"
+    };
+    CodeGenerator.langs.glsl.presets.implicit2h_compact = {
+        fun: "mat3 {%funname%}(float x, float y) {\n\
+    float {%funbody%};\n\
+    return mat3({%val;x,x%}, {%val;x,y%}, {%val;x%}, {%val;y,x%}, {%val;y,y%}, {%val;y%}, {%val;x%}, {%val;y%}, {%val%});\n\
 }",
         prefix: 'v',
         def: "{%varname%}={%expr%}",
@@ -161,7 +181,7 @@ document.body.onload = function (event) {
 
     // init code generator
     initLangpack();
-    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit2_compact;
+    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit2g_compact;
     CodeGenerator.langs.js.config = CodeGenerator.langs.js.presets.implicit2;
 
     // init parameters

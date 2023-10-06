@@ -153,7 +153,7 @@ MathParser.addFunctionParenthesis = function (expr) {
     for (var ci = 0; ci <= expr.length; ci++) {
         var c = ci == expr.length ? '' : expr[ci];
         // console.log(c, res, fun, tmp, close);
-        if (/[A-Za-z0-9π_\.]/.test(c)) {
+        if (/[A-Za-z0-9Α-Ωα-ω_\.]/.test(c)) {
             tmp += c;
             // erf inv -> erfinv
             if (fun != "" && MathFunctions.hasOwnProperty(fun+tmp)
