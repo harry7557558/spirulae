@@ -206,6 +206,11 @@ MathParser.addFunctionParenthesis = function (expr) {
                 fun = "";
                 close = close.slice(1);
             }
+            // sin(x) ( -> sin(x)*(
+            else if (c == "(" && fun == "" && close != "") {
+                res += tmp + close + c;
+                close = "";
+            }
             // sin x -> sin(x
             else if (/\s/.test(c) && fun != "" && tmp == "") {
                 continue;
@@ -217,7 +222,11 @@ MathParser.addFunctionParenthesis = function (expr) {
                     close = "";
                 }
                 else res += tmp;
-                res += c;
+                if (c == '') {
+                    res += close;
+                    fun = close = "";
+                }
+                else res += c;
                 tmp = fun = "";
             }
         }

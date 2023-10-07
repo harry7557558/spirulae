@@ -475,6 +475,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%LIGHT_THEME%}", Number(params.bLight));
         shaderSource = shaderSource.replaceAll("{%COLOR%}", params.sColor);
+        shaderSource = shaderSource.replaceAll("{%AUTODIFF%}", Number(params.bAutodiff));
         shaderSource = shaderSource.replaceAll("{%XRAY%}", Number(params.bXray));
         shaderSource = shaderSource.replaceAll("{%Y_UP%}", Number(params.bYup));
         shaderSource = shaderSource.replaceAll("{%GRID%}", Number(params.sGrid));

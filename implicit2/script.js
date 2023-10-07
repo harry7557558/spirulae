@@ -181,14 +181,21 @@ document.body.onload = function (event) {
 
     // init code generator
     initLangpack();
-    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit2g_compact;
-    CodeGenerator.langs.js.config = CodeGenerator.langs.js.presets.implicit2;
+    var updateLangpack = function() {
+        let v = document.getElementById("select-grad").value;
+        CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets
+            ['implicit2' + ['','g','h'][Number(v)] + '_compact'];
+        CodeGenerator.langs.js.config = CodeGenerator.langs.js.presets.implicit2;
+    }
+    updateLangpack();
+    UpdateFunctionInputConfig.callbackBefore = updateLangpack;
 
     // init parameters
     initParameters([
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+        new GraphingParameter("sDebug", "select-grad"),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;

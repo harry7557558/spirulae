@@ -24,7 +24,7 @@
 
 <p><b>Quality</b>: A higher quality means a smaller raymarching step, which is slower but usually produces a more accurate image.</p>
 
-<p><b><i>Y</i>-up</b>: A majority of math textbooks use the <i>z</i>-axis as the vertical axis. Check this checkbox if you prefer <i>y</i> as the vertical axis.</p>
+<p><b><i>Y</i>-up</b>: Most math textbooks use the <i>z</i>-axis as the vertical axis. Check this checkbox if you prefer <i>y</i> as the vertical axis.</p>
 
 <p><b>Light theme</b>: Check <code>☼</code> to use light background instead of the default dark background.</p>
 

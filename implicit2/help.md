@@ -1,5 +1,9 @@
 <h2>Implicit Curve Grapher</h2>
 
+<h3 style="color:orange">This is a tool created for testing purpose and is not intended to be useful. For more practical ones, please visit <a href="../" style="color:yellow">Spirulae homepage</a>.</h3>
+
+<hr/>
+
 <p>By Harry Chen (harry7557558) - Implicit curve grapher in 2D. This tool isn't indented to be useful. It was created as a member of the Spirulae function grapher series to test 2D viewport and input parsing. You can find cooler function graphers from the series <a href="../implicit3/" title="3D Implicit Surface Grapher">here</a>, <a href="../complex/" title="Complex Domain Coloring Grapher">here</a>, and <a href="../complex3/" title="3D Complex Domain Coloring Grapher">here</a>.</p>
 
 <p>If you insist to use this tool, here is a brief description of it (template copied from other graphers):</p>

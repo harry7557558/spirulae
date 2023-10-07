@@ -55,24 +55,6 @@ CodeGenerator.langs.glsl = {
             def: "{%varname%}={%expr%}",
             joiner: ", "
         },
-        paramsurf: {
-            fun: "vec3 {%funname%}(float u, float v) {\n\
-{%funbody%}\n\
-    return vec3({%x%}, {%y%}, {%z%});\n\
-}",
-            prefix: 'v',
-            def: "    float {%varname%} = {%expr%};",
-            joiner: "\n"
-        },
-        paramsurf_compact: {
-            fun: "vec3 {%funname%}(float u, float v) {\n\
-    float {%funbody%};\n\
-    return vec3({%x%}, {%y%}, {%z%});\n\
-}",
-            prefix: 'v',
-            def: "{%varname%}={%expr%}",
-            joiner: ", "
-        },
     },
     extensions: [
         {
@@ -769,12 +751,18 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
     // console.log(intermediates);
 
     // gradient evaluation
+    grads.sort(function (a, b) {
+        return a.diff.length - b.diff.length;
+    });
     for (var gi in grads) {
         var varname = grads[gi].varname;
         var diffs = grads[gi].diff;
-        var grad = getObjectGradient(qmap[varname], diffs[0]);
-        console.log(varname+';'+diffs.join(','));
-        console.log(grad);
+        var nd = diffs.length;
+        // console.log(varname+';'+diffs.join(','));
+        var grad = nd == 1 ?
+            getObjectGradient(qmap[varname], diffs[0]) :
+            getObjectGradient(qmap[varname+';'+diffs.slice(0,nd-1).join(',')], diffs[nd-1]);
+        // console.log(grad);
         qmap[varname+';'+diffs.join(',')] = grad;
     }
     // console.log(qmap);

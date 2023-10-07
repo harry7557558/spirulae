@@ -8,8 +8,7 @@ uniform vec2 iResolution;
 uniform vec2 xyMin;
 uniform vec2 xyMax;
 
-
-#define DIFF_ORDER 1
+#define DIFF_ORDER {%DEBUG%}
 
 // function
 {%FUN%}
@@ -27,7 +26,7 @@ float fun(vec2 p) {
 
 // numerical gradient
 vec2 funGradN(vec2 p) {
-    float h = 0.001*length(p);
+    float h = 0.001*pow(dot(p,p),1.0/6.0);
     return vec2(
         fun(p+vec2(h,0)) - fun(p-vec2(h,0)),
         fun(p+vec2(0,h)) - fun(p-vec2(0,h))
@@ -47,7 +46,7 @@ vec3 funGrad(vec2 p) {
 
 // numerical hessian
 mat2 funHessN(vec2 p) {
-    float h = 0.002*length(p);
+    float h = 0.002*pow(dot(p,p),1.0/6.0);
     float f = fun(p);
     float fxx = (fun(p+vec2(h,0))+fun(p-vec2(h,0))-2.0*f)/(h*h);
     float fyy = (fun(p+vec2(0,h))+fun(p-vec2(0,h))-2.0*f)/(h*h);
@@ -58,16 +57,16 @@ mat2 funHessN(vec2 p) {
 #if DIFF_ORDER == 2
 // analytical hessian
 mat2 funHess(vec2 p) {
-    return mat2(2, 0, 0, 0);
-    return mat2(2.0, 0, 0, 2.0);
-    {
-        float x = p.x, y = p.y;
-        float a = x*x+y*y-1.0;
-        float fxx = 6.0*a*a+24.0*x*x*a-4.0*y*y*y;
-        float fyy = 6.0*a*a+24.0*y*y*a-12.0*x*x*y;
-        float fxy = 24.0*x*y*a-12.0*x*y*y;
-        return mat2(fxx, fxy, fxy, fyy);
-    }
+    // return mat2(2, 0, 0, 0);
+    // return mat2(2.0, 0, 0, 2.0);
+    // {
+    //     float x = p.x, y = p.y;
+    //     float a = x*x+y*y-1.0;
+    //     float fxx = 6.0*a*a+24.0*x*x*a-4.0*y*y*y;
+    //     float fyy = 6.0*a*a+24.0*y*y*a-12.0*x*x*y;
+    //     float fxy = 24.0*x*y*a-12.0*x*y*y;
+    //     return mat2(fxx, fxy, fxy, fyy);
+    // }
     return mat2(funRaw(p.x, p.y));
 }
 #endif

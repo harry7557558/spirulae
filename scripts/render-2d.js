@@ -460,6 +460,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%GRID%}", params.bGrid ? "1" : "0");
         shaderSource = shaderSource.replaceAll("{%CONTOUR_LINEAR%}", params.bContourLinear ? "1" : "0");
         shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", params.bContourLog ? "1" : "0");
+        shaderSource = shaderSource.replaceAll("{%DEBUG%}", params.sDebug);
         return shaderSource;
     }
     console.time("compile shader");

@@ -257,6 +257,8 @@ var UpdateFunctionInputConfig = {
     warnNaN: true,
     useGL: true,
     jsFunName: null,
+    callbackBefore: null,
+    callbackAfter: null
 };
 
 var WarningStack = [];
@@ -277,6 +279,9 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
     } catch (e) { console.error(e); }
     if (!updateFunction) return;
     WarningStack = [];
+
+    if (UpdateFunctionInputConfig.callbackBefore)
+        UpdateFunctionInputConfig.callbackBefore();
 
     // parse input
     var parsed = null;
@@ -383,6 +388,9 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         if (checkboxLatex.checked)
             updateLatex(parsed.latex, "red");
     }
+
+    if (UpdateFunctionInputConfig.callbackAfter)
+        UpdateFunctionInputConfig.callbackAfter();
 }
 
 

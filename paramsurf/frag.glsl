@@ -19,6 +19,10 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #line 20
 
 
+// no autodiff
+#if {%AUTODIFF%}==0 || {%COLOR%}==0 || {%COLOR%}==1
+
+
 vec3 F(float u, float v) {
     vec3 p = funRaw(u, v);
 #if {%Y_UP%}
@@ -56,13 +60,62 @@ void dF(float u, float v,
     // fu = (f21-f01)/(2.0*h);
     // fv = (f12-f10)/(2.0*h);
     fu = dFdu(u, v), fv = dFdv(u, v);
+#if {%COLOR%}==4
     I1 = mat2(dot(fu,fu), dot(fu,fv), dot(fu,fv), dot(fv,fv));
     vec3 n = normalize(cross(fu, fv));
     vec3 ruu = (f21+f01-2.0*f11)/(h*h);
     vec3 rvv = (f12+f10-2.0*f11)/(h*h);
     vec3 ruv = (f00+f22-f02-f20)/(4.0*h*h);
     I2 = mat2(dot(ruu,n), dot(ruv,n), dot(ruv,n), dot(rvv,n));
+#endif
 }
+
+
+// first order autodiff
+#elif {%AUTODIFF%}==1 && ({%COLOR%}==2 || {%COLOR%}==3)
+
+
+void dF(float u, float v,
+    out vec3 f, out vec3 fu, out vec3 fv, out mat2 I1, out mat2 I2
+) {
+    float h = 0.005;
+    mat3 puv = funRawG(u, v);
+#if {%Y_UP%}
+    puv = mat3(1,0,0,0,0,1,0,-1,0) * puv;
+#endif
+    f = puv[0];
+    fu = puv[1];
+    fv = puv[2];
+    // we don't need I1 and I2 in this case
+}
+
+
+// second order autodiff
+#elif {%AUTODIFF%}==1 && {%COLOR%}==4
+
+
+void dF(float u, float v,
+    out vec3 f, out vec3 fu, out vec3 fv, out mat2 I1, out mat2 I2
+) {
+    float h = 0.005;
+    mat3 r2uv;
+    mat3 puv = funRawH(u, v, r2uv);
+#if {%Y_UP%}
+    mat3 R = mat3(1,0,0,0,0,1,0,-1,0);
+    puv = R * puv;
+    ruv = R * ruv;
+#endif
+    f = puv[0];
+    fu = puv[1];
+    fv = puv[2];
+    I1 = mat2(dot(fu,fu), dot(fu,fv), dot(fu,fv), dot(fv,fv));
+    vec3 n = normalize(cross(fu, fv));
+    vec3 ruu = r2uv[0], ruv = r2uv[1], rvv = r2uv[2];
+    I2 = mat2(dot(ruu,n), dot(ruv,n), dot(ruv,n), dot(rvv,n));
+}
+
+
+#endif
 
 
 

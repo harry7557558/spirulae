@@ -14,6 +14,20 @@ uniform int lAxes;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
+
+// Random number generator
+float seed;
+float hash31(vec3 p) {
+    vec3 p3 = fract(p*1.1031);
+    p3 += dot(p3, p3.zxy + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    seed = hash31(vec3(seed,1,1));
+    return seed;
+}
+
+
 #if {%LIGHT_THEME%} && {%FIELD%}==0
 #define BACKGROUND_COLOR vec3(0.82,0.8,0.78)
 #else
@@ -86,7 +100,7 @@ float fun(vec3 p) {  // function
 }
 
 vec3 funGrad(vec3 p) {  // numerical gradient
-    float h = 0.002*length(p);
+    float h = 0.002*pow(dot(p,p), 1.0/6.0);
     return vec3(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
@@ -282,6 +296,8 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             float ddt = abs(v/g);
             dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
                 clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
+            if (i == 1) dt *= randf();
+            else dt *= 0.9+0.2*randf();
             t += dt;
         }
     }
@@ -344,6 +360,8 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
 
 
 void main(void) {
+    seed = hash31(vec3(gl_FragCoord.xy,0));
+
     vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
     vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
@@ -420,7 +438,7 @@ void main(void) {
     }
 
     col = pow(col, vec3(1./2.2));
-    col -= vec3(1.5/255.)*fract(0.13*gl_FragCoord.x*gl_FragCoord.y);  // reduce "stripes"
+    col -= vec3(1.5/255.)*randf();  // reduce "stripes"
     // col = vec3(callCount) / 255.0;
     fragColor = vec4(clamp(col,0.,1.), 1.0);
 }
