@@ -16,6 +16,21 @@ uniform float rZScale;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
+
+// Random number generator
+float seed;
+float hash31(vec3 p) {
+    vec3 p3 = fract(p*1.1031);
+    p3 += dot(p3, p3.zxy + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    // seed = hash31(vec3(seed,1,1));
+    seed = fract(sin(12.9898*seed+78.233) * 43758.5453);
+    return seed;
+}
+
+
 #if {%LIGHT_THEME%}
 #define BACKGROUND_COLOR vec3(0.8)
 #else
@@ -227,6 +242,8 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
             dt = (isnan(g) || g==0.) ? STEP_SIZE :
                 clamp(min(abs(v/g)-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
+            dt *= 0.9+0.2*randf();
+            dt = max(min(t1-t, dt), 0.01*STEP_SIZE);
             t += dt;
         }
         if (++i >= MAX_STEP || t > t1) return BACKGROUND_COLOR;
@@ -235,10 +252,14 @@ vec3 vSolid(in vec3 ro, in vec3 rd, float t0, float t1) {
 }
 
 void main(void) {
+    seed = hash31(vec3(gl_FragCoord.xy,0));
+
     vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
-    vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
-    float pad = max(STEP_SIZE, 1./255.);
+    // vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
+    vec4 tt = texture(iChannel0, 0.5+0.5*vXy);
+    float pad1 = max(STEP_SIZE, 1./255.);
+    float pad0 = pad1 + randf()/255.;
     vec3 col = BACKGROUND_COLOR;
 #if {%CLIP%}
     vec3 ro_w = screenToWorld(ro_s);
@@ -250,15 +271,15 @@ void main(void) {
         t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
         tt.z = max(t0, 0.0); tt.w = min(t1, 1.0);
         col = vSolid(ro_s, rd_s,
-            tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
-            min(tt.y+pad, min(tt.w, 1.0))
+            tt.z>=254./255.?1.: max(tt.x-pad0, max(tt.z, 0.0)),
+            min(tt.y+pad1, min(tt.w, 1.0))
         );
     }
     else col = clamp(mix(col, vec3(0.5), -10.0), 0.0, 1.0);
 #else
     col = vSolid(ro_s, rd_s,
-        tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
-        min(tt.y+pad, min(tt.w, 1.0))
+        tt.z>=254./255.?1.: max(tt.x-pad0, max(tt.z, 0.0)),
+        min(tt.y+pad1, min(tt.w, 1.0))
     );
 #endif
     // vec3 col = vSolid(ro, rd, t01.x==1.?1.:max(t01.x-pad, 0.0), min(t01.y+pad, 1.0));

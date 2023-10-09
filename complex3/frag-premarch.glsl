@@ -13,6 +13,21 @@ uniform float rZScale;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
+
+// Random number generator
+float seed;
+float hash31(vec3 p) {
+    vec3 p3 = fract(p*1.1031);
+    p3 += dot(p3, p3.zxy + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    // seed = hash31(vec3(seed,1,1));
+    seed = fract(sin(12.9898*seed+78.233) * 43758.5453);
+    return seed;
+}
+
+
 vec3 screenToWorld(vec3 p) {
     vec4 q = transformMatrix * vec4(p, 1);
     return q.xyz / q.w;
@@ -104,6 +119,8 @@ vec2 premarch(in vec3 ro, in vec3 rd, float t0_, float t1_) {
         }
         dt = dt1;
         dt00 = dt0, dt0 = dt, v00 = v0, v0 = v;
+        if (i == 1) dt *= randf();
+        else dt *= 0.9+0.2*randf();
     }
     if (t0 < 0.) t0 = t1 = min_t;
     return vec2(t0, t1);
@@ -111,6 +128,8 @@ vec2 premarch(in vec3 ro, in vec3 rd, float t0_, float t1_) {
 
 
 void main(void) {
+    seed = hash31(vec3(gl_FragCoord.xy,0));
+
     vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
 #if {%CLIP%}

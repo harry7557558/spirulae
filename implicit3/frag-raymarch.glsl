@@ -23,7 +23,8 @@ float hash31(vec3 p) {
     return fract((p3.x + p3.y) * p3.z);
 }
 float randf() {
-    seed = hash31(vec3(seed,1,1));
+    // seed = hash31(vec3(seed,1,1));
+    seed = fract(sin(12.9898*seed+78.233) * 43758.5453);
     return seed;
 }
 
@@ -296,8 +297,8 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             float ddt = abs(v/g);
             dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
                 clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
-            if (i == 1) dt *= randf();
-            else dt *= 0.9+0.2*randf();
+            dt *= 0.9+0.2*randf();
+            dt = max(min(t1-t, dt), 0.01*STEP_SIZE);
             t += dt;
         }
     }
@@ -339,6 +340,7 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
         float ddt = abs(v/g);
         dt = (g==0. || isnan(ddt) || isinf(ddt)) ? STEP_SIZE :
             clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
+        dt *= 0.9+0.2*randf();
         dt00 = dt0, dt0 = dt, v00 = v0, v0 = v, g0 = g;
 #if {%FIELD%}
         // field
@@ -364,8 +366,10 @@ void main(void) {
 
     vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
     vec3 rd_s = vec3(0,0,1);
-    vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
-    float pad = max(STEP_SIZE, 1./255.);
+    // vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
+    vec4 tt = texture(iChannel0, 0.5+0.5*vXy);
+    float pad1 = max(STEP_SIZE, 1./255.);
+    float pad0 = pad1 + randf()/255.;
     vec3 col = BACKGROUND_COLOR;
     vec4 colt;
     vec3 ro_w = screenToWorld(ro_s);
@@ -378,8 +382,8 @@ void main(void) {
         float t1 = p1==vec3(-1) ? 1.0 : dot(p1-ro_s, rd_s);
         tt.z = max(t0, 0.0); tt.w = min(t1, 1.0);
         colt = render(ro_s, rd_s,
-            tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
-            min(tt.y+pad, min(tt.w, 1.0))
+            tt.z>=254./255.?1.: max(tt.x-pad0, max(tt.z, 0.0)),
+            min(tt.y+pad1, min(tt.w, 1.0))
         );
         col = colt.xyz;
     }
@@ -389,8 +393,8 @@ void main(void) {
     }
 #else
     colt = render(ro_s, rd_s,
-        tt.z>=254./255.?1.: max(tt.x-pad, max(tt.z, 0.0)),
-        min(tt.y+pad, min(tt.w, 1.0))
+        tt.z>=254./255.?1.: max(tt.x-pad0, max(tt.z, 0.0)),
+        min(tt.y+pad1, min(tt.w, 1.0))
     );
     col = colt.xyz;
 #endif
@@ -440,5 +444,6 @@ void main(void) {
     col = pow(col, vec3(1./2.2));
     col -= vec3(1.5/255.)*randf();  // reduce "stripes"
     // col = vec3(callCount) / 255.0;
+    // col *= vec3(tt.x);
     fragColor = vec4(clamp(col,0.,1.), 1.0);
 }
