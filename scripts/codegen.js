@@ -425,6 +425,8 @@ CodeGenerator.postfixToLatex = function (queue) {
                 latex = "\\frac{" + tex1 + "}{" + tex2 + "}";
             }
             else if (token.str == "^") {
+                if (v1.precedence == operators['^'])
+                    tex1 = '\\left(' + tex1 + '\\right)';
                 latex = "{" + tex1 + "}^{" + tex2 + "}";
                 if (token.str == "^" && tex1 == "\\operatorname{e}" && false)
                     latex = MathFunctions['exp']['1'].subLatex([v2]);

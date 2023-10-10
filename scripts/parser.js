@@ -148,13 +148,21 @@ MathParser.addFunctionParenthesis = function (expr) {
     const MAXFL = 5;  // maximum function length
     var res = "";  // result string
     var fun = "";  // function name, nonempty if inside function
+    var pow = "";  // ^2 in sin^2
     var tmp = "";  // temp string
     var close = "";  // close parenthesis
     for (var ci = 0; ci <= expr.length; ci++) {
         var c = ci == expr.length ? '' : expr[ci];
-        // console.log(c, res, fun, tmp, close);
+        // console.log(c, expr.slice(ci+1), res, fun, tmp, close, pow);
         if (/[A-Za-z0-9Α-Ωα-ω_\.]/.test(c)) {
+            // sin^ 2 -> sin^2
+            if (tmp == "" && pow != "" && /[0-9\.]/.test(c)) {
+                pow += c;
+                close = close.slice(0, pow.length) + c + close.slice(pow.length);
+                continue;
+            }
             tmp += c;
+            pow = "";
             // erf inv -> erfinv
             if (fun != "" && MathFunctions.hasOwnProperty(fun+tmp)
                 // && MathFunctions[fun+tmp].hasOwnProperty(1)
@@ -176,24 +184,24 @@ MathParser.addFunctionParenthesis = function (expr) {
                         // sinxcos -> sin(x)cos(
                         if (tmp.length > l && !/^[\dπ\.]+$/.test(pre)) {
                             res += fun + "(" + pre + close;
-                            fun = name;
-                            tmp = "";
                             close = ")";
+                            fun = name;
+                            tmp = pow = "";
                         }
                         // lnsin -> ln(sin(
                         else {
                             res += fun + "(" + pre;
+                            close = ")" + close;
                             fun = name;
-                            tmp = "";
-                            close += ")";
+                            tmp = pow = "";
                         }
                     }
                     // xsin -> x*sin(
                     else {
                         res += pre;
+                        close = ")" + close;
                         fun = name;
-                        tmp = "";
-                        close += ")";
+                        tmp = pow = "";
                     }
                     break;
                 }
@@ -204,7 +212,23 @@ MathParser.addFunctionParenthesis = function (expr) {
             if (c == "(" && fun != "" && tmp == "") {
                 res += fun + c;
                 fun = "";
+                // sin^2(...) -> sin(...)^2
                 close = close.slice(1);
+                if (/^\}?\^/.test(close)) {
+                    var t = close.slice(0, (close+')').indexOf(')'));
+                    close = close.slice(t.length);
+                    var depth = 0, i;
+                    for (i = ci+1; i < expr.length; i++) {
+                        if (expr[i] == '(')
+                            depth += 1;
+                        if (expr[i] == ')') {
+                            depth -= 1;
+                            if (depth == 0) break;
+                        }
+                    }
+                    expr = expr.slice(0, i+1) + t + expr.slice(i+1);
+                }
+                pow = "";
             }
             // sin(x) ( -> sin(x)*(
             else if (c == "(" && fun == "" && close != "") {
@@ -214,6 +238,14 @@ MathParser.addFunctionParenthesis = function (expr) {
             // sin x -> sin(x
             else if (/\s/.test(c) && fun != "" && tmp == "") {
                 continue;
+            }
+            // sin^
+            else if (fun != "" && tmp == "" && (
+                    (pow == "" && c == '^') || (pow == "^" && c == "-"))) {
+                pow += c;
+                if (pow == c)
+                    fun = "{" + fun, c = c + '}';
+                close = close.slice(0, pow.length) + c + close.slice(pow.length);
             }
             // exit function
             else {
@@ -231,6 +263,7 @@ MathParser.addFunctionParenthesis = function (expr) {
             }
         }
     }
+    res = res.replaceAll('{', '(').replaceAll('}', ')');
     // console.log(res);
     return res;
 }
@@ -554,13 +587,87 @@ MathParser.testLine = function (line) {
 }
 
 
+MathParser.replaceDesmosCopyPaste = function(input) {
+    input = input.replaceAll("\\left(", "(").replaceAll("\\right)", ")");
+    input = input.replaceAll("\\left|", "abs(").replaceAll("\\right|", ")");
+    input = input.replaceAll(/\\[ \!\,\:\;]/g, " ");
+    input = input.replaceAll("\\cdot", "*");
+    input = input.replaceAll(/\\(arccos|arcsin|arctan|cos|cosh|cot|coth|csc|exp|ln|log|sec|sin|sinh|tan|tanh)/g, "$1");
+    input = input.replaceAll(/\\operatorname\{(\w+)\}/g, "$1");
+
+    // \frac
+    var sf = input.replaceAll("\\dfrac", "\\frac").split("\\frac");
+    input = "";
+    var frac = 0, depth = 0, depths = [];
+    for (var si = 0; si < sf.length; si++) {
+        var s = sf[si];
+        for (var i = 0; i < s.length; i++) {
+            input += s[i];
+            if (s[i] == '{' && (i == 0 || s[i-1] != '\\'))
+                depth++;
+            else if (s[i] == '}' && (i == 0 || s[i-1] != '\\')) {
+                depth--;
+                if (frac > 0 && depth < depths[frac-1])
+                    throw new Error("LaTeX fraction not match.");
+                if (frac > 0 && depth == depths[frac-1])
+                    input += "/", frac--, depths.pop();
+            }
+        }
+        if (si + 1 != sf.length) {
+            frac++;
+            depths.push(depth);
+        }
+    }
+
+    // \sqrt
+    var sf = input.split("\\sqrt[");
+    input = "";
+    var sqrt = 0, depth = 0, depths = [];
+    for (var si = 0; si < sf.length; si++) {
+        var s = sf[si];
+        for (var i = 0; i < s.length; i++) {
+            if (s[i] == '[' && (i == 0 || s[i-1] != '\\'))
+                input += "(", depth++;
+            else if (s[i] == ']' && (i == 0 || s[i-1] != '\\')) {
+                depth--;
+                if (sqrt > 0 && depth < depths[sqrt-1])
+                    throw new Error("LaTeX sqrt not match.");
+                if (sqrt > 0 && depth == depths[sqrt-1]) {
+                    input += ",", sqrt--, i++, depths.pop();
+                }
+                else input += "]";
+            }
+            else input += s[i];
+        }
+        if (si + 1 != sf.length) {
+            console.log("sqrt[");
+            sqrt++;
+            depths.push(depth);
+            depth++;
+            input += "root{";
+        }
+    }
+
+    // {} -> ()
+    for (var i = 0; i < 2; i++)
+        input = input.replaceAll(/([^\\])\{/g, "$1(").replaceAll(/([^\\])\}/g, "$1)");
+
+    // sin^-1, not limited to desmos
+    input = input.replaceAll(/((sin|cos|tan|csc|sec|cot)h?)\s*\^\s*[\(\[]?\s*-\s*1\s*\s*[\)\]]?/g, "arc$1");
+    // sin^(2) -> sin^2
+    input = input.replaceAll(/\^\s*[\(\[]\s*(\-?\s*[\d.]+)\s*[\)\]]/g, "^$1");
+
+    return input;
+}
+
+
 // Parse input (all lines)
 // Generate postfix expression and LaTeX
 MathParser.parseInput = function (input) {
     // accept different comments
     input = input.replaceAll('%', '#').replaceAll('//', '#').replaceAll('`', '#');
 
-    // copypasta x²+y²+z²–1
+    // copy paste x²+y²+z²–1
     input = input.replace(/[\uff01-\uff5e]/g,
         (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
     input = input.replace(/[˗‐‑‒–⁃−﹘]/g, '-');
@@ -575,6 +682,9 @@ MathParser.parseInput = function (input) {
             res += b[a.indexOf(s[i])];
         return res;
     });
+
+    // Desmos copy paste
+    input = MathParser.replaceDesmosCopyPaste(input);
 
     // split to arrays
     input = input.replace(/\r?\n/g, ';');
