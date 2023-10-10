@@ -647,6 +647,7 @@ MathParser.replaceDesmosCopyPaste = function(input) {
             input += "root{";
         }
     }
+    input = input.replaceAll(/\\sqrt/g, "sqrt");
 
     // {} -> ()
     for (var i = 0; i < 2; i++)
