@@ -158,7 +158,8 @@ MathParser.addFunctionParenthesis = function (expr) {
             // sin^ 2 -> sin^2
             if (tmp == "" && pow != "" && /[0-9\.]/.test(c)) {
                 pow += c;
-                close = close.slice(0, pow.length) + c + close.slice(pow.length);
+                var bi = close.indexOf('}')+pow.length;
+                close = close.slice(0, bi) + c + close.slice(bi);
                 continue;
             }
             tmp += c;
@@ -169,6 +170,13 @@ MathParser.addFunctionParenthesis = function (expr) {
             ) {
                 fun += tmp;
                 tmp = "";
+                continue;
+            }
+            // ln arc sin -> ln(arcsin
+            if (fun != "" && MathFunctions.hasOwnProperty(tmp)) {
+                res += fun + "(";
+                close = ")" + close;
+                fun = tmp, tmp = "";
                 continue;
             }
             // check function name match
@@ -210,10 +218,13 @@ MathParser.addFunctionParenthesis = function (expr) {
         else {
             // sin( -> sin(
             if (c == "(" && fun != "" && tmp == "") {
-                res += fun + c;
-                fun = "";
+                if (fun[fun.length-1] != '\b') {
+                    res += fun + c;
+                    fun += new Array(fun.length+1).fill('\b').join('');
+                }
+                else res += c;
                 // sin^2(...) -> sin(...)^2
-                close = close.slice(1);
+                close = close.replace(')', '');
                 if (/^\}?\^/.test(close)) {
                     var t = close.slice(0, (close+')').indexOf(')'));
                     close = close.slice(t.length);
@@ -223,7 +234,7 @@ MathParser.addFunctionParenthesis = function (expr) {
                             depth += 1;
                         if (expr[i] == ')') {
                             depth -= 1;
-                            if (depth == 0) break;
+                            if (depth <= 0) break;
                         }
                     }
                     expr = expr.slice(0, i+1) + t + expr.slice(i+1);
@@ -243,9 +254,14 @@ MathParser.addFunctionParenthesis = function (expr) {
             else if (fun != "" && tmp == "" && (
                     (pow == "" && c == '^') || (pow == "^" && c == "-"))) {
                 pow += c;
-                if (pow == c)
-                    fun = "{" + fun, c = c + '}';
-                close = close.slice(0, pow.length) + c + close.slice(pow.length);
+                if (pow == c) {
+                    fun = "{" + fun, c = '}'+c;
+                    close = c + close;
+                }
+                else {
+                    var bi = close.indexOf('}')+pow.length;
+                    close = close.slice(0, bi) + c + close.slice(bi);
+                }
             }
             // exit function
             else {
@@ -264,6 +280,13 @@ MathParser.addFunctionParenthesis = function (expr) {
         }
     }
     res = res.replaceAll('{', '(').replaceAll('}', ')');
+    var res0 = res;
+    res = "";
+    for (var i = 0; i < res0.length; i++) {
+        if (res0[i] == '\b')
+            res = res.slice(0, res.length-1);
+        else res += res0[i];
+    }
     // console.log(res);
     return res;
 }
