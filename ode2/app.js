@@ -34,6 +34,67 @@ function initApp() {
             "y' = " + dxdt.y.toPrecision(4);
         display.style.display = 'block';
     });
+
+    document.getElementById("drop-x").addEventListener("keydown", function(e) {
+        if (e.key === 'Enter') {
+            dropPoint();
+        };
+    });
+    document.getElementById("drop-y").addEventListener("keydown", function(e) {
+        if (e.key === 'Enter') {
+            dropPoint();
+        };
+    });
+    document.getElementById("drop").addEventListener("click", dropPoint);
+}
+
+
+function dropPoint() {
+    var definition = document.getElementById("equation-input").value;
+    definition = definition.replaceAll(';', '\n').split('\n');
+    var lines = [];
+    for (var i = 0; i < definition.length; i++) {
+        var line = definition[i].trim();
+        if (/[xy]_t\s*\=/.test(line) || /y_x\s*\=/.test(line))
+            continue;
+        lines.push(line);
+    }
+    definition = lines.join('\n');
+
+    function getValue(id) {
+        let element = document.getElementById(id);
+        var text = element.value.trim();
+        var value = Number(text);
+        if (!isFinite(value)) {
+            try {
+                var s = definition + '\ny_x=' + text;
+                var e = MathParser.parseInput(s);
+                var c = CodeGenerator.postfixToSource([{ y_x: e.y_x }], ['fun'], 'js');
+                eval('value=('+c.source+")().y");
+            }
+            catch(e) {
+                console.error(e);
+            }
+        }
+        if (text != "" && isFinite(value)) {
+            element.style.color = null;
+            element.style.boxShadow = null;
+            element.style.fontWeight = null;
+            return value;
+        }
+        else {
+            element.style.color = "red";
+            element.style.boxShadow = "rgb(255,0,0) 0px 0px 3px";
+            element.style.fontWeight = 600;
+            return NaN;
+        }
+    }
+    var x = getValue("drop-x");
+    var y = getValue("drop-y");
+    if (isFinite(x) && isFinite(y)) {
+        App.solutionPoints.push({x: x, y: y});
+        state.renderNeeded = true;
+    }
 }
 
 
@@ -48,20 +109,20 @@ function solverReturnToBezier(fwd, bck, clean) {
             (state.xmax-state.xmin)/state.width,
             (state.ymax-state.ymin)/state.height);
         var dt = 0.0;
-        for (var i = 1; i < ret.length; i++) {
+        for (var i = 2; i < ret.length; i++) {
             var a = res.x[res.x.length-1];
             var b = ret.x[i];
             var da = res.dxdt[res.dxdt.length-1];
             var db = ret.dxdt[i];
             var l = Math.hypot(b.x-a.x, b.y-a.y);
             var t = (da.x*db.y-da.y*db.x) / Math.hypot(da.x,da.y) / Math.hypot(db.x,db.y);
-            dt += ret.dt[i-1];
             if (l*Math.abs(t) > eps || i == ret.length - 1) {
-                res.x.push(ret.x[i]);
-                res.dxdt.push(ret.dxdt[i]);
+                res.x.push(ret.x[i-1]);
+                res.dxdt.push(ret.dxdt[i-1]);
                 res.dt.push(dt);
                 dt = 0.0;
             }
+            dt += ret.dt[i-1];
         }
         res.length = res.x.length;
         return res;
