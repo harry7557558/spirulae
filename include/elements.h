@@ -30,6 +30,9 @@ using glm::ivec2;
 using glm::ivec3;
 using glm::ivec4;
 
+float dot2(vec2 p) { return dot(p, p); }
+float dot2(vec3 p) { return dot(p, p); }
+float dot2(vec4 p) { return dot(p, p); }
 
 // timer
 #include <chrono>

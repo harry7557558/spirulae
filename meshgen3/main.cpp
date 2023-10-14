@@ -50,6 +50,7 @@ void generateMesh(
     float t0 = getTimePast();
     verts.clear(), tets.clear(), faces.clear();
     std::vector<bool> isConstrained0[3];
+#if 0
     MeshgenTetImplicit::generateInitialMesh(
         Fs, bc-br, bc+br,
         // ivec3(14, 15, 16), 1,
@@ -66,7 +67,7 @@ void generateMesh(
     MeshgenTetImplicit::cutIsosurface(
         std::vector<vec3>(verts), funvals, sticky, std::vector<ivec4>(tets), isConstrained0,
         verts, tets, isConstrained);
-    MeshgenTetImplicit::restoreSurface(verts, tets, faces, edges);
+    MeshgenTetImplicit::restoreSurface(tets, faces, edges);
     printf("%d verts, %d tets, %d faces, %d edges\n",
         (int)verts.size(), (int)tets.size(), (int)faces.size(), (int)edges.size());
     // MeshgenTetImplicit::splitStickyVertices(verts, tets, faces, edges, isConstrained);
@@ -74,6 +75,15 @@ void generateMesh(
     MeshgenTetImplicit::compressMesh(
         verts, tets, faces, edges, 5, Fs,
         constraint, isConstrained);
+#else
+    MeshgenTetImplicit::marchingCubes(
+        Fs, bc-br, bc+br,
+        ivec3(96), 2,
+        verts, faces, isConstrained0
+    );
+    MeshgenTetImplicit::mergeEdge(verts, faces, 0.4);
+    MeshgenTetImplicit::restoreEdges(faces, edges);
+#endif
 }
 
 

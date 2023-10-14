@@ -15,12 +15,17 @@ MESHGEN_TET_IMPLICIT_NS_START
 
 using namespace MeshgenMisc;
 
+// optimization based mesh generator
 #include "generate_initial_mesh.h"
 #include "find_sticky_vertices.h"
 #include "cut_isosurface.h"
 #include "restore_surface.h"
 #include "split_sticky_vertices.h"
 #include "compress_mesh.h"
+
+// decimation based mesh generator
+#include "marching_cubes.h"
+#include "merge_edge.h"
 
 
 void initMeshGenerator() {
