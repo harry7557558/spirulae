@@ -51,6 +51,14 @@ const ivec2 MC_EDGE_LIST[12] = {
     ivec2(4,5), ivec2(5,6), ivec2(6,7), ivec2(7,4),
     ivec2(0,4), ivec2(1,5), ivec2(2,6), ivec2(3,7)
 };
+const ivec4 MC_FACE_LIST[6] = {
+    {0, 1, 5, 4}, {0, 3, 7, 4}, {0, 1, 2, 3},
+    {2, 3, 7, 6}, {2, 1, 5, 6}, {4, 5, 6, 7}
+};
+const ivec3 MC_FACE_DIR[6] = {
+    ivec3(-1,0,0), ivec3(0,-1,0), ivec3(0,0,-1),
+    ivec3(1,0,0), ivec3(0,1,0), ivec3(0,0,1)
+};
 
 
 void marchingCubes(
@@ -60,45 +68,190 @@ void marchingCubes(
 ) {
     float time0 = getTimePast();
 
-    // sample values
-    std::vector<vec3> points;
-    points.reserve(bn.x*bn.y*bn.z);
+    ivec3 bnd = bn << nd;
+    auto getI = [&](int i, int j, int k) {
+        return (k*bnd.y+j)*bnd.x+i;
+    };
+    auto idxToPoint = [&](int idx) {
+        int k = idx / (bnd.x*bnd.y);
+        int j = (idx / bnd.x) % bnd.y;
+        int i = idx % bnd.x;
+        vec3 rnd = 1e-2f*vec3(cos(i), cos(2.0f*j), cos(4.0f*k));
+        return b0+(b1-b0)*(vec3(i,j,k)+rnd)/vec3((bn-1)<<nd);
+    };
+
+    // initial grid
+    std::vector<vec3> pointst;
+    std::unordered_map<int, float> samples;
+    pointst.reserve(bn.x*bn.y*bn.z);
     for (int k = 0; k < bn.z; k++)
         for (int j = 0; j < bn.y; j++)
             for (int i = 0; i < bn.x; i++) {
-                vec3 rnd = 1e-2f*vec3(cos(i), cos(2.0f*j), cos(4.0f*k));
-                points.push_back(b0+(b1-b0)*(vec3(i,j,k)+rnd)/vec3(bn-1));
+                pointst.push_back(idxToPoint(getI(i<<nd, j<<nd, k<<nd)));
             }
-    std::vector<float> vals(points.size());
-    Fs(points.size(), &points[0], &vals[0]);
+    std::vector<float> vals(pointst.size());
+    Fs(pointst.size(), &pointst[0], &vals[0]);
+    for (int k = 0; k < bn.z; k++)
+        for (int j = 0; j < bn.y; j++)
+            for (int i = 0; i < bn.x; i++) {
+                samples[getI(i<<nd, j<<nd, k<<nd)] = vals[(k*bn.y+j)*bn.x+i];
+            }
 
-    auto getI = [&](int i, int j, int k) {
-        return (k*bn.y+j)*bn.x+i;
+    auto calcCubeIdx = [&](ivec3 c, int idx[8], int s) {
+        idx[0] = getI(c.x, c.y, c.z);
+        idx[1] = getI(c.x, c.y+s, c.z);
+        idx[2] = getI(c.x+s, c.y+s, c.z);
+        idx[3] = getI(c.x+s, c.y, c.z);
+        idx[4] = getI(c.x, c.y, c.z+s);
+        idx[5] = getI(c.x, c.y+s, c.z+s);
+        idx[6] = getI(c.x+s, c.y+s, c.z+s);
+        idx[7] = getI(c.x+s, c.y, c.z+s);
+        int cubeIndex = 0;
+        for (int i = 0; i < 8; i++) {
+            assert(samples.find(idx[i]) != samples.end());
+            cubeIndex |= (int(samples[idx[i]] <= 0.) << i);
+        }
+        return cubeIndex;
     };
+    std::vector<ivec3> cubes;
+    std::vector<int> cubeSizes;
+    for (int k = 0; k < bn.z-1; k++)
+        for (int j = 0; j < bn.y-1; j++)
+            for (int i = 0; i < bn.x-1; i++) {
+                ivec3 c = ivec3(i, j, k) << nd;
+                int s = 1 << nd;
+                int cvidx[8];
+                int idx = calcCubeIdx(c, cvidx, s);
+                if (idx != 0 && idx != 0xff) {
+                    cubes.push_back(c);
+                    cubeSizes.push_back(s);
+                }
+            }
 
     float time1 = getTimePast();
 
-    // get edges
-    std::unordered_map<ivec2, int> edges;
+    // subdivide
+    for (int subdiv = 0; subdiv < nd; subdiv++) {
 
-    for (int k = 0; k < bn.z-1; k++) for (int j = 0; j < bn.y-1; j++) for (int i = 0; i < bn.x-1; i++)
-    {
-        // read values from the cube
-        int idx[8] = {
-            getI(i, j, k),
-            getI(i, j+1, k),
-            getI(i+1, j+1, k),
-            getI(i+1, j, k),
-            getI(i, j, k+1),
-            getI(i, j+1, k+1),
-            getI(i+1, j+1, k+1),
-            getI(i+1, j, k+1),
+        // sample
+        std::vector<int> sampleIdx;
+        std::vector<vec3> samplePoints;
+        auto sampleCube = [&](ivec3 c0, int s) {
+            for (int i = 0; i < 27; i++) {
+                ivec3 c = c0 + s * ivec3(i%3, (i/3)%3, i/9);
+                int idx = getI(c.x, c.y, c.z);
+                if (samples.find(idx) == samples.end()) {
+                    samples[idx] = 0.0f;
+                    sampleIdx.push_back(idx);
+                    samplePoints.push_back(idxToPoint(idx));
+                }
+            }
         };
+        for (int ci = 0; ci < (int)cubes.size(); ci++) {
+            ivec3 c0 = cubes[ci];
+            int s0 = cubeSizes[ci];
+            assert(s0 << subdiv == 1 << nd);
+            sampleCube(c0, s0 >> 1);
+        }
+        std::vector<float> sampleValues(samplePoints.size());
+        Fs(samplePoints.size(), &samplePoints[0], &sampleValues[0]);
+        for (int i = 0; i < (int)samplePoints.size(); i++)
+            samples[sampleIdx[i]] = sampleValues[i];
 
-        // calculate cube index in the table
-        int cubeIndex = 0;
-        for (int i = 0; i < 8; i++)
-            cubeIndex |= (int(vals[idx[i]] <= 0.) << i);
+        // resolve open cubes
+        std::unordered_set<int> addedCubes;
+        for (ivec3 c : cubes)
+            addedCubes.insert(getI(c.x, c.y, c.z));
+        int ci0 = 0, ci1 = (int)cubes.size();
+        for (int riter = 0; riter < 256 && ci0 < ci1; riter++) {
+            sampleIdx.clear();
+            samplePoints.clear();
+            sampleValues.clear();
+            for (int ci = ci0; ci < ci1; ci++) {
+                ivec3 c0 = cubes[ci];
+                int s0 = cubeSizes[ci];
+                int s = s0 >> 1;
+                bool sign[3][3][3];
+                for (int i = 0; i < 27; i++) {
+                    ivec3 d = ivec3(i%3, (i/3)%3, i/9);
+                    ivec3 c = c0 + s * d;
+                    int idx = getI(c.x, c.y, c.z);
+                    assert(samples.find(idx) != samples.end());
+                    sign[d.x][d.y][d.z] = (samples[idx] <= 0.0f);
+                }
+                auto getSign = [&](ivec3 _) {
+                    return sign[_.x+1][_.y+1][_.z+1];
+                };
+                for (int fi = 0; fi < 6; fi++) {
+                    ivec3 c = c0 + ivec3(s);
+                    ivec3 k = MC_FACE_DIR[fi];
+                    ivec3 i = MC_FACE_DIR[(fi+1)%6];
+                    ivec3 j = MC_FACE_DIR[(fi+2)%6];
+                    int vsign = 
+                        (int)getSign(k+i+j) +
+                        (int)getSign(k+i-j) +
+                        (int)getSign(k-i+j) +
+                        (int)getSign(k-i-j);
+                    int esign =
+                        (int)getSign(k) +
+                        (int)getSign(k+i) +
+                        (int)getSign(k-i) +
+                        (int)getSign(k+j) +
+                        (int)getSign(k-j);
+                    if ((vsign == 0 && esign != 0) || (vsign == 4 && esign != 5)) {
+                        ivec3 c1 = c0 + s0 * k;
+                        if (c1.x < 0 || c1.x+s0 >= bnd.x-nd ||
+                            c1.y < 0 || c1.y+s0 >= bnd.y-nd ||
+                            c1.z < 0 || c1.z+s0 >= bnd.z-nd) continue;
+                        int i1 = getI(c1.x, c1.y, c1.z);
+                        if (addedCubes.find(i1) == addedCubes.end()) {
+                            cubes.push_back(c1);
+                            cubeSizes.push_back(s0);
+                            sampleCube(c1, s);
+                            addedCubes.insert(i1);
+                        }
+                    }
+                }
+            }
+            sampleValues.resize(samplePoints.size());
+            Fs(samplePoints.size(), &samplePoints[0], &sampleValues[0]);
+            for (int i = 0; i < (int)samplePoints.size(); i++)
+                samples[sampleIdx[i]] = sampleValues[i];
+            // printf("%d %d\n", ci0, ci1);
+            ci0 = ci1, ci1 = (int)cubes.size();
+        }
+
+        // subdivide
+        std::vector<ivec3> newCubes;
+        std::vector<int> newCubeSizes;
+        auto addCube = [&](ivec3 c0, int s) {
+            int cvidx[8];
+            for (int i = 0; i < 8; i++) {
+                ivec3 c = c0 + s * ivec3(i%2, (i/2)%2, i/4);
+                int ci = calcCubeIdx(c, cvidx, s);
+                if (ci != 0 && ci != 0xff) {
+                    newCubes.push_back(c);
+                    newCubeSizes.push_back(s);
+                }
+            }
+        };
+        for (int ci = 0; ci < (int)cubes.size(); ci++) {
+            ivec3 c0 = cubes[ci];
+            int s0 = cubeSizes[ci];
+            addCube(c0, s0 >> 1);
+        }
+        cubes = newCubes;
+        cubeSizes = newCubeSizes;
+    }
+
+    float time2 = getTimePast();
+
+    // get edges
+    std::vector<uint64_t> edges;
+
+    for (int i = 0; i < (int)cubes.size(); i++) {
+        int idx[8];
+        int cubeIndex = calcCubeIdx(cubes[i], idx, cubeSizes[i]);
 
         // check table
         if (cubeIndex != 0 && cubeIndex != 0xff) {
@@ -108,10 +261,8 @@ void marchingCubes(
                     int i1 = idx[MC_EDGE_LIST[e].x];
                     int i2 = idx[MC_EDGE_LIST[e].y];
                     if (i1 > i2) std::swap(i1, i2);
-                    auto p = edges.find(ivec2(i1, i2));
-                    if (p == edges.end())
-                        eidx[e] = edges[ivec2(i1, i2)] = (int)edges.size();
-                    else eidx[e] = p->second;
+                    eidx[e] = edges.size();
+                    edges.push_back(((uint64_t)i1 << 32) | (uint64_t)i2);
                 }
 
             // construct triangles
@@ -126,7 +277,27 @@ void marchingCubes(
 
     }
 
-    float time2 = getTimePast();
+    float time3 = getTimePast();
+
+    std::unordered_map<uint64_t, int> uniqueEdges;
+    std::vector<uint64_t> edges1;
+    std::vector<int> emap(edges.size());
+    for (int i = 0; i < (int)edges.size(); i++) {
+        uint64_t e = edges[i];
+        if (uniqueEdges[e]) {
+            emap[i] = uniqueEdges[e];
+        }
+        else {
+            emap[i] = uniqueEdges[e] = edges1.size();
+            edges1.push_back(e);
+        }
+    }
+    for (int i = 0; i < (int)trigs.size(); i++)
+        for (int _ = 0; _ < 3; _++)
+            trigs[i][_] = emap[trigs[i][_]];
+    edges = edges1;
+
+    float time4 = getTimePast();
 
     // get interpolated vertices
     vertices.resize(edges.size());
@@ -137,22 +308,22 @@ void marchingCubes(
         float v1 = vals[i1];
         float v2 = vals[i2];
         float t = v1 / (v1 - v2);
-        vertices[ei.second] = points[i1] * (1 - t) + points[i2] * t;
+        vertices[ei.second] = idxToPoint(i1) * (1 - t) + idxToPoint(i2) * t;
     }
 #else
     // quadratic interpolation
     std::vector<vec3> edgep(edges.size());
     std::vector<ivec2> edgei(edges.size());
     std::vector<float> edgevc(edges.size());
-    for (std::pair<ivec2, int> ei : edges) {
-        int i1 = ei.first.x, i2 = ei.first.y;
-        edgei[ei.second] = vec2(i1, i2);
-        edgep[ei.second] = 0.5f*(points[i1]+points[i2]);
+    for (int i = 0; i < (int)edges.size(); i++) {
+        int i1 = (int)(edges[i] >> 32), i2 = (int)edges[i];
+        edgei[i] = vec2(i1, i2);
+        edgep[i] = 0.5f*(idxToPoint(i1)+idxToPoint(i2));
     }
     Fs(edgep.size(), &edgep[0], &edgevc[0]);
     for (int i = 0; i < (int)edgep.size(); i++) {
         float t = 0.5f;
-        float v0 = vals[edgei[i].x], v1 = vals[edgei[i].y], vc = edgevc[i];
+        float v0 = samples[edgei[i].x], v1 = samples[edgei[i].y], vc = edgevc[i];
         float a = (t-1.0f) * v0 - t * v1 + vc;
         float b = (1.0f-t*t) * v0 + t*t * v1 - vc;
         float c = (t*t-t) * v0;
@@ -160,13 +331,13 @@ void marchingCubes(
         float t1 = (-b+d)/(2.0f*a), t2 = (-b-d)/(2.0f*a);
         t = a == 0.0f ? -c / b : fabs(t1 - 0.5f) < fabs(t2 - 0.5f) ? t1 : t2;
         t = clamp(t, 0.01f, 0.99f);
-        vertices[i] = mix(points[edgei[i].x], points[edgei[i].y], t);
+        vertices[i] = mix(idxToPoint(edgei[i].x), idxToPoint(edgei[i].y), t);
     }
 #endif
 
-    float time3 = getTimePast();
-    printf("marchingCubes: %.2g + %.2g + %.2g = %.2g secs\n",
-        time1-time0, time2-time1, time3-time2, time3-time0);
+    float time5 = getTimePast();
+    printf("marchingCubes: %.2g + %.2g + %.2g + %.2g + %.2g = %.2g secs\n",
+        time1-time0, time2-time1, time3-time2, time4-time3, time5-time4, time5-time0);
 
 }
 

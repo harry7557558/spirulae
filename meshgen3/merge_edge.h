@@ -11,6 +11,7 @@ using namespace MeshgenMisc;
 void mergeEdge(
     std::vector<vec3> &verts,
     std::vector<ivec3> &trigs,
+    bool merge_equilateral,
     float k
 ) {
     // construct edges
@@ -22,16 +23,35 @@ void mergeEdge(
     // find edges to merge
     std::vector<bool> merge(edges.size(), false);
     DisjointSet dsj((int)verts.size());
-    for (int i = 0; i < (int)edges.size(); i++) {
-        ivec4 e = edges[i];
-        float l = dot2(verts[e.y]-verts[e.x]) / (k*k);
-        if (e.z != -1 && l < dot2(verts[e.z]-verts[e.x]) ||
-            e.w != -1 && l < dot2(verts[e.w]-verts[e.x]) ||
-            e.z != -1 && l < dot2(verts[e.z]-verts[e.y]) ||
-            e.w != -1 && l < dot2(verts[e.w]-verts[e.y])
-            ) {
-            merge[i] = true;
-            dsj.unionSet(e.x, e.y);
+    if (merge_equilateral) {
+        float th = sqrt(1.0f-k*k);
+        for (ivec3 f0 : trigs) {
+            float d[3];
+            for (int _ = 0; _ < 3; _++) {
+                ivec3 f(f0[_], f0[(_+1)%3], f0[(_+2)%3]);
+                vec3 a = verts[f[1]]-verts[f[0]];
+                vec3 b = verts[f[2]]-verts[f[0]];
+                d[_] = dot(a, b) / sqrt(dot2(a)*dot2(b));
+            }
+            float maxd = fmax(fmax(d[0], d[1]), d[2]);
+            if (maxd > th) {
+                int i = d[0] == maxd ? 0 : d[1] == maxd ? 1 : 2;
+                dsj.unionSet(f0[(i+1)%3], f0[(i+2)%3]);
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < (int)edges.size(); i++) {
+            ivec4 e = edges[i];
+            float l = dot2(verts[e.y]-verts[e.x]) / (k*k);
+            if (e.z != -1 && l < dot2(verts[e.z]-verts[e.x]) ||
+                e.w != -1 && l < dot2(verts[e.w]-verts[e.x]) ||
+                e.z != -1 && l < dot2(verts[e.z]-verts[e.y]) ||
+                e.w != -1 && l < dot2(verts[e.w]-verts[e.y])
+                ) {
+                merge[i] = true;
+                dsj.unionSet(e.x, e.y);
+            }
         }
     }
 

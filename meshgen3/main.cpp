@@ -78,10 +78,11 @@ void generateMesh(
 #else
     MeshgenTetImplicit::marchingCubes(
         Fs, bc-br, bc+br,
-        ivec3(96), 2,
+        ivec3(48), 2,
         verts, faces, isConstrained0
     );
-    MeshgenTetImplicit::mergeEdge(verts, faces, 0.4);
+    MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
+    MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
     MeshgenTetImplicit::restoreEdges(faces, edges);
 #endif
 }
