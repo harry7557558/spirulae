@@ -32,12 +32,15 @@ void generateMesh(
 
     GlBatchEvaluator3 evaluator(funDeclaration);
     int batchEvalCount = 0;
+    vec3 bc = vec3(0), br = vec3(2);
     MeshgenTetImplicit::ScalarFieldFBatch Fs = [&](size_t n, const vec3 *p, float *v) {
         // printf("Batch eval %d %d\n", ++batchEvalCount, (int)n);
         evaluator.evaluateFunction(n, p, v);
-        // for (size_t i = 0; i < n; i++) v[i] = length(p[i]) - 1.0f;
+        for (size_t i = 0; i < n; i++) {
+            vec3 dp = abs(p[i] - bc) / br;
+            v[i] = fmax(fmax(v[i], dp.x-1.0f), fmax(dp.y, dp.z)-1.0f);
+        }
     };
-    vec3 bc = vec3(0), br = vec3(2);
     auto constraint = [=](vec3 p) {
         p -= bc;
         return -vec3(
@@ -77,13 +80,14 @@ void generateMesh(
         constraint, isConstrained);
 #else
     MeshgenTetImplicit::marchingCubes(
-        Fs, bc-br, bc+br,
+        Fs, bc-1.01f*br, bc+1.01f*br,
         ivec3(48), 2,
         verts, faces, isConstrained0
     );
     MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
     MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
     MeshgenTetImplicit::restoreEdges(faces, edges);
+    // MeshgenTetImplicit::MeshDecimatorEC(verts, faces, edges).decimateMesh();
 #endif
 }
 
@@ -384,7 +388,7 @@ int main() {
     if (!initWindow())
         return -1;
     MeshgenTetImplicit::initMeshGenerator();
-    updateShaderFunction("float funRaw(float x, float y, float z) { return length(vec3(x,y,z))-1.0; }");
+    updateShaderFunction("float funRaw(float x, float y, float z) { return z-x*y; }");
     mainGUI(mainGUICallback);
 
 #endif

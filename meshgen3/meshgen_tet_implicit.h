@@ -26,6 +26,7 @@ using namespace MeshgenMisc;
 // decimation based mesh generator
 #include "marching_cubes.h"
 #include "merge_edge.h"
+#include "edge_contract.h"
 
 
 void initMeshGenerator() {

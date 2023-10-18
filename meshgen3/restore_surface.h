@@ -62,23 +62,46 @@ void restoreEdges(
     float time0 = getTimePast();
 
     // edges
-    auto ivec2Cmp = [](ivec2 a, ivec2 b) {
-        return a.x != b.x ? a.x < b.x : a.y < b.y;
-    };
-    std::map<ivec2, ivec2, decltype(ivec2Cmp)> uniqueIndicesE(ivec2Cmp);
+#if 0
+    std::unordered_map<uint64_t, ivec2> edgeMap;
     for (ivec3 t : faces) {
         for (int _ = 0; _ < 3; _++) {
             ivec2 e(t[_], t[(_+1)%3]);
             int i = 0;
             if (e.x > e.y)
                 std::swap(e.x, e.y), i = 1;
-            if (uniqueIndicesE.find(e) == uniqueIndicesE.end())
-                uniqueIndicesE[e] = ivec2(-1);
-            uniqueIndicesE[e][i] = t[(_+2)%3];
+            uint64_t idx = (uint64_t)e.x << 32 | (uint64_t)e.y;
+            edgeMap[idx][i] = t[(_+2)%3]+1;
         }
     }
-    for (std::pair<ivec2, ivec2> e : uniqueIndicesE)
-        edges.push_back(ivec4(e.first, e.second));
+    for (std::pair<uint64_t, ivec2> e : edgeMap) {
+        edges.push_back(ivec4(
+            int(e.first >> 32),
+            int(e.first),
+            e.second-1
+        ));
+    }
+#else
+    std::vector<ivec4> allEdges;
+    for (ivec3 t : faces) {
+        for (int _ = 0; _ < 3; _++) {
+            ivec2 e(t[_], t[(_+1)%3]);
+            int i = 0;
+            if (e.x > e.y)
+                std::swap(e.x, e.y), i = 1;
+            uint64_t idx = (uint64_t)e.x << 32 | (uint64_t)e.y;
+            allEdges.push_back(ivec4(e, i, t[(_+2)%3]+1));
+        }
+    }
+    std::sort(allEdges.begin(), allEdges.end(),
+        [](ivec4 a, ivec4 b) { return *(uint64_t*)&a < *(uint64_t*)&b; });
+    edges.clear();
+    for (ivec4 e : allEdges) {
+        if (edges.empty() || ivec2(edges.back()) != ivec2(e))
+            edges.push_back(ivec4(e.x, e.y, (1-e.z)*e.w-1, e.z*e.w-1));
+        else edges.back() += ivec4(0, 0, (1-e.z)*e.w, e.z*e.w);
+    }
+#endif
 
     float time1 = getTimePast();
     printf("restoreEdges: %.2g secs\n", time1-time0);

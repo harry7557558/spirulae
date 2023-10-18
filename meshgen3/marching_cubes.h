@@ -76,7 +76,7 @@ void marchingCubes(
         int k = idx / (bnd.x*bnd.y);
         int j = (idx / bnd.x) % bnd.y;
         int i = idx % bnd.x;
-        vec3 rnd = 1e-2f*vec3(cos(i), cos(2.0f*j), cos(4.0f*k));
+        vec3 rnd = 1e-2f*vec3(cos(i+j), cos(2.0f*j-k), cos(4.0f*k+i));
         return b0+(b1-b0)*(vec3(i,j,k)+rnd)/vec3((bn-1)<<nd);
     };
 
@@ -284,7 +284,7 @@ void marchingCubes(
     std::vector<int> emap(edges.size());
     for (int i = 0; i < (int)edges.size(); i++) {
         uint64_t e = edges[i];
-        if (uniqueEdges[e]) {
+        if (uniqueEdges.find(e) != uniqueEdges.end()) {
             emap[i] = uniqueEdges[e];
         }
         else {
@@ -322,16 +322,21 @@ void marchingCubes(
     }
     Fs(edgep.size(), &edgep[0], &edgevc[0]);
     for (int i = 0; i < (int)edgep.size(); i++) {
-        float t = 0.5f;
-        float v0 = samples[edgei[i].x], v1 = samples[edgei[i].y], vc = edgevc[i];
-        float a = (t-1.0f) * v0 - t * v1 + vc;
-        float b = (1.0f-t*t) * v0 + t*t * v1 - vc;
-        float c = (t*t-t) * v0;
-        float d = sqrt(fmax(b*b-4.0*a*c, 0.0f));
-        float t1 = (-b+d)/(2.0f*a), t2 = (-b-d)/(2.0f*a);
-        t = a == 0.0f ? -c / b : fabs(t1 - 0.5f) < fabs(t2 - 0.5f) ? t1 : t2;
-        t = clamp(t, 0.01f, 0.99f);
-        vertices[i] = mix(idxToPoint(edgei[i].x), idxToPoint(edgei[i].y), t);
+        typedef double scalar;
+        scalar t = (scalar)(0.5);
+        scalar v0 = (scalar)samples[edgei[i].x];
+        scalar v1 = (scalar)samples[edgei[i].y];
+        scalar vc = (scalar)edgevc[i];
+        scalar a = (t-(scalar)1) * v0 - t * v1 + vc;
+        scalar b = ((scalar)1-t*t) * v0 + t*t * v1 - vc;
+        scalar c = (t*t-t) * v0;
+        scalar d = sqrt(fmax(b*b-(scalar)4*a*c, (scalar)0));
+        float t1 = 0.5f*float((-b+d)/a);
+        float t2 = 0.5f*float((-b-d)/a);
+        float t_ = a == (scalar)0 ? (float)(-c / b) :
+            fabs(t1-0.5f) < fabs(t2 - 0.5f) ? t1 : t2;
+        t_ = clamp(t_, 0.01f, 0.99f);
+        vertices[i] = mix(idxToPoint(edgei[i].x), idxToPoint(edgei[i].y), t_);
     }
 #endif
 

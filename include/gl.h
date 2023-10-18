@@ -121,7 +121,7 @@ GlBatchEvaluator2::GlBatchEvaluator2(std::string funRaw) {
         printf("Failed to create framebuffer.\n");
         throw "Failed to create framebuffer.";
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 }
 
 GlBatchEvaluator2::~GlBatchEvaluator2() {
@@ -168,7 +168,7 @@ void GlBatchEvaluator2::evaluateFunction(
         v[i] = pixels[i].x;
 
     glDeleteBuffers(1, &vbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 
 }
 
@@ -227,7 +227,7 @@ GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw) {
         printf("Failed to create framebuffer.\n");
         throw "Failed to create framebuffer.";
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 }
 
 GlBatchEvaluator3::~GlBatchEvaluator3() {
@@ -289,6 +289,6 @@ void GlBatchEvaluator3::evaluateFunction(
 
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &vxyz);
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 
 }

@@ -101,7 +101,7 @@ void main() {
         printf("Failed to create framebuffer.\n");
         throw "Failed to create framebuffer.";
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &vverts);
@@ -186,7 +186,7 @@ void GlMaxMovementEvaluator::evaluate(
         }
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);
 
 }
 
