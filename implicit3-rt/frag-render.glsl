@@ -20,16 +20,16 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
 // Random number generator
-uint seed;
-float randf() {
-    seed = 1664525u * seed + 1013904223u;
-    return float(seed) / 4294967296.0;
-}
+float seed;
 // https://www.shadertoy.com/view/4djSRW
 float hash13(vec3 p3) {
 	p3  = fract(p3 * .1031);
     p3 += dot(p3, p3.zyx + 31.32);
     return fract((p3.x + p3.y) * p3.z);
+}
+float randf() {
+    seed = floor(mod(75.0*seed+74.0, 65537.)+0.5);
+    return hash13(vec3(seed/65537., 1, 1));
 }
 
 
@@ -528,7 +528,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             // total absorption density A/k (1-exp(-kt))
             // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
             //      from 1 to exp(-A/k)
-            float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 1.0 / (k0_abs/(1.0-k0_abs));
+            float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
             float k0_sca = pow(rVDecaySca, 0.8); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
             float A0_abs = rAbsorb2/(1.0-rAbsorb2) / (1.0-exp(-4.0/k0_abs));
             float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (1.0-exp(-4.0/k0_sca));
@@ -610,9 +610,11 @@ void main(void) {
     if (iFrame == 0) pixel = vec4(0);
 
     int nFrame = 1;
+    vec4 totcol = vec4(0);
     for (int fi=0; fi<nFrame; fi++) {
         // random number seed
-        seed = uint(4294967296.0*hash13(0.01*vec3(gl_FragCoord.xy, iFrame)));
+        seed = 65537.*(hash13(vec3(gl_FragCoord.xy/iResolution.xy,
+                sin(float(iFrame*nFrame+fi)))));
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
@@ -621,7 +623,11 @@ void main(void) {
         vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
         vec3 col = mainRender(ro, rd);
         if (!isnan(dot(col, vec3(1))))
-            pixel += vec4(col, 1);
+            totcol += vec4(col, 1);
+    }
+    if (totcol.w != 0.0) {
+        pixel.xyz = (pixel.xyz*pixel.w+totcol.xyz)/(pixel.w+totcol.w);
+        pixel.w += totcol.w;
     }
     fragColor = pixel;
 }
