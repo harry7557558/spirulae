@@ -13,19 +13,23 @@ uniform vec2 screenCenter;
 uniform float uScale;
 uniform vec3 uClipBox;
 
+uniform float rScale1;
+uniform float rScale2;
+
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
 // Random number generator
-float seed;
-float hash31(vec3 p) {
-    vec3 p3 = fract(p*1.1031);
-    p3 += dot(p3, p3.zxy + 31.32);
-    return fract((p3.x + p3.y) * p3.z);
-}
+uint seed;
 float randf() {
-    seed = hash31(vec3(seed,1,1));
-    return seed;
+    seed = 1664525u * seed + 1013904223u;
+    return float(seed) / 4294967296.0;
+}
+// https://www.shadertoy.com/view/4djSRW
+float hash13(vec3 p3) {
+	p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 
@@ -35,28 +39,43 @@ float randf() {
 #define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
 #endif
 
+#if {%CLOSED%}
+#define CLIP_OFFSET 1.01
+#else
+#define CLIP_OFFSET 1.0
+#endif
+
 #if {%CLIP%}==1
 bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
     vec3 inv_rd = 1.0 / rd;
     vec3 n = inv_rd*(ro);
-    vec3 k = abs(inv_rd)*uClipBox;
+    vec3 k = abs(inv_rd)*uClipBox*CLIP_OFFSET;
     vec3 t1 = -n - k, t2 = -n + k;
     tn = max(max(t1.x, t1.y), t1.z);
     tf = min(min(t2.x, t2.y), t2.z);
     if (tn > tf) return false;
     return true;
 }
+float clipFunction(vec3 p) {
+    vec3 d = abs(p) - uClipBox;
+    return max(max(d.x, d.y), d.z);
+}
 #elif {%CLIP%}==2
 bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
-	float a = dot(rd/uClipBox,rd/uClipBox);
-	float b = -dot(rd/uClipBox,ro/uClipBox);
-	float c = dot(ro/uClipBox,ro/uClipBox)-1.0;
+    vec3 clipBox = uClipBox*CLIP_OFFSET;
+	float a = dot(rd/clipBox,rd/clipBox);
+	float b = -dot(rd/clipBox,ro/clipBox);
+	float c = dot(ro/clipBox,ro/clipBox)-1.0;
 	float delta = b*b-a*c;
 	if (delta < 0.0) return false;
 	delta = sqrt(delta);
 	t1 = (b-delta)/a, t2 = (b+delta)/a;
 	if (t1>t2) { float t=t1; t1=t2; t2=t;}
 	return true;
+}
+float clipFunction(vec3 p) {
+    vec3 d = abs(p) / uClipBox;
+    return length(d)-1.0;
 }
 #endif
 
@@ -74,27 +93,60 @@ vec3 worldToScreen(vec3 p) {
 // function and its gradient in world space
 
 {%FUN%}
-#line 62
+#line 97
+
+float getScale1() {
+    return rScale1/(1.0-rScale1);
+}
+float getScale2() {
+    return rScale2/(1.0-rScale2);
+}
 
 int callCount = 0;
-float fun(vec3 p) {  // function
+float funRawR(vec3 p) {  // function
     callCount += 1;
 #if {%Y_UP%}
     float x=p.x, y=p.z, z=-p.y;
 #else
     float x=p.x, y=p.y, z=p.z;
 #endif
-    return funRaw(x, y, z);
+    float s = getScale1();
+    return funRaw(s*x, s*y, s*z);
     // return funRaw(x, y, z).w;
 }
+float fun(vec3 p) {
+#if {%CLOSED%}
+    return max(funRawR(p), clipFunction(p));
+#else
+    return funRawR(p);
+#endif
+}
+float funC(vec3 p, out bool isBoundary) {
+    float a = funRawR(p);
+    float b = clipFunction(p);
+    isBoundary = b > a;
+    // return max(a, b);
+    return a > b || isnan(a) ? a : b;
+}
 
-vec3 funGrad(vec3 p) {  // numerical gradient
-    float h = 0.002*length(p);
+vec3 funGrad(vec3 p) {
+    float h = 0.001*pow(dot(p,p), 1.0/6.0);
     return vec3(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
         fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
-    ) / (2.0*h);
+    ) / (2.0*h*getScale1());
+}
+vec3 funGradC(vec3 p, out bool isBoundary) {
+    float h = 0.001*pow(dot(p,p), 1.0/6.0);
+    bool b0, b1, b2, b3, b4, b5;
+    vec3 r = vec3(
+        funC(p+vec3(h,0,0),b0) - funC(p-vec3(h,0,0),b1),
+        funC(p+vec3(0,h,0),b2) - funC(p-vec3(0,h,0),b3),
+        funC(p+vec3(0,0,h),b4) - funC(p-vec3(0,0,h),b5)
+    ) / (2.0*h*getScale1());
+    isBoundary = (int(b0)+int(b1)+int(b2)+int(b3)+int(b4)+int(b5)) > 3;
+    return r;
 }
 
 // function and its gradient in screen space
@@ -108,6 +160,10 @@ float funS(vec3 p) {
 #define MAX_STEP int(10.0/(STEP_SIZE))
 
 uniform vec3 LDIR;
+uniform float rLightIntensity;
+uniform float rLightAmbient;
+uniform float rLightSoftness;
+uniform float rLightHardness;
 #define OPACITY 0.6
 
 // calculate the color at one point, parameters are in screen space
@@ -132,7 +188,7 @@ float grid(vec3 p, vec3 n) {
     float g2 = grid1(q2, n, w1);
     return min(min(mix(0.65, 1.0, g0), mix(mix(0.8,0.65,fs), 1.0, g1)), mix(mix(1.0,0.8,fs), 1.0, g2));
 }
-vec3 calcAlbedo(vec3 p, vec3 n0) {
+vec3 calcAlbedo(vec3 p, vec3 n0, bool isBoundary) {
     vec3 n = normalize(n0);
 #if {%Y_UP%}
     n0 = vec3(n0.x, n0.z, -n0.y);
@@ -152,6 +208,8 @@ vec3 calcAlbedo(vec3 p, vec3 n0) {
     vec3 albedo = vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*grad
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
 #endif // {%COLOR%} == 1
+    if (isBoundary)
+        albedo = vec3(0.9);
     albedo *= g;
     return pow(albedo, vec3(1.5));
 #endif // {%COLOR%} == 0
@@ -261,8 +319,13 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
             t += dt;
         }
     }
-    vec3 grad = funGrad(ro+rd*t);
-    col = calcAlbedo(ro+rd*t, grad);
+    bool isBoundary = false;
+    #if {%CLOSED%}
+        vec3 grad = funGradC(ro+rd*t, isBoundary);
+    #else
+        vec3 grad = funGrad(ro+rd*t);
+    #endif
+    col = calcAlbedo(ro+rd*t, grad, isBoundary);
     n = normalize(grad);
     return t;
 }
@@ -272,8 +335,9 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
 // define materials
 const int MAT_NONE = -1;
 const int MAT_BACKGROUND = 0;
-const int MAT_PLANE = 1;
-const int MAT_OBJECT = 2;
+const int MAT_SCATTER = 1;
+const int MAT_PLANE = 2;
+const int MAT_OBJECT = 3;
 
 
 
@@ -352,21 +416,67 @@ vec3 sampleRoughGlassBsdf(
     return wo.x * u + wo.y * v + wo.z * n;
 }
 
+// volume
+
+vec3 sampleUniformSphere() {
+    float u = 2.0*PI*randf();
+    float v = 2.0*randf()-1.0;
+    return vec3(vec2(cos(u), sin(u))*sqrt(1.0-v*v), v);
+}
+
+vec3 sampleHenyeyGreenstein(vec3 wi, float g) {
+    if (g == 0.0) return sampleUniformSphere();
+    if (g >= 1.0) return wi;
+    if (g <= -1.0) return -wi;
+    float us = randf();
+    float vs = 2.0*PI*randf();
+    float z = (1.0+g*g-pow((1.0-g*g)/(2.0*g*(us+(1.0-g)/(2.0*g))),2.0))/(2.0*g);
+    vec2 xy = vec2(cos(vs), sin(vs)) * sqrt(1.0-z*z);
+    vec3 u = normalize(cross(wi, vec3(1.2345, 2.3456, -3.4561)));
+    vec3 v = cross(u, wi);
+    vec3 wo = normalize(xy.x*u + xy.y*v + z*wi);
+    return wo;
+}
 
 
 uniform float rRoughness1;
 uniform float rRoughness2;
+uniform float rEmission1;
+uniform float rEmission2;
+uniform float rAbsorb1;
+uniform float rAbsorb2;
+uniform float rScatter1;
+uniform float rScatter2;
+uniform float rVDecayAbs;
+uniform float rVDecaySca;
+uniform float rVAbsorbHue;
+uniform float rVAbsorbChr;
+uniform float rVAbsorbBri;
 
+vec3 getAbsorbColor() {
+    float h = 2.0*PI*rVAbsorbHue;
+    float c = 0.2*pow(rVAbsorbChr, 2.0);
+    float l = 1.0-1.0*c;
+    // h = 2.0*PI*0.55, c = 0.036, l = 0.97;
+    float alpha = c*cos(h);
+    float beta = c*sin(h);
+    vec3 col = mat3(0.6667, -0.3333, -0.3333, 0, 0.5774, -0.5774, 1, 1, 1)
+        * vec3(alpha, beta, l);
+    // return vec3(0.95, 0.98, 0.99);
+    col = clamp(0.99*col, 0.0, 0.995);
+    return pow(col, vec3(0.5));
+}
 
 vec3 mainRender(vec3 ro, vec3 rd) {
     vec3 m_col = vec3(1.0), t_col = vec3(0.0), col, tmpcol;
     bool is_inside = false;
     vec3 prev_col = vec3(1.0);
+    rd = normalize(rd);
 
     for (int iter = int(ZERO); iter < 32; iter++) {
         ro += 1e-4*length(ro) * rd;
         vec3 n, min_n;
-        float t, min_t = 1e12;
+        float t, min_t = 1e6;
         vec3 min_ro = ro, min_rd = rd;
         int material = MAT_BACKGROUND;
 
@@ -375,8 +485,9 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         if (t > 0.0) {
             min_t = t, min_n = vec3(0,0,1);
             min_ro = ro+rd*t, min_rd = rd;
-            col = sin(PI*min_ro.x)*sin(PI*min_ro.y) < 0. ?
-                vec3(0.7, 0.8, 0.9) : vec3(0.8, 0.7, 0.9);
+            float s = getScale2();
+            col = sin(s*PI*min_ro.x)*sin(s*PI*min_ro.y) < 0. ?
+                vec3(0.9) : vec3(0.7);
             col = pow(col, vec3(2.2));
             material = MAT_PLANE;
         }
@@ -390,21 +501,86 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             material = MAT_OBJECT;
         }
 
+        // absorption and scattering
+        if (is_inside) {
+            float A_abs = rAbsorb1/(1.0-rAbsorb1);
+            float A_sca = pow(rScatter1, 0.5); A_sca = 0.5*A_sca/(1.0-A_sca);
+            // scattering
+            float r = randf();
+            float tsc = -log(r) / A_sca;
+            vec3 colmid = 0.5*(prev_col+col);
+            if (tsc < min_t) {
+                min_t = tsc, min_n = vec3(0);
+                min_ro = ro+rd*tsc, min_rd = rd;
+                colmid = mix(prev_col, col, tsc/min_t);
+                col = prev_col;
+                material = MAT_SCATTER;
+            }
+            // absorption
+            float absorb = A_abs*min_t;
+            m_col *= pow(clamp(colmid, 0.0, 1.0), vec3(absorb));
+        }
+        else {
+            // density A0 exp(-k0 z)
+            //      = A0 exp(-k0 (ro.z + rd.z t))
+            //      = (A0 exp(-k0 ro.z)) exp(-k0 rd.z t)
+            //      = A exp(-k t)
+            // total absorption density A/k (1-exp(-kt))
+            // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
+            //      from 1 to exp(-A/k)
+            float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 1.0 / (k0_abs/(1.0-k0_abs));
+            float k0_sca = pow(rVDecaySca, 0.8); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
+            float A0_abs = rAbsorb2/(1.0-rAbsorb2) / (1.0-exp(-4.0/k0_abs));
+            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (1.0-exp(-4.0/k0_sca));
+            float z0 = -uClipBox.z;
+            float A_abs = A0_abs * exp(-k0_abs*(ro.z-z0));
+            float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
+            float k_abs = k0_abs * rd.z;
+            float k_sca = k0_sca * rd.z;
+            // scattering
+            float r = randf();
+            if (r > exp(-A_sca/k_sca) || k_sca < 0.0) {
+                float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
+                if (tsc < min_t) {
+                    min_t = tsc, min_n = vec3(0);
+                    min_ro = ro+rd*tsc, min_rd = rd;
+                    col = prev_col;
+                    material = MAT_SCATTER;
+                }
+            }
+            // absorption
+            float absorb = A_abs / k_abs * (1.0-exp(-k_abs*min_t));
+            m_col *= pow(getAbsorbColor(), vec3(absorb));
+        }
+
         // update ray
         if (material == MAT_BACKGROUND) {
-            col = vec3(max(0.5+0.5*dot(rd,LDIR), 0.0));
+            float soft = pow(rLightSoftness, 4.0);
+            // https://www.desmos.com/3d/750cc71ae5
+            float k1 = 1.0 / soft;
+            float k2 = 1.52004*sqrt(soft) - 0.379175*(soft);
+            col = 2.0*rLightIntensity * mix(vec3(1)*mix(
+                0.5*(k1+1.0)*pow(0.5+0.5*dot(rd,LDIR),k1),
+                dot(rd,LDIR)>cos(k2) ? 1.0/(1.0-cos(k2)) : 0.0,
+                rLightHardness), vec3(0.5), rLightAmbient);
             return m_col * col + t_col;
         }
         if (isnan(dot(min_n, col))) {
-            return m_col * vec3(0, 1, 0) + t_col;
+            return m_col * vec3(0, 1, 0) + t_col;  // this glows, should fix it
         }
         ro = min_ro, rd = min_rd;
         min_n = dot(rd,min_n) < 0. ? min_n : -min_n;
-        if (material == MAT_PLANE) {
+        if (material == MAT_SCATTER) {
+            // isotropic scattering
+            rd = sampleUniformSphere();
+        }
+        else if (material == MAT_PLANE) {
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
+            t_col += rEmission2 * m_col * col;
             rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
         }
         else if (material == MAT_OBJECT) {
+            t_col += rEmission1 * m_col * col;
             float alpha = pow(rRoughness1,2.0);
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
         #if {%TRANSPARENCY%}
@@ -413,7 +589,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             rd = sampleRoughGlassBsdf(-rd, min_n, alpha, eta);
             if (is_inside) {
                 vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
-                m_col *= pow(col, vec3(1.0*min_t));
+                // m_col *= pow(col, vec3(1.0*min_t));
             }
         #else
             rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
@@ -424,7 +600,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         // if (is_inside) return vec3(0,1,0);
         prev_col = col;
     }
-    return m_col + t_col;
+    // return m_col + t_col;
     return t_col;
 }
 
@@ -436,7 +612,7 @@ void main(void) {
     int nFrame = 1;
     for (int fi=0; fi<nFrame; fi++) {
         // random number seed
-        seed = hash31(vec3(gl_FragCoord.xy,iFrame*nFrame+fi));
+        seed = uint(4294967296.0*hash13(0.01*vec3(gl_FragCoord.xy, iFrame)));
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;

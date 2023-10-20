@@ -281,7 +281,8 @@ function initRenderer() {
             state.renderNeeded = true;
         if (state.renderNeeded)
             state.iFrame = 0;
-        if (state.iFrame < 256) {
+        let maxFrame = Number(parameterToDict(RawParameters).sSpp);
+        if (state.iFrame < maxFrame) {
             state.width = canvas.width = canvas.style.width = window.innerWidth;
             state.height = canvas.height = canvas.style.height = window.innerHeight;
             try {
@@ -401,6 +402,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%FUNGRAD%}", funGradCode);
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
         shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.sClip));
+        shaderSource = shaderSource.replaceAll("{%CLOSED%}", Number(params.cClosed));
         shaderSource = shaderSource.replaceAll("{%FIELD%}", params.sField);
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
         shaderSource = shaderSource.replaceAll("{%TRANSPARENCY%}", Number(params.bTransparency));
