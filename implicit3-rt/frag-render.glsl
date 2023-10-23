@@ -20,7 +20,7 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
 // Random number generator
-float seed;
+float seed0, seed;
 // https://www.shadertoy.com/view/4djSRW
 float hash13(vec3 p3) {
 	p3  = fract(p3 * .1031);
@@ -29,7 +29,9 @@ float hash13(vec3 p3) {
 }
 float randf() {
     seed = floor(mod(75.0*seed+74.0, 65537.)+0.5);
-    return hash13(vec3(seed/65537., 1, 1));
+    seed0 += 1.0;
+    // return hash13(vec3(seed0));
+    return hash13(vec3(seed/65537., seed0, 1));
 }
 
 
@@ -529,9 +531,9 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
             //      from 1 to exp(-A/k)
             float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
-            float k0_sca = pow(rVDecaySca, 0.8); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
-            float A0_abs = rAbsorb2/(1.0-rAbsorb2) / (1.0-exp(-4.0/k0_abs));
-            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (1.0-exp(-4.0/k0_sca));
+            float k0_sca = pow(rVDecaySca, 1.0); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
+            float A0_abs = rAbsorb2/(1.0-rAbsorb2) / (0.1*k0_abs);
+            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);
             float z0 = -uClipBox.z;
             float A_abs = A0_abs * exp(-k0_abs*(ro.z-z0));
             float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
@@ -559,7 +561,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             // https://www.desmos.com/3d/750cc71ae5
             float k1 = 1.0 / soft;
             float k2 = 1.52004*sqrt(soft) - 0.379175*(soft);
-            col = 2.0*rLightIntensity * mix(vec3(1)*mix(
+            col = pow(2.0*rLightIntensity,2.0) * mix(vec3(1)*mix(
                 0.5*(k1+1.0)*pow(0.5+0.5*dot(rd,LDIR),k1),
                 dot(rd,LDIR)>cos(k2) ? 1.0/(1.0-cos(k2)) : 0.0,
                 rLightHardness), vec3(0.5), rLightAmbient);
@@ -613,8 +615,9 @@ void main(void) {
     vec4 totcol = vec4(0);
     for (int fi=0; fi<nFrame; fi++) {
         // random number seed
-        seed = 65537.*(hash13(vec3(gl_FragCoord.xy/iResolution.xy,
-                sin(float(iFrame*nFrame+fi)))));
+        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy,
+                            sin(float(iFrame*nFrame+fi))));
+        seed = round(65537.*seed0);
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
