@@ -114,6 +114,12 @@ document.body.onload = function (event) {
 };
 
 
+function decimateMesh(shapeCost, angleCost) {
+    Module.ccall('decimateMesh', null,
+        ['number', 'number'], [shapeCost, angleCost]);
+}
+
+
 window.ModelExporter = {
     assertModelNonempty: function() {
         let isEmpty = Module.ccall('isModelEmpty', 'int', [], []);

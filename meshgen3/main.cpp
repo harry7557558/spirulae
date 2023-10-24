@@ -24,10 +24,18 @@
 #endif
 
 
+struct DecimationParameters {
+    bool decimate;
+    float shapeCost;
+    float angleCost;
+};
+
+
 void generateMesh(
     std::string funDeclaration,
     std::vector<vec3> &verts,
-    std::vector<ivec4> &tets, std::vector<ivec3> &faces, std::vector<ivec4> &edges
+    std::vector<ivec4> &tets, std::vector<ivec3> &faces, std::vector<ivec4> &edges,
+    DecimationParameters decimate
 ) {
 
     GlBatchEvaluator3 evaluator(funDeclaration);
@@ -38,7 +46,8 @@ void generateMesh(
         evaluator.evaluateFunction(n, p, v);
         for (size_t i = 0; i < n; i++) {
             vec3 dp = abs(p[i] - bc) / br;
-            v[i] = fmax(fmax(v[i], dp.x-1.0f), fmax(dp.y, dp.z)-1.0f);
+            float clip = fmax(dp.x, fmax(dp.y, dp.z));
+            v[i] = std::isfinite(v[i]) ? fmax(v[i], clip-1.0f) : clip;
         }
     };
     auto constraint = [=](vec3 p) {
@@ -79,15 +88,25 @@ void generateMesh(
         verts, tets, faces, edges, 5, Fs,
         constraint, isConstrained);
 #else
+    const ivec3 bn = ivec3(48);
+    const int nd = 2;
+    vec3 expd = 1.0f + 0.02f/vec3(bn-1)*exp2f(-nd);
     MeshgenTetImplicit::marchingCubes(
-        Fs, bc-1.01f*br, bc+1.01f*br,
-        ivec3(48), 2,
+        Fs, bc-expd*br, bc+expd*br,
+        bn, nd,
         verts, faces, isConstrained0
     );
-    MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
-    MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
-    MeshgenTetImplicit::restoreEdges(faces, edges);
-    // MeshgenTetImplicit::MeshDecimatorEC(verts, faces, edges).decimateMesh();
+    if (decimate.decimate) {
+        MeshgenTetImplicit::restoreEdges(faces, edges);
+        MeshgenTetImplicit::MeshDecimatorEC(verts, faces, edges,
+            0.25f/length(vec3(bn-1))*exp2f(-nd),
+            decimate.shapeCost, decimate.angleCost).decimateMesh();
+    }
+    else {
+        MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
+        MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
+        MeshgenTetImplicit::restoreEdges(faces, edges);
+    }
 #endif
 }
 
@@ -214,7 +233,9 @@ void mainGUICallback() {
 
     // printf("newGlslFun:\n%s\n", &newGlslFun[0]);
     float t0 = getTimePast();
-    generateMesh(newGlslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    generateMesh(newGlslFun,
+        Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
+        { false, 0.0f, 0.0f });
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
     renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
@@ -222,6 +243,16 @@ void mainGUICallback() {
     newGlslFun.clear();
 }
 
+EXTERN EMSCRIPTEN_KEEPALIVE
+void decimateMesh(bool shapeCost, bool angleCost) {
+    float t0 = getTimePast();
+    generateMesh(glslFun,
+        Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
+        { true, shapeCost ? 2.0f : 0.0f, angleCost ? 0.5f : 0.0f });
+    float t1 = getTimePast();
+    printf("Total %.2g secs.\n \n", t1 - t0);
+    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+}
 
 // viewport
 

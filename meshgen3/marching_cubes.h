@@ -72,11 +72,12 @@ void marchingCubes(
     auto getI = [&](int i, int j, int k) {
         return (k*bnd.y+j)*bnd.x+i;
     };
+    vec3 noise = 1e-2f/vec3(bn-1)*exp2f(-nd);
     auto idxToPoint = [&](int idx) {
         int k = idx / (bnd.x*bnd.y);
         int j = (idx / bnd.x) % bnd.y;
         int i = idx % bnd.x;
-        vec3 rnd = 1e-2f*vec3(cos(i+j), cos(2.0f*j-k), cos(4.0f*k+i));
+        vec3 rnd = noise*vec3(cos(i+j), cos(2.0f*j-k), cos(4.0f*k+i));
         return b0+(b1-b0)*(vec3(i,j,k)+rnd)/vec3((bn-1)<<nd);
     };
 

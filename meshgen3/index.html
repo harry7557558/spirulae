@@ -229,6 +229,10 @@
         <span title="show mesh"><input type="checkbox" id="checkbox-edge" checked />mesh</span>&ensp;
         <span title="smooth shading"><input type="checkbox" id="checkbox-normal" />normal</span>&ensp;
         <br />
+        <button onclick="decimateMesh(false, false)">optimize mesh</button>
+        <button onclick="decimateMesh(true, false)">+shape</button>
+        <!-- <button onclick="decimateMesh(true, true)">+angle</button> -->
+        <br />
         <span>Export:
           <input id="export-stl" type="button" value="STL" />
           <input id="export-ply" type="button" value="PLY" />
