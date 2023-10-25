@@ -88,7 +88,7 @@ void generateMesh(
         verts, tets, faces, edges, 5, Fs,
         constraint, isConstrained);
 #else
-    const ivec3 bn = ivec3(48);
+    const ivec3 bn = ivec3(36);
     const int nd = 2;
     vec3 expd = 1.0f + 0.02f/vec3(bn-1)*exp2f(-nd);
     MeshgenTetImplicit::marchingCubes(
@@ -99,12 +99,12 @@ void generateMesh(
     if (decimate.decimate) {
         MeshgenTetImplicit::restoreEdges(faces, edges);
         MeshgenTetImplicit::MeshDecimatorEC(verts, faces, edges,
-            0.25f/length(vec3(bn-1))*exp2f(-nd),
+            0.3f/length(vec3(bn-1))*exp2f(-nd),
             decimate.shapeCost, decimate.angleCost).decimateMesh();
     }
     else {
-        MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
-        MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
+        // MeshgenTetImplicit::mergeEdge(verts, faces, false, 0.4);
+        // MeshgenTetImplicit::mergeEdge(verts, faces, true, 0.25);
         MeshgenTetImplicit::restoreEdges(faces, edges);
     }
 #endif

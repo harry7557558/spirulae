@@ -45,7 +45,8 @@ public:
         targetAccuracy(targetAccuracy), shapeCost(shapeCost), angleCost(angleCost),
         isVertRemoved(verts.size(), false),
         isFaceRemoved(faces.size(), false),
-        isEdgeRemoved(edges.size(), false) {
+        isEdgeRemoved(edges.size(), false),
+        edgeVerts(edges.size()) {
             if (verts.empty()) edgeCost = nullptr;
             else edgeCost = new MaxSegmentTree(computeCostReduction());
         }
@@ -63,6 +64,7 @@ private:
     std::vector<bool> isFaceRemoved;
     std::vector<bool> isEdgeRemoved;
     std::vector<mat3> Q;
+    std::vector<vec3> edgeVerts;
 
     float targetAccuracy;
     float shapeCost;
@@ -101,10 +103,18 @@ private:
     // costs
     void computeErrorQuadrics();
     mat3 computeErrorQuadrics(int vi);
-    float computeCostReduction(ivec4 e);
+    float computeCostReductionErrorOnly(int ei, bool topology_only, vec3 &vmean);
+    float computeCostReduction(int ei, bool topology_only, vec3 &vmean);
     std::vector<float> computeCostReduction();
 
     // decimation
+    vec3 computeNewVertexLocation(ivec2 e) {
+        // return 0.5f*(verts[e.x]+verts[e.y]);
+        // return inverse(Q[e.x]+Q[e.y]) * (Q[e.x]*verts[e.x] + Q[e.y]*verts[e.y]);
+        mat3 Q1 = Q[e.x] + mat3(1e-5f);
+        mat3 Q2 = Q[e.y] + mat3(1e-5f);
+        return inverse(Q1+Q2) * (Q1*verts[e.x] + Q2*verts[e.y]);
+    }
     void contractEdge(int ei);
 
     // misc
@@ -113,6 +123,8 @@ private:
             verts[f.y]-verts[f.x], verts[f.z]-verts[f.x]
         ));
     }
+
+    constexpr static float LARGE = 1e6f;
 };
 
 
@@ -153,7 +165,10 @@ mat3 MeshDecimatorEC::computeErrorQuadrics(int vi) {
     return Q;
 }
 
-float MeshDecimatorEC::computeCostReduction(ivec4 e) {
+float MeshDecimatorEC::computeCostReductionErrorOnly(
+    int ei, bool topology_only, vec3 &vmean) {
+    ivec4 e = edges[ei];
+
     float costReduction = 0.0f;
 
     // topology change
@@ -162,25 +177,27 @@ float MeshDecimatorEC::computeCostReduction(ivec4 e) {
         ;
         // orphan vertex
         if (e.z != -1 && neighborVerts[e.z].size() <= 2)
-            return -1.0f;
+            return -LARGE;
         if (e.w != -1 && neighborVerts[e.w].size() <= 2)
-            return -1.0f;
+            return -LARGE;
         // bridge vertex
         if (neighborVerts[e.x].size() <= 3)
-            return -1.0f;
+            return -LARGE;
         if (neighborVerts[e.y].size() <= 3)
-            return -1.0f;
+            return -LARGE;
         // don't merge "triangular prism"
         int count = 0;
         for (int i : neighborVerts[e.x])
             for (int j : neighborVerts[e.y])
                 count += int(i == j);
         if (count > 2)
-            return -1.0f;
+            return -LARGE;
     }
+    if (topology_only)
+        return costReduction;
 
     // vert after update
-    vec3 vmean = 0.5f * (verts[e.x] + verts[e.y]);
+    vmean = computeNewVertexLocation(ivec2(e));
 
     // each triangle costs 1
     costReduction += float(e.z != -1) + float(e.w != -1);
@@ -191,7 +208,7 @@ float MeshDecimatorEC::computeCostReduction(ivec4 e) {
         return n + 16.0f / (n-2.0f);
     };
     {
-        const float kVal = 0.4f;
+        const float kVal = 0.4f + 0.3f*shapeCost + 1.0f*angleCost;
         float n1 = (float)neighborVerts[e.x].size();
         float n2 = (float)neighborVerts[e.y].size();
         float a = 0.5f * (valenceCostFun(n1) + valenceCostFun(n2));
@@ -209,11 +226,26 @@ float MeshDecimatorEC::computeCostReduction(ivec4 e) {
             sqrt(dot(vmean-verts[e.y], Q[e.y]*(vmean-verts[e.y]))+1e-6) );
     }
 
+    return costReduction;
+}
+
+float MeshDecimatorEC::computeCostReduction(int ei, bool topology_only, vec3 &vmean) {
+    ivec4 e = edges[ei];
+    float costReduction = computeCostReductionErrorOnly(ei, topology_only, vmean);
+    if (costReduction == -LARGE)
+        return costReduction;
+
     // triangle shape
     auto triangleCostFun = [](vec3 v0, vec3 v1, vec3 v2) {
+        auto angle = [](vec3 a, vec3 b) {
+            float s = length(cross(normalize(a), normalize(b)));
+            return -log(s);
+            // return -log(s+0.1f);
+        };
+        return (angle(v1-v0,v2-v0) + angle(v2-v1,v0-v1) + angle(v0-v2,v1-v2)) / 3.0f;
         vec3 vc = (v0+v1+v2) / 3.0f;
-        float s = 1.0f / sqrt(dot(v0, v0) + dot(v1, v1) + dot(v2, v2));
-        vec3 a = v0 * s, b = v1 * s;
+        float s = 1.0f / sqrt(dot2(v0-vc) + dot2(v1-vc) + dot2(v2-vc));
+        vec3 a = (v1-v0) * s, b = (v2-v0) * s;
         return -log(length(cross(a, b)));
     };
     if (shapeCost != 0.0f) {
@@ -249,66 +281,86 @@ float MeshDecimatorEC::computeCostReduction(ivec4 e) {
         }
         afterCost /= (float)checkedEdges.size();
 
-        const float kTri = shapeCost;
+        const float kTri = shapeCost + 0.0f*angleCost;
         costReduction += kTri * (beforeCost - afterCost);
     }
 
-    // angle cost, neighbor edges only
+    // angle cost
     auto angleCostFun = [](vec3 v0, vec3 v1, vec3 v2, vec3 v3) {
         vec3 n1 = normalize(cross(v1-v0, v2-v0));
         vec3 n2 = normalize(cross(v0-v1, v3-v1));
         return -log(1.0f + dot(n1, n2));
     };
-    if (angleCost != 0.0f && false) if (e.z != -1 && e.w != -1) do {
+    if (angleCost != 0.0f) if (e.z != -1 && e.w != -1) do {
         // current angle cost
-        std::vector<int> checkedEdges;
+        std::vector<int> adjEdges, oppEdges;
         for (int i : neighborEdges[e.x])
             if (edges[i].x == e.x || edges[i].y == e.x)
-                insertElement(checkedEdges, i);
+                insertElement(adjEdges, i);
+            else if (edges[i].x != e.y && edges[i].y != e.y
+                    && edges[i].z != e.y && edges[i].w != e.y)
+                insertElement(oppEdges, i);
         for (int i : neighborEdges[e.y])
             if (edges[i].x == e.y || edges[i].y == e.y)
-                insertElement(checkedEdges, i);
-        if (checkedEdges.size() < 2)
+                insertElement(adjEdges, i);
+            else if (edges[i].x != e.x && edges[i].y != e.x
+                    && edges[i].z != e.x && edges[i].w != e.x)
+                insertElement(oppEdges, i);
+        if (adjEdges.size() < 2)
             continue;
         float beforeCost = 0.0f;
-        for (int i : checkedEdges)
+        for (int i : adjEdges)
             beforeCost += angleCostFun(
                 verts[edges[i][0]], verts[edges[i][1]],
                 verts[edges[i][2]], verts[edges[i][3]]);
-        beforeCost /= (float)checkedEdges.size();
+        for (int i : oppEdges)
+            beforeCost += angleCostFun(
+                verts[edges[i][0]], verts[edges[i][1]],
+                verts[edges[i][2]], verts[edges[i][3]]);
+        beforeCost /= (float)(adjEdges.size()+oppEdges.size());
+        beforeCost *= (float)faces.size() / (float)edges.size();
 
         // updated angle cost
         float afterCost = 0.0f;
         std::vector<int> xmap, ymap;
-        for (int i : checkedEdges) {
+        for (int i : adjEdges) {
             if (edges[i].z == e.x || edges[i].w == e.x)
                 ymap.push_back(i);
             if (edges[i].z == e.y || edges[i].w == e.y)
                 xmap.push_back(i);
         }
-        for (int i : checkedEdges) {
-            ivec4 e1 = edges[i];
-            if ((e1.x == e.x && e1.y == e.y) ||
-                (e1.x == e.y && e1.y == e.x)) continue;
+        assert(xmap.size() == 2);
+        assert(ymap.size() == 2);
+        // for (int i : adjEdges) {
+        //     ivec4 e1 = edges[i];
+        //     if ((e1.x == e.x && e1.y == e.y) ||
+        //         (e1.x == e.y && e1.y == e.x)) continue;
+        //     vec3 p[4];
+        //     for (int _ = 0; _ < 2; _++)
+        //         p[_] = (e1[_] == e.x || e1[_] == e.y)
+        //             ? vmean : verts[e1[_]];
+        //     for (int _ = 2; _ < 4; _++) {
+        //         if (e1[_] == e.x)
+        //             p[_] = verts[(xmap[0] == e1[5-_]) ? xmap[1] : xmap[0]];
+        //         else if (e1[_] == e.y)
+        //             p[_] = verts[(ymap[0] == e1[5-_]) ? ymap[1] : ymap[0]];
+        //         else p[_] = verts[e1[_]];
+        //     }
+        //     afterCost += angleCostFun(p[0], p[1], p[2], p[3]);
+        // }
+        for (int i : oppEdges) {
             vec3 p[4];
-            for (int _ = 0; _ < 2; _++)
-                p[_] = (e1[_] == e.x || e1[_] == e.y)
-                    ? vmean : verts[e1[_]];
-            for (int _ = 2; _ < 4; _++) {
-                if (e1[_] == e.x)
-                    p[_] = verts[(xmap[0] == e1[5-_]) ? xmap[1] : xmap[0]];
-                else if (e1[_] == e.y)
-                    p[_] = verts[(ymap[0] == e1[5-_]) ? ymap[1] : ymap[0]];
-                else p[_] = verts[e1[_]];
-            }
+            for (int _ = 0; _ < 4; _++)
+                p[_] = (edges[i][_] == e.x || edges[i][_] == e.y)
+                    ? vmean : verts[edges[i][_]];
             afterCost += angleCostFun(p[0], p[1], p[2], p[3]);
         }
-        afterCost /= (float)checkedEdges.size() - 1.0f;
+        afterCost /= (float)(0*adjEdges.size()+oppEdges.size()-0);
+        afterCost *= (float)(faces.size()-2) / (float)(edges.size()-3);
 
         // printf("%f %f\n", beforeCost, afterCost);
 
-        const float kAng = angleCost;
-        costReduction += kAng * (beforeCost - afterCost);
+        costReduction += angleCost * (beforeCost - afterCost);
     } while(0);
 
     if (std::isnan(costReduction))
@@ -343,8 +395,8 @@ std::vector<float> MeshDecimatorEC::computeCostReduction() {
     std::vector<float> res;
     res.reserve(edges.size());
     computeErrorQuadrics();
-    for (ivec4 e : edges)
-        res.push_back(computeCostReduction(e));
+    for (size_t i = 0; i < edges.size(); i++)
+        res.push_back(computeCostReduction(i, false, edgeVerts[i]));
     return res;
 }
 
@@ -455,7 +507,7 @@ void MeshDecimatorEC::contractEdge(int ei) {
     // for (int i = 0; i < 4; i++) printf("%d (%f,%f,%f) ", edge[i], verts[edge[i]].x, verts[edge[i]].y, verts[edge[i]].z); printf("\n");
 
     // verts
-    verts[edge.x] = 0.5f*(verts[edge.x]+verts[edge.y]);
+    verts[edge.x] = edgeVerts[ei];
     isVertRemoved[edge.y] = true;
     for (int vi : neighborVerts[edge.y]) {
         assert(!isVertRemoved[vi]);
@@ -574,14 +626,20 @@ void MeshDecimatorEC::contractEdge(int ei) {
     for (int vi : neighborVerts[edge.x])
         Q[vi] = computeErrorQuadrics(vi);
     std::unordered_set<int> updatedEdges;
+    float (MeshDecimatorEC::*costReduction)(int, bool, vec3&);
+    if (shapeCost == 0.0f && angleCost == 0.0f)
+        costReduction = &MeshDecimatorEC::computeCostReductionErrorOnly;
+    else costReduction = &MeshDecimatorEC::computeCostReduction;
     for (int ei : neighborEdges[edge.x]) {
-        edgeCost->update(ei, computeCostReduction(edges[ei]));
+        edgeCost->update(ei, (this->*costReduction)(ei, false, edgeVerts[ei]));
         updatedEdges.insert(ei);
     }
     for (int vi : neighborVerts[edge.x]) {
         for (int ei : neighborEdges[vi]) {
             if (updatedEdges.find(ei) == updatedEdges.end()) {
-                edgeCost->update(ei, computeCostReduction(edges[ei]));
+                float cr = (this->*costReduction)(ei, false, edgeVerts[ei]);
+                if (cr < 0.0f)
+                    edgeCost->update(ei, cr);
                 updatedEdges.insert(ei);
             }
         }
@@ -600,7 +658,7 @@ void MeshDecimatorEC::decimateMesh() {
         // computeCostReduction();
         // for (int i = 0; i < (int)edges.size(); i++)
         //     if (!isEdgeRemoved[i])
-        //         edgeCost->update(i, computeCostReduction(edges[i]));
+        //         edgeCost->update(i, computeCostReduction(i));
         std::pair<int, float> maxe = edgeCost->getMax();
         // printf("%f ", maxe.second);
         if (maxe.second <= 0.0f)
