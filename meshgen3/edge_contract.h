@@ -22,16 +22,14 @@ using namespace MeshgenMisc;
 //      - contract the edge that results in highest cost reduction
 //      - update cost reduction of affected edges
 
-// requirements
-// - cost functions
-// - data structure for updating cost and finding minimum cost
-// - edge contraction operator
-// - finding affected edges
-// - manifold change checking
-
 
 #include "maxsegtree.h"
 
+namespace MeshgenECLoss {
+#undef CASADI_PREFIX
+#include "ec_loss_trig.h"
+#undef CASADI_PREFIX
+}
 
 class MeshDecimatorEC {
 public:
@@ -108,13 +106,7 @@ private:
     std::vector<float> computeCostReduction();
 
     // decimation
-    vec3 computeNewVertexLocation(ivec2 e) {
-        // return 0.5f*(verts[e.x]+verts[e.y]);
-        // return inverse(Q[e.x]+Q[e.y]) * (Q[e.x]*verts[e.x] + Q[e.y]*verts[e.y]);
-        mat3 Q1 = Q[e.x] + mat3(1e-5f);
-        mat3 Q2 = Q[e.y] + mat3(1e-5f);
-        return inverse(Q1+Q2) * (Q1*verts[e.x] + Q2*verts[e.y]);
-    }
+    vec3 computeNewVertexLocation(ivec2 e);
     void contractEdge(int ei);
 
     // misc
@@ -164,6 +156,40 @@ mat3 MeshDecimatorEC::computeErrorQuadrics(int vi) {
     }
     return Q;
 }
+
+
+
+vec3 MeshDecimatorEC::computeNewVertexLocation(ivec2 e) {
+    // return 0.5f*(verts[e.x]+verts[e.y]);
+    // return inverse(Q[e.x]+Q[e.y]) * (Q[e.x]*verts[e.x] + Q[e.y]*verts[e.y]);
+    mat3 Q1 = Q[e.x] + mat3(1e-4f);
+    mat3 Q2 = Q[e.y] + mat3(1e-4f);
+    if (shapeCost == 0.0f && angleCost == 0.0f)
+        return inverse(Q1+Q2) * (Q1*verts[e.x] + Q2*verts[e.y]);
+
+    // triangle cost
+    vec3 g, gt; mat3 H, Ht;
+    std::vector<int> checkedEdges;
+    for (int i : neighborEdges[e.x])
+        if (edges[i].z == e.x || edges[i].w == e.x)
+            insertElement(checkedEdges, i);
+    for (int i : neighborEdges[e.y])
+        if (edges[i].z == e.y || edges[i].w == e.y)
+            insertElement(checkedEdges, i);
+    float afterCost = 0.0f;
+    vec3 vmean = 0.5f*(verts[e.x]+verts[e.y]);
+    float kTri = shapeCost / (float)checkedEdges.size();
+    for (int i : checkedEdges) {
+        vec3 v[3] = { vmean, verts[edges[i][0]], verts[edges[i][1]] };
+        const float* vd = (const float*)&v[0];
+        float* res[2] = { (float*)&gt, (float*)&Ht };
+        MeshgenECLoss::ec_loss_trig_gh(&vd, res, nullptr, nullptr, 0);
+        g += kTri * gt;
+        H += kTri * Ht;
+    }
+    return inverse(Q1+Q2+H) * (Q1*verts[e.x] + Q2*verts[e.y] + H*vmean - g);
+}
+
 
 float MeshDecimatorEC::computeCostReductionErrorOnly(
     int ei, bool topology_only, vec3 &vmean) {
@@ -238,11 +264,13 @@ float MeshDecimatorEC::computeCostReduction(int ei, bool topology_only, vec3 &vm
     // triangle shape
     auto triangleCostFun = [](vec3 v0, vec3 v1, vec3 v2) {
         auto angle = [](vec3 a, vec3 b) {
-            float s = length(cross(normalize(a), normalize(b)));
+            // float s = dot2(cross(normalize(a), normalize(b)));
+            float s = dot2(cross(a, b)) / (dot(a,a)*dot(b,b));
+            // float s = 1.0f - (dot(a,b)*dot(a,b))/(dot(a,a)*dot(b,b));
             return -log(s);
             // return -log(s+0.1f);
         };
-        return (angle(v1-v0,v2-v0) + angle(v2-v1,v0-v1) + angle(v0-v2,v1-v2)) / 3.0f;
+        return (angle(v1-v0,v2-v0) + angle(v2-v1,v0-v1) + angle(v0-v2,v1-v2)) / 6.0f;
         vec3 vc = (v0+v1+v2) / 3.0f;
         float s = 1.0f / sqrt(dot2(v0-vc) + dot2(v1-vc) + dot2(v2-vc));
         vec3 a = (v1-v0) * s, b = (v2-v0) * s;
