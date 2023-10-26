@@ -191,8 +191,16 @@ function getSolution(p0, clean) {
         var l = Math.hypot(r.x, r.y);
         return { x: r.x/l, y: r.y/l };
     }
+    let bidirection = parameterToDict(RawParameters).cBidirection;
     var fwd = rkas(funNormalized, p0, 0.1, 1000, bound, maxstep);
-    var bck = rkas(funNormalized, p0, -0.1, 1000, bound, maxstep);
+    var bck = bidirection ?
+        rkas(funNormalized, p0, -0.1, 1000, bound, maxstep) :
+        {
+            length: 1,
+            x: [p0],
+            dxdt: [funNormalized(p0)],
+            dt: []
+        };
     return solverReturnToBezier(fwd, bck, clean);
 }
 
@@ -314,12 +322,6 @@ function getStreamlines(density) {
         }
     }
     return streamlines;
-}
-ctx.strokeStyle = 'rgb(128,128,128)';
-ctx.lineWidth = 1;
-for (var i = 0; i < streamlines.length; i++) {
-    var sl = streamlines[i];
-    drawPolyline(sl);
 }
 
 
@@ -458,7 +460,7 @@ function onDraw() {
     }
 
     // stacked solutions
-    ctx.strokeStyle = 'rgb(0,128,0)';
+    ctx.strokeStyle = 'rgb(255,0,0)';
     ctx.lineWidth = 3;
     for (var i = 0; i < App.solutionPoints.length; i++) {
         var p = App.solutionPoints[i];
