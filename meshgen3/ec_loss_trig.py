@@ -14,11 +14,21 @@ def angle(a, b):
     s = cs.dot(n, n) / (cs.dot(a, a) * cs.dot(b, b))
     return -cs.log(s)
 
+def triangle_loss_1(v0, v1, v2):
+    xu0 = cs.horzcat(v1-v0, v2-v0)
+    vc = (v0+v1+v2)/3
+    d = cs.vertcat(v0-vc, v1-vc, v2-vc)
+    xu = xu0 / cs.sqrt(cs.dot(d, d))
+    n = cs.cross(xu[:, 0], xu[:, 1])
+    return -0.5*cs.log(cs.dot(n, n))
+    # return -0.5*cs.dot(n, n)
+
 v0 = SX.sym('v0', 3)
 v1 = SX.sym('v1', 3)
 v2 = SX.sym('v2', 3)
 vs = cs.vertcat(v0, v1, v2)
 val = (angle(v1-v0,v2-v0) + angle(v2-v1,v0-v1) + angle(v0-v2,v1-v2)) / 6
+# val = triangle_loss_1(v0, v1, v2)
 
 jac = cs.jacobian(val, v0)
 hess = cs.jacobian(jac, v0)

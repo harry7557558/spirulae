@@ -230,17 +230,19 @@ void mainGUICallback() {
         newGlslFun.clear();
         return;
     }
+    glslFun = newGlslFun;
+    newGlslFun.clear();
+    #ifndef __EMSCRIPTEN__
+        return;
+    #endif
 
-    // printf("newGlslFun:\n%s\n", &newGlslFun[0]);
     float t0 = getTimePast();
-    generateMesh(newGlslFun,
+    generateMesh(glslFun,
         Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
         { false, 0.0f, 0.0f });
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
     renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
-    glslFun = newGlslFun;
-    newGlslFun.clear();
 }
 
 EXTERN EMSCRIPTEN_KEEPALIVE
@@ -419,7 +421,16 @@ int main() {
     if (!initWindow())
         return -1;
     MeshgenTetImplicit::initMeshGenerator();
-    updateShaderFunction("float funRaw(float x, float y, float z) { return z-x*y; }");
+    glslFun = "float funRaw(float x, float y, float z) { return z-x*y; }";
+
+    float t0 = getTimePast();
+    generateMesh(glslFun,
+        Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
+        { true, 0.0f, 0.0f });
+    float t1 = getTimePast();
+    printf("Total %.2g secs.\n \n", t1 - t0);
+    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+
     mainGUI(mainGUICallback);
 
 #endif
