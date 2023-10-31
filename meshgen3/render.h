@@ -94,6 +94,8 @@ namespace RenderParams {
     GLuint vertexArrayID = 0;
     Viewport* viewport;
     glm::vec2 screenCenter = glm::vec2(0.5, 0.5);
+    bool mouseDown = false;
+    glm::vec2 mousePos(-1, -1);
 }
 
 
@@ -382,8 +384,29 @@ void mainGUI(void (*callback)(void)) {
     // main loop
     loop = [&] {
         callback();
-
         using RenderParams::viewport;
+
+    #ifndef __EMSCRIPTEN__
+        using RenderParams::mousePos, RenderParams::mouseDown;
+        glm::dvec2 newMousePos;
+        glfwGetCursorPos(RenderParams::window, &newMousePos.x, &newMousePos.y);
+        newMousePos.y = RenderParams::iResolution.y - 1 - newMousePos.y;
+        vec2 mouseDelta = mousePos == vec2(-1) ? vec2(0.0) : vec2(newMousePos) - mousePos;
+        mousePos = newMousePos;
+        int mouseState = glfwGetMouseButton(RenderParams::window, GLFW_MOUSE_BUTTON_LEFT);
+        if (!mouseDown && mouseState == GLFW_PRESS) {
+            mouseDown = true;
+            viewport->mouseClick();
+        }
+        else if (mouseDown && mouseState == GLFW_RELEASE) {
+            mouseDown = false;
+            viewport->renderNeeded = true;
+        }
+        if (mouseDown) {
+            viewport->mouseMove(mouseDelta);
+        }
+    #endif
+
         if (!viewport->renderNeeded) return;
 
         glViewport(0, 0, RenderParams::iResolution.x, RenderParams::iResolution.y);
@@ -434,6 +457,11 @@ void mainGUI(void (*callback)(void)) {
     emscripten_set_main_loop(main_loop, 0, true);
     return;
 #else
+	// mouse action(s)
+    glfwSetScrollCallback(RenderParams::window,
+        [](GLFWwindow* window, double xoffset, double yoffset) {
+            RenderParams::viewport->mouseScroll((float)yoffset);
+        });
     do {
         main_loop();
     } while (!glfwWindowShouldClose(RenderParams::window));
