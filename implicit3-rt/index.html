@@ -53,8 +53,6 @@
                 <option value="0.004">high</option>
                 <option value="0.001">ultra high</option>
             </select>quality</span>&ensp;
-        <span title="Use y-up coordinate system convension"><input type="checkbox"
-                id="checkbox-yup" /><i>y</i>-up</span>&ensp;
         <span style="display:none" title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <span><select id="select-spp" title="Maximum samples per pixel">
                 <option value="16">2⁴</option>
@@ -69,8 +67,8 @@
             <option value="1" selected>box</option>
             <option value="2">sphere</option>
         </select>clip</span>
-        (<span title="Fixed box size independent of zooming"><input type="checkbox"
-                id="checkbox-clip-fixed" checked />fixed</span>)&ensp;
+        <!-- (<span title="Fixed box size independent of zooming"><input type="checkbox"
+                id="checkbox-clip-fixed" checked />fixed</span>)&ensp; -->&ensp;
             <span style="display:none;" title="Visualize scalar field with volume contour lines"><select id="select-field">
                 <option value="0" selected>no</option>
                 <option value="1">linear</option>
@@ -78,6 +76,8 @@
             </select>field</span>
         <span title="Show surface at clipping boundary"><input
             type="checkbox" id="checkbox-closed" checked/>closed</span>&ensp;
+        <span title="Use y-up coordinate system convension"><input type="checkbox"
+                id="checkbox-yup" /><i>y</i>-up</span>&ensp;
         <br />
         <hr />
         <span title="Surface color mode"><select id="select-color">
@@ -85,8 +85,8 @@
                 <option value="1">normal</option>
                 <option value="2" selected>gradient</option>
             </select>color</span>&ensp;
-        <span title="Glass instead of opaque material"><input type="checkbox"
-                id="checkbox-transparency" checked />transparency</span>
+        <!-- <span title="Glass instead of opaque material"><input type="checkbox"
+                id="checkbox-transparency" checked />transparency</span> -->
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
@@ -97,6 +97,9 @@
         <span title="plane grid size"><input type="range" id="slider-scale2" style="width:100px" /></span>
         <br />
         <hr />
+        <span title="object opacity"><span>opacity</span>&nbsp;<input type="range" id="slider-opacity" style="width:80px" /></span>
+        <span title="object index of refraction"><span>ior</span>&nbsp;<input type="range" id="slider-ior" style="width:80px" /></span>
+        <br />
         <span>roughness</span>
         <span title="object roughness"><input type="range" id="slider-roughness1" style="width:80px" /></span>
         <span title="plane roughness"><input type="range" id="slider-roughness2" style="width:80px" /></span>

@@ -243,7 +243,7 @@ void integrateField(float v0, float v1, vec3 c0, vec3 c1, out vec3 col, out floa
 }
 
 
-float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, out vec3 n) {
+float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, out vec3 n, out float totalv) {
     rd = normalize(rd);
     float t0_, t1_;
     if (!clipIntersection(ro, rd, t0_, t1_))
@@ -252,6 +252,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
     if (t1 < t0)
         return -1.0;
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
+    totalv = 0.0;
     float step_size = 8.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z);
     float t = t0, dt = step_size;
     float v = 0.0, v0 = v, v00 = v, v1;
@@ -294,6 +295,8 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
             old_dvdt = abs((v1-v0)/(t1-t0));
         }
         else {  // raymarching
+            if (!isnan(v) && !isinf(v))
+                totalv += sign(v);
             if (isnan(dt0) || dt0 <= 0.0) v00 = v, v0 = v, dt0 = dt00 = 0.0;
             float g = dt0 > 0.0 ? ( // estimate gradient
                 dt00 > 0.0 ? // quadratic fit
@@ -315,7 +318,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
             // update
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             float ddt = abs(v/g);
-            dt = (g==0. || isnan(ddt) || isinf(ddt)) ? step_size :
+            dt = (ddt > step_size || isnan(ddt) || isinf(ddt)) ? step_size :
                 clamp(min(ddt-step_size, t1-t0-0.01*step_size), 0.05*step_size, step_size);
             if (i == 1) dt *= randf();
             t += dt;
@@ -441,6 +444,8 @@ vec3 sampleHenyeyGreenstein(vec3 wi, float g) {
 }
 
 
+uniform float rOpacity;
+uniform float rIor;
 uniform float rRoughness1;
 uniform float rRoughness2;
 uniform float rEmission1;
@@ -471,12 +476,11 @@ vec3 getAbsorbColor() {
 
 vec3 mainRender(vec3 ro, vec3 rd) {
     vec3 m_col = vec3(1.0), t_col = vec3(0.0), col, tmpcol;
-    bool is_inside = false;
     vec3 prev_col = vec3(1.0);
     rd = normalize(rd);
 
     for (int iter = int(ZERO); iter < 32; iter++) {
-        ro += 1e-4*length(ro) * rd;
+        if (iter != 0) ro += 1e-4*length(ro) * rd;
         vec3 n, min_n;
         float t, min_t = 1e6;
         vec3 min_ro = ro, min_rd = rd;
@@ -495,13 +499,16 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         }
 
         // object
-        t = intersectObject(ro, rd, 0.0, min_t, tmpcol, n);
+        float totalv;
+        bool is_inside = false;
+        t = intersectObject(ro, rd, 0.0, min_t, tmpcol, n, totalv);
         if (t > 0.0 && t < min_t) {
             min_t = t, min_n = n;
             min_ro = ro+rd*t, min_rd = rd;
             col = tmpcol;
             material = MAT_OBJECT;
         }
+        is_inside = (totalv < 0.0);
 
         // absorption and scattering
         if (is_inside) {
@@ -582,24 +589,22 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
         }
         else if (material == MAT_OBJECT) {
+            col = pow(clamp(col,0.0,1.0), vec3(rAbsorb1/(1.0-rAbsorb1)));
             t_col += rEmission1 * m_col * col;
             float alpha = pow(rRoughness1,2.0);
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
-        #if {%TRANSPARENCY%}
-            float eta = is_inside?1.5:1.0/1.5;
-            // rd = sampleGlassBsdf(rd, min_n, eta);
-            rd = sampleRoughGlassBsdf(-rd, min_n, alpha, eta);
-            if (is_inside) {
-                vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
-                // m_col *= pow(col, vec3(1.0*min_t));
+            if (randf() > rOpacity) {
+                float eta = is_inside?rIor:1.0/rIor;
+                // rd = sampleGlassBsdf(rd, min_n, eta);
+                rd = sampleRoughGlassBsdf(-rd, min_n, alpha, eta);
+                if (is_inside) {
+                    vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
+                    // m_col *= pow(col, vec3(1.0*min_t));
+                }
+            } else {
+                rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
             }
-        #else
-            rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
-        #endif
         }
-        if (dot(rd, min_n) < 0.)
-            is_inside = !is_inside;
-        // if (is_inside) return vec3(0,1,0);
         prev_col = col;
     }
     // return m_col + t_col;

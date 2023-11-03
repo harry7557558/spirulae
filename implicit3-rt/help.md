@@ -4,6 +4,8 @@
 
 <p>Mouse hover a slider or checkbox to see explaination of the parameter. Some detailed explaination of the parameter is given below:</p>
 
+<p>- <b>Opacity</b>: linear interpolation between opaque and refractive</p>
+
 <p>- <b>Roughness</b>: this defines the distribution of GGX normal</p>
 
 <p>- <b>Emission</b>: emission from the surface of the object and/or the plane</p>
@@ -17,3 +19,7 @@
 <p>- <b>Absorb</b>: specify hue and chroma for atmospheric absorption</p>
 
 <p>- <b>Lighting</b>: θ and φ specify light direction, intensity specify total integral of radiance; light consists of direction independent ambient light and spot light, ambient specify the factor of ambient light and softness/hardness specify concentration of spot light</p>
+
+<p><hr/></p>
+
+<p>Gallery: <a href="https://spirulae.github.io/gallery">https://spirulae.github.io/gallery</a></p>
