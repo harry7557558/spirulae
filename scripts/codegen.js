@@ -332,7 +332,7 @@ CodeGenerator.langs.js = {
 };
 
 
-CodeGenerator.parseGradient = function(s) {
+CodeGenerator.parsePrecomputeExpr = function(s) {
     var parsed = MathParser.exprToPostfix(s, MathFunctions);
     for (var i = 0; i < parsed.length; i++)
         if (parsed[i].type == 'variable')
@@ -351,7 +351,22 @@ CodeGenerator.initFunctionGradients = function () {
                 fun.grad = fun.langs.D;
                 continue;
             }
-            fun.grad = CodeGenerator.parseGradient(fun.langs.D);
+            fun.grad = CodeGenerator.parsePrecomputeExpr(fun.langs.D);
+        }
+    }
+}
+
+CodeGenerator.initFunctionComplex = function() {
+    for (var name in MathFunctions) {
+        for (var nparam in MathFunctions[name]) {
+            var fun = MathFunctions[name][nparam];
+            fun.complex = null;
+            if (!fun.langs.hasOwnProperty("C"))
+                continue;
+            var real = CodeGenerator.parsePrecomputeExpr(fun.langs.C[0]);
+            var imag = CodeGenerator.parsePrecomputeExpr(fun.langs.C[1]);
+            var i = new Token("unit", "i");
+            fun.complex = real.concat(imag).concat([i]);
         }
     }
 }
@@ -379,14 +394,38 @@ CodeGenerator.postfixToLatex = function (queue) {
         varname = varname.replace(" }", "}").replace(" _", "_");
         return varname.trim();
     }
+    function formatNumber(s) {
+        s = s.replace(/\.0*$/, "");
+        if (s == "" || s[0] == ".") s = "0" + s;
+        return s;
+    }
     var stack = [];
     for (var i = 0; i < queue.length; i++) {
         var token = queue[i];
         // number
         if (token.type == 'number') {
-            var s = token.str.replace(/\.0*$/, "");
-            if (s == "" || s[0] == ".") s = "0" + s;
+            var s = formatNumber(token.str);
             stack.push(new EvalLatexObject([token], s, Infinity));
+        }
+        // unit
+        else if (token.type == 'unit') {
+            var s = token.str;
+            if (s == 'i') {  // complex number
+                s = "\\mathfrak{i}";
+                var b = formatNumber(queue[i+1].str);
+                var a = formatNumber(queue[i+2].str);
+                if (b == '1') b = '';
+                if (b == '-1') b = '-';
+                if (a == '0') a = '';
+                if (b.length > 0 && a.lenght > 0 && b[0] != '-') b = '+' + b;
+                s = a + b + s;
+                if (/[\+\-]/g.test(s)) s = "(" + s + ")";
+                stack.push(new EvalLatexObject([token], s, Infinity));
+                i += 2;
+            }
+            else {
+                throw new Error();
+            }
         }
         // variable
         else if (token.type == "variable") {
@@ -579,6 +618,29 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         return stack1[0];
     }
 
+    function popStackValue(stack) {
+        var i = stack.length - 1;
+        if (stack[i].code[0] != '\\') {
+            var res = [stack[i]];
+            stack.pop();
+            return res;
+        }
+        if (stack[i].code == "\\i") {
+            var res = [stack[i-2], stack[i-1], stack[i]];
+            stack.pop(); stack.pop(); stack.pop();
+            return res;
+        }
+        throw new Error("Unrecognized unit " + stack[i].code);
+    }
+
+    function toComplex(v) {
+        let zero = new EvalObject([new Token('number', '0')],
+            constexpr.replaceAll("%1", '0'),
+            true, new Interval(0.0, 0.0), true);
+        let imag = new EvalObject([new Token('unit', 'i')], "\\i", false);
+        return [v[0], zero, imag];
+    }
+
     function addToken(stack, token, diffvar) {
         var obj = null, objAlt = null, fun = null;
         var funArgs = [];
@@ -586,6 +648,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         if (token.type == "variable" && /@/.test(token.str)) {
             throw new Error();
         }
+
         // number
         else if (token.type == 'number') {
             var s = token.str;
@@ -603,6 +666,12 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             stack.push(obj);
             return;
         }
+        else if (token.type == 'unit') {
+            obj = new EvalObject([token], '\\'+token.str, false);
+            stack.push(obj);
+            return;
+        }
+
         // variable
         else if (token.type == "variable") {
             var s = token.str;
@@ -637,12 +706,43 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             stack.push(obj);
             return;
         }
+
         // operators
         else if (token.type == "operator") {
-            var v1 = stack[stack.length - 2];
-            var v2 = stack[stack.length - 1];
-            stack.pop(); stack.pop();
-            // get object
+            var v2 = popStackValue(stack);
+            var v1 = popStackValue(stack);
+            if (v1.length == 3 && v2.length == 1)
+                v2 = toComplex(v2);
+            if (v1.length == 1 && v2.length == 3)
+                v1 = toComplex(v1);
+
+            // complex
+            if (v1.length == 3 && v2.length == 3) {
+                var fun = MathFunctions[{
+                    '+': 'ADD', '-': "SUB",
+                    '*': 'MUL', '/': 'DIV', '^': 'pow'
+                }[token.str]]['2'];
+                if (!fun.complex)
+                    throw new Error(fun.name[0] + " does not support complex argument.");
+                var vmap = {
+                    'a@1': v1[0], 'b@1': v1[1],
+                    'a@2': v2[0], 'b@2': v2[1]
+                };
+                for (var i = 0; i < fun.complex.length; i++) {
+                    var t = fun.complex[i];
+                    if (t.type == "variable" && /@/.test(t.str))
+                        stack.push(vmap[t.str]);
+                    else addToken(stack, t, diffvar);
+                }
+                console.log(stack.slice());
+                var imag = stack[stack.length-2];
+                if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
+                    stack.pop(), stack.pop();
+                return;
+            }
+
+            // real scalar
+            v1 = v1[0], v2 = v2[0];
             if (token.str == "^") {
                 obj = FunctionSubs.powEvalObjects(v1, v2, lang);
                 fun = MathFunctions[v2.isNumeric ? "powconst" : "pow"][2];
@@ -677,14 +777,50 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             }
             else obj = id;
         }
+
         // function
         else if (token.type == 'function') {
             fun = MathFunctions[token.str];
             var numArgs = token.numArgs;
             for (var j = numArgs; j > 0; j--)
-                funArgs.push(stack[stack.length - j]);
-            for (var j = 0; j < numArgs; j++)
-                stack.pop();
+                funArgs = [popStackValue(stack)].concat(funArgs);
+
+            // real/complex
+            var isRealScalar = true;
+            for (var i = 0; i < numArgs; i++)
+                if (funArgs[i].length > 1)
+                    isRealScalar = false;
+            for (var i = 0; i < numArgs; i++) {
+                if (!isRealScalar && funArgs[i].length == 1)
+                    funArgs[i] = toComplex(funArgs[i]);
+                if (isRealScalar)
+                    funArgs[i] = funArgs[i][0];
+            }
+
+            // complex
+            if (!isRealScalar) {
+                fun = fun[numArgs];
+                console.log(fun.complex);
+                if (!fun.complex)
+                    throw new Error("Function " + fun.name[0] + " does not support complex argument.");
+                for (var i = 0; i < fun.complex.length; i++) {
+                    var t = fun.complex[i];
+                    if (t.type == "variable" && /@/.test(t.str)) {
+                        var v = t.str.split('@');
+                        var ridx = v[0] == 'a' ? 0 : 1;
+                        var aidx = Number(v[1]) - 1;
+                        stack.push(funArgs[aidx][ridx]);
+                    }
+                    else addToken(stack, t, diffvar);
+                }
+                console.log(stack.slice());
+                var imag = stack[stack.length-2];
+                if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
+                    stack.pop(), stack.pop();
+                return;
+            }
+
+            // real scalar
             if (fun['' + numArgs] == undefined) fun = fun['0'];
             else fun = fun['' + numArgs];
             if (fun == undefined) throw new Error(
@@ -705,6 +841,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 obj.code = id;
             }
         }
+
         else {
             throw new Error("Unrecognized token `" + token + "`");
         }
@@ -743,11 +880,14 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         for (var i = 0; i < queue.length; i++) {
             addToken(stack, { ...queue[i] }, null);
         }
-        if (stack.length != 1)
+        if (stack.length != 1) {
+            qmap[qi] = popStackValue(stack)[0];
+            if (stack.length == 0)
+                throw new Error("Result is not a real scalar");
             throw new Error("Result stack length is not 1");
-        // console.log(stack[0]);
-        qmap[qi] = stack[0];
-        isCompatible = isCompatible && stack[0].isCompatible;
+        }
+        else qmap[qi] = stack[0];
+        isCompatible = isCompatible && qmap[qi].isCompatible;
     }
     // console.log(subtrees);
     // console.log(intermediates);

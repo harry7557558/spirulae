@@ -31,6 +31,14 @@ let MathParser = {
     isDependentFunction: function (name) {
         return MathParser.DependentFunctions.hasOwnProperty(name);
     },
+    // imaginary unit i, j
+    ImaginaryUnits: {
+        "i": "i",
+        "j": "j"
+    },
+    isImaginaryUnit: function (name) {
+        return MathParser.ImaginaryUnits.hasOwnProperty(name);
+    },
     // regex to match a variable/function name
     reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
     matchFunction: function (funstr) {
@@ -434,6 +442,14 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             var fun = new Token("function", token);
             stack.push(fun);
         }
+        // imaginary unit
+        else if (MathParser.isImaginaryUnit(token)) {
+            var imag = new Token("unit", 'i');
+            // 0 + 1 i
+            queue.push(imag);
+            queue.push(new Token("number", '1'));
+            queue.push(new Token("number", '0'));
+        }
         // variable name
         else if (/^[A-Za-zΑ-Ωα-ω](_[A-Za-zΑ-Ωα-ω0-9]+)?$/.test(token)) {
             var variable = new Token("variable", token);
@@ -807,12 +823,30 @@ MathParser.parseInput = function (input) {
         }
     }
 
+    function popStackValue(stack) {
+        var i = stack.length - 1;
+        if (stack[i].length > 1 ||
+            stack[i][0].type == "number" || stack[i][0].type == "variable") {
+            var res = stack[i];
+            stack.pop();
+            return res;
+        }
+        throw new Error("Top of stack is not value");
+    }
+
     // resolve dependencies
     function dfs(equ, variables) {
         var stack = [];
         for (var i = 0; i < equ.length; i++) {
             if (equ[i].type == 'number') {
                 stack.push([equ[i]]);
+            }
+            else if (equ[i].type == 'unit') {
+                if (equ[i+1].type != 'number' || equ[i+2].type != 'number')
+                    throw new Error("Unit without number");
+                // complex
+                stack.push([equ[i+2], equ[i+1], equ[i]]);
+                i += 2;
             }
             else if (equ[i].type == 'variable') {
                 var variable = variables[equ[i].str];
@@ -841,14 +875,12 @@ MathParser.parseInput = function (input) {
                     if (stack.length < fun.numArgs)
                         throw "No enough arguments for function " + equ[i].str;
                     for (var j = 0; j < fun.numArgs; j++) {
-                        variables1[fun.args[j]] = {
-                            'postfix': stack[stack.length - fun.numArgs + j],
+                        variables1[fun.args[fun.numArgs-1-j]] = {
+                            'postfix': popStackValue(stack),
                             'isFunParam': true,
                             'resolving': false
                         };
                     }
-                    for (var j = 0; j < fun.numArgs; j++)
-                        stack.pop();
                     if (fun.resolving) throw "Recursive function definition is not supported.";
                     fun.resolving = true;
                     var res = dfs(fun.postfix, variables1);
@@ -859,18 +891,17 @@ MathParser.parseInput = function (input) {
                 else {
                     var params = [];
                     for (var j = equ[i].numArgs; j > 0; j--)
-                        params = params.concat(stack[stack.length - j]);
-                    for (var j = 0; j < equ[i].numArgs; j++)
-                        stack.pop();
+                        params = popStackValue(stack).concat(params);
                     params.push(equ[i]);
                     stack.push(params);
                 }
             }
             else if (equ[i].type == 'operator') {
                 if (stack.length < 2) throw "No enough tokens in the stack"
-                var expr = stack[stack.length - 2].concat(stack[stack.length - 1]);
+                var expr1 = popStackValue(stack);
+                var expr2 = popStackValue(stack);
+                var expr = expr2.concat(expr1);
                 expr.push(equ[i]);
-                stack.pop(); stack.pop();
                 stack.push(expr);
             }
             else {
@@ -881,6 +912,7 @@ MathParser.parseInput = function (input) {
             if (totlength >= 65536) {
                 throw "Definitions are nested too deeply."
             }
+            // console.log(i+1, stack.slice());
         }
         if (stack.length != 1) throw "Result stack size is not 1";
         return stack[0];
@@ -966,6 +998,7 @@ MathParser.parseInput = function (input) {
         latexList.push(line + comment);
     }
     result.latex = latexList;
+    console.log(result);
     return result;
 }
 

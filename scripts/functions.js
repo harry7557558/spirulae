@@ -5,7 +5,7 @@ const PI = Math.PI;
 
 
 function Token(type, str, numArgs=0) {
-    console.assert(type == 'number' || type == 'variable' ||
+    console.assert(type == 'number' || type == "unit" || type == 'variable' ||
         type == 'operator' || type == 'function' || type == null);
     this.type = type;  // type of the token
     this.str = str;  // name of the token represented as a string
@@ -46,7 +46,7 @@ function Interval(
 
 function EvalObject(
     postfix, code,
-    isNumeric, range = Interval(), isCompatible = true
+    isNumeric, range = new Interval(), isCompatible = true
 ) {
     this.postfix = postfix;
     this.code = code;
@@ -191,24 +191,28 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(0, Infinity)),
     new MathFunction(['ADD'], 2, {
         D: "g1+g2",
-        latex: '%1+%2',
+        C: ["a1+a2", "b1+b2"],
+        latex: '(%1+%2)',
         glsl: '%1+%2',
         glslc: '%1+%2',
     }),
     new MathFunction(['SUB'], 2, {
         D: "g1-g2",
+        C: ["a1-a2", "b1-b2"],
         latex: '%1-%2',
         glsl: '%1-%2',
         glslc: '%1-%2',
     }),
     new MathFunction(['MUL'], 2, {
         D: "g1*f2+f1*g2",
+        C: ["a1*a2-b1*b2", "a1*b2+a2*b1"],
         latex: '%1\\cdot %2',
         glsl: '%1*%2',
         glslc: 'vec2(%1.x*%2.x-%1.y*%2.y,%1.x*%2.y+%1.y*%2.x)',
     }),
     new MathFunction(['DIV'], 2, {
         D: "(g1*f2-f1*g2)/(f2*f2)",
+        C: ["(a1*a2+b1*b2)/(a2*a2+b2*b2)", "(a2*b1-a1*b2)/(a2*a2+b2*b2)"],
         latex: '\\frac{%1}{%2}',
         glsl: '%1/%2',
         glslc: 'vec2(%1.x*%2.x+%1.y*%2.y, %1.y*%2.x-%1.x*%2.y)/dot(%2,%2)',
@@ -255,6 +259,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['exp'], 1, {
         D: "g1*exp(f1)",
+        C: ["exp(a1)*cos(b1)", "exp(a1)*sin(b1)"],
         latex: '\\exp\\left(%1\\right)',
         glsl: 'exp(%1)',
         glslc: 'mc_exp(%1)',
@@ -262,6 +267,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(0, Infinity), Math.exp),
     new MathFunction(['log', 'ln'], 1, {
         D: "g1/f1",
+        C: ["ln(a1^2+b1^2)/2", "atan2(b1,a1)"],
         latex: '\\ln\\left(%1\\right)',
         glsl: 'log(%1)',
         glslc: 'mc_ln(%1)',
@@ -269,6 +275,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(0, Infinity), new Interval(), Math.log),
     new MathFunction(['sin'], 1, {
         D: "g1*cos(f1)",
+        C: ["sin(a1)*cosh(b1)", "cos(a1)*sinh(b1)"],
         latex: '\\sin\\left(%1\\right)',
         glsl: 'sin(%1)',
         glslc: 'mc_sin(%1)',
@@ -276,6 +283,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(-1, 1)),
     new MathFunction(['cos'], 1, {
         D: "-g1*sin(f1)",
+        C: ["cos(a1)*cosh(b1)", "-sin(a1)*sinh(b1)"],
         latex: '\\cos\\left(%1\\right)',
         glsl: 'cos(%1)',
         glslc: 'mc_cos(%1)',
@@ -470,6 +478,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
 BuiltInMathFunctions.rawMathFunctionsR = [
     new MathFunction(['abs'], 1, {
         D: "g1*sign(f1)",
+        C: ["hypot(a1,b1)", "0"],
         latex: '\\left|%1\\right|',
         glsl: 'abs(%1)',
         cppf: 'fabs(%1)',
@@ -1086,6 +1095,9 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
 
     // gradients
     CodeGenerator.initFunctionGradients();
+
+    // complex
+    CodeGenerator.initFunctionComplex();
 
     // special substitutions
     funs['ADD']['2'].subSource = function (args, lang) {
