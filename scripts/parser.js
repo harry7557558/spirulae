@@ -14,7 +14,7 @@ let MathParser = {
         return MathParser.IndependentVariables.hasOwnProperty(name);
     },
     // dependent variables, one letter
-    DependentVariables: {},  // name: bool required, number for groups
+    DependentVariables: { 'val': true },  // name: bool required, number for groups
     DependentFunctions: {},
     isDependentVariable: function (name) {
         let dvars = MathParser.DependentVariables;
@@ -39,6 +39,8 @@ let MathParser = {
     isImaginaryUnit: function (name) {
         return MathParser.ImaginaryUnits.hasOwnProperty(name);
     },
+    // always use complex arithmetic for nan functions
+    complexMode: false,
     // regex to match a variable/function name
     reVarname: /^[A-Za-zΑ-Ωα-ω]((_[A-Za-zΑ-Ωα-ω\d]+)|(_?\d[A-Za-zΑ-Ωα-ω\d]*))?$/,
     matchFunction: function (funstr) {
@@ -46,6 +48,7 @@ let MathParser = {
         if (match == null) return false;
         if (!MathParser.reVarname.test(match[1])) return false;
         if (match[1] == "e" || match[1] == "π") return false;
+        if (MathParser.isImaginaryUnit(match[1])) return false;
         var matches = [match[1]];
         match = match[2].split(',');
         for (var i = 0; i < match.length; i++) {
@@ -193,6 +196,7 @@ MathParser.addFunctionParenthesis = function (expr) {
                     continue;
                 var name = tmp.slice(tmp.length-l);
                 var pre = tmp.slice(0, tmp.length-l);
+                if (/_/.test(pre)) continue;
                 if (MathFunctions.hasOwnProperty(name) &&
                     MathFunctions[name].hasOwnProperty(1)
                 ) {
@@ -447,8 +451,8 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             var imag = new Token("unit", 'i');
             // 0 + 1 i
             queue.push(imag);
-            queue.push(new Token("number", '1'));
-            queue.push(new Token("number", '0'));
+            queue.push(new Token("number", '1.0'));
+            queue.push(new Token("number", '0.0'));
         }
         // variable name
         else if (/^[A-Za-zΑ-Ωα-ω](_[A-Za-zΑ-Ωα-ω0-9]+)?$/.test(token)) {
@@ -581,6 +585,8 @@ MathParser.testLine = function (line) {
                     throw new Error("You can't use constant 'π' as a variable name.");
                 if (left == "e")
                     throw new Error("You can't use constant 'e' as a variable name.");
+                if (MathParser.isImaginaryUnit(left))
+                    throw new Error("You can't use imaginary unit '" + left + "' as a variable name.");
                 res.type = "variable";
                 res.variable = { name: left, string: right };
             }
@@ -909,7 +915,7 @@ MathParser.parseInput = function (input) {
             }
             var totlength = 0;
             for (var j = 0; j < stack.length; j++) totlength += stack[j].length;
-            if (totlength >= 65536) {
+            if (totlength >= 262144) {
                 throw "Definitions are nested too deeply."
             }
             // console.log(i+1, stack.slice());
@@ -948,7 +954,8 @@ MathParser.parseInput = function (input) {
         else {
             if (mainVariables.hasOwnProperty(varname))
                 result[varname] = dfs(variables[varname].postfix, variables);
-            else if (dvars[varname])
+            else if (varname != "val" && (
+                dvars[varname] === true || dvars[varname].required === true))
                 throw "Definition for `" + varname + "` not found.";
         }
     }
@@ -998,7 +1005,7 @@ MathParser.parseInput = function (input) {
         latexList.push(line + comment);
     }
     result.latex = latexList;
-    console.log(result);
+    // console.log(result);
     return result;
 }
 

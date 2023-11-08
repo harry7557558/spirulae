@@ -635,7 +635,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
 
     function toComplex(v) {
         let zero = new EvalObject([new Token('number', '0')],
-            constexpr.replaceAll("%1", '0'),
+            constexpr.replaceAll("%1", '0.0'),
             true, new Interval(0.0, 0.0), true);
         let imag = new EvalObject([new Token('unit', 'i')], "\\i", false);
         return [v[0], zero, imag];
@@ -679,6 +679,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             var interval = new Interval();
             if (MathParser.isIndependentVariable(s)) {
                 s = MathParser.IndependentVariables[s];
+                if (typeof s == "object") {
+                    for (var i = 0; i < s.length; i++)
+                        addToken(stack, s[i], diffvar);
+                    return;
+                }
             }
             else if (s == "e") {
                 s = constexpr.replaceAll("%1", Math.E);
@@ -734,10 +739,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                         stack.push(vmap[t.str]);
                     else addToken(stack, t, diffvar);
                 }
-                console.log(stack.slice());
-                var imag = stack[stack.length-2];
-                if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
-                    stack.pop(), stack.pop();
+                if (!MathParser.complexMode) {
+                    var imag = stack[stack.length-2];
+                    if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
+                        stack.pop(), stack.pop();
+                }
                 return;
             }
 
@@ -800,9 +806,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             // complex
             if (!isRealScalar) {
                 fun = fun[numArgs];
-                console.log(fun.complex);
                 if (!fun.complex)
-                    throw new Error("Function " + fun.name[0] + " does not support complex argument.");
+                    throw new Error("Function `" + token.str + "` does not support complex numbers.");
                 for (var i = 0; i < fun.complex.length; i++) {
                     var t = fun.complex[i];
                     if (t.type == "variable" && /@/.test(t.str)) {
@@ -813,10 +818,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                     }
                     else addToken(stack, t, diffvar);
                 }
-                console.log(stack.slice());
-                var imag = stack[stack.length-2];
-                if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
-                    stack.pop(), stack.pop();
+                if (!MathParser.complexMode) {
+                    var imag = stack[stack.length-2];
+                    if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
+                        stack.pop(), stack.pop();
+                }
                 return;
             }
 
@@ -874,20 +880,42 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
     // postfix evaluation
     var qmap = {};
     var isCompatible = true;
+    let dvars = MathParser.DependentVariables;
     for (var qi in queues) {
         var queue = queues[qi];
         var stack = [];  // EvalObject objects
         for (var i = 0; i < queue.length; i++) {
             addToken(stack, { ...queue[i] }, null);
         }
-        if (stack.length != 1) {
-            qmap[qi] = popStackValue(stack)[0];
-            if (stack.length == 0)
-                throw new Error("Result is not a real scalar");
+        var vecn = 1;
+        if (dvars.hasOwnProperty(qi) && dvars[qi].type === "complex")
+            vecn = 2;
+        var res = popStackValue(stack);
+        if (res.length > 2*vecn-1 || res.length % 2 != 1) {
+            if (vecn == 1 && stack.length == 0)
+                throw new Error("Result is not a real scalar. " +
+                    "Please explicitly convert result to a real scalar using a function like Re() and abs().");
             throw new Error("Result stack length is not 1");
         }
-        else qmap[qi] = stack[0];
-        isCompatible = isCompatible && qmap[qi].isCompatible;
+        if (vecn == 1) {
+            qmap[qi] = res[0];
+            continue;
+        }
+        qmap[qi] = [res[0]];
+        isCompatible &= res[0].isCompatible;
+        for (var i = 1; i < res.length; i += 2) {
+            qmap[qi].push(res[i]);
+            isCompatible &= res[i].isCompatible;
+        }
+        while (qmap[qi].length < vecn)
+            // qmap[qi].push(tokenToEvalObject(new Token('number', '0.0')));
+            qmap[qi].push(new EvalObject(
+                [new Token('number', "0.0")],
+                constexpr.replaceAll("%1", "0.0"),
+                true, new Interval(0.0, 0.0), true));
+        for (var i = 0; i < qmap[qi].length; i++)
+            qmap[qi+'['+i+']'] = qmap[qi][i];
+        delete qmap[qi];
     }
     // console.log(subtrees);
     // console.log(intermediates);

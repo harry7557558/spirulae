@@ -20,6 +20,7 @@ const builtinFunctions = [
     ["Jellyfish", "r=(v(1-v)+sin(piv))(1+0.05(1-v^2)exp(2sin(48piu))+0.1sin(7piu));x=cos(2piu)r;z=sin(2piu)r;y=1-cos(piv)-4v(1-v)sin(iTime(0))^2-0.5/(1-v)^0.5"],
     ["Parametric Curve", "x0(t)=t(cos(4pit)-cos(4pit)cos(60pit);y0(t)=t(sin(4pit)-sin(4pit)cos(60pit);z0(t)=t(sin(60pit)-1)+0.5;h=0.005;x1(t)=(x0(t+h)-x0(t-h))/(2h);y1(t)=(y0(t+h)-y0(t-h))/(2h);z1(t)=(z0(t+h)-z0(t-h))/(2h);x2(t)=(x0(t+h)+x0(t-h)-2x0(t))/h^2;y2(t)=(y0(t+h)+y0(t-h)-2y0(t))/h^2;z2(t)=(z0(t+h)+z0(t-h)-2z0(t))/h^2;l2(t)=hypot(x2(t),y2(t),z2(t));x3(t)=y1(t)z2(t)-y2(t)z1(t);y3(t)=z1(t)x2(t)-z2(t)x1(t);z3(t)=x1(t)y2(t)-x2(t)y1(t);l3(t)=hypot(x3(t),y3(t),z3(t));r=0.025;x=x0(u)+r(x2(u)/l2(u)cos(2piv)+x3(u)/l3(u)sin(2piv));y=y0(u)+r(y2(u)/l2(u)cos(2piv)+y3(u)/l3(u)sin(2piv));z=z0(u)+r(z2(u)/l2(u)cos(2piv)+z3(u)/l3(u)sin(2piv))"],
     ["Cups", "t=2v-1;w=3t(1-t^2);a=10ln(1-t^2);x=t+wsin(a)cos(piu);y=t+wcos(a)cos(piu);z0=2tcos(piu)(1+0.1usin(40piw^10)-0.1u);z=-3+exp(0.8z0)"],
+    ["Boy's Surface", "w=vexp(2piiu);g1=-3/2Im(w(1-w^4)/(w^6+sqrt(5)w^3-1));g2=-3/2Re(w(1+w^4)/(w^6+sqrt(5)w^3-1));g3=Im((1+w^6)/(w^6+sqrt(5)w^3-1))-1/2;s=1/(g1^2+g2^2+g3^2);x=sg1;y=sg2;z=sg3+1/2"],
 ];
 
 

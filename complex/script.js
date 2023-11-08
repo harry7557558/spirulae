@@ -36,15 +36,29 @@ document.body.onload = function (event) {
     // init parser
     BuiltInMathFunctions.initMathFunctions(
         BuiltInMathFunctions.rawMathFunctionsShared
-            .concat(BuiltInMathFunctions.rawMathFunctionsC)
+            // .concat(BuiltInMathFunctions.rawMathFunctionsC)
+            .concat(BuiltInMathFunctions.rawMathFunctionsR)
     );
     MathParser.IndependentVariables = {
-        'x': "z",
-        'z': "z",
-        'i': "mc_i()",
-        'j': "mc_i()"
+        'z_real': "z_real",
+        'z_imag': "z_imag",
+        'x': MathParser.exprToPostfix("z_real+z_imag*i", {}),
+        'z': MathParser.exprToPostfix("z_real+z_imag*i", {}),
     };
-    CodeGenerator.langs.glslc.config = CodeGenerator.langs.glslc.presets.complex;
+    MathParser.DependentVariables = {
+        'val': { required: true, type: 'complex' }
+    };
+    CodeGenerator.langs.glsl.config = {
+        fun: "vec2 {%funname%}(vec2 z) {\n\
+    float z_real = z.x, z_imag = z.y;\n\
+    float {%funbody%};\n\
+    return vec2({%val[0]%}, {%val[1]%});\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    MathParser.complexMode = true;
 
     // init parameters
     initParameters([
@@ -55,7 +69,7 @@ document.body.onload = function (event) {
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rBrightness", "slider-brightness", 0.001, 0.999, 0.6),
     ]);
-    UpdateFunctionInputConfig.complexMode = true;
+    // UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.implicitMode = false;
     UpdateFunctionInputConfig.warnNaN = false;
 

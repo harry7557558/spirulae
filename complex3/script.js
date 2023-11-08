@@ -25,20 +25,34 @@ document.body.onload = function (event) {
     // init parser
     BuiltInMathFunctions.initMathFunctions(
         BuiltInMathFunctions.rawMathFunctionsShared
-            .concat(BuiltInMathFunctions.rawMathFunctionsC)
+            // .concat(BuiltInMathFunctions.rawMathFunctionsC)
+            .concat(BuiltInMathFunctions.rawMathFunctionsR)
     );
-    MathFunctions['zeta'][1].langs.glslc = "mc_zeta_fast(%1)";
-    for (var i = 0; i < 3; i++) {
-        var funname = ['logzeta', 'lnzeta', 'lzeta'][i];
-        MathFunctions[funname][1].langs.glslc = "mc_lnzeta_fast(%1)";
-    }
+    // MathFunctions['zeta'][1].langs.glslc = "mc_zeta_fast(%1)";
+    // for (var i = 0; i < 3; i++) {
+    //     var funname = ['logzeta', 'lnzeta', 'lzeta'][i];
+    //     MathFunctions[funname][1].langs.glslc = "mc_lnzeta_fast(%1)";
+    // }
     MathParser.IndependentVariables = {
-        'x': "z",
-        'z': "z",
-        'i': "mc_i()",
-        'j': "mc_i()"
+        'z_real': "z_real",
+        'z_imag': "z_imag",
+        'x': MathParser.exprToPostfix("z_real+z_imag*i", {}),
+        'z': MathParser.exprToPostfix("z_real+z_imag*i", {}),
     };
-    CodeGenerator.langs.glslc.config = CodeGenerator.langs.glslc.presets.complex;
+    MathParser.DependentVariables = {
+        'val': { required: true, type: 'complex' }
+    };
+    CodeGenerator.langs.glsl.config = {
+        fun: "vec2 {%funname%}(vec2 z) {\n\
+    float z_real = z.x, z_imag = z.y;\n\
+    float {%funbody%};\n\
+    return vec2({%val[0]%}, {%val[1]%});\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
+    MathParser.complexMode = true;
 
     // init parameters
     initParameters([
@@ -56,7 +70,7 @@ document.body.onload = function (event) {
         new UniformSlider("rZScale", "slider-zscale", 0.01, 0.99, 0.5),
         new UniformSlider("rBrightness", "slider-brightness", 0.01, 0.99, 0.7),
     ]);
-    UpdateFunctionInputConfig.complexMode = true;
+    // UpdateFunctionInputConfig.complexMode = true;
     UpdateFunctionInputConfig.implicitMode = false;
     UpdateFunctionInputConfig.warnNaN = false;
 

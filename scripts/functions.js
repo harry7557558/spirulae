@@ -246,6 +246,8 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['pow'], 2, {
         D: "f1^f2*(g2ln(f1)+g1f2/f1)",
+        C: ["(a1^2+b1^2)^(a2/2)exp(-b2atan2(b1,a1))cos(b2ln(a1^2+b1^2)/2+a2atan2(b1,a1))",
+            "(a1^2+b1^2)^(a2/2)exp(-b2atan2(b1,a1))sin(b2ln(a1^2+b1^2)/2+a2atan2(b1,a1))"],
         latex: '\\left(%1\\right)^{%2}',
         glsl: 'pow(%1,%2)',
         glslc: 'mc_pow(%1, %2)',
@@ -476,7 +478,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
 
 // Built-in real-only functions
 BuiltInMathFunctions.rawMathFunctionsR = [
-    new MathFunction(['abs'], 1, {
+    new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, {
         D: "g1*sign(f1)",
         C: ["hypot(a1,b1)", "0"],
         latex: '\\left|%1\\right|',
@@ -485,6 +487,38 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppd: 'fabs(%1)',
         js: 'Math.abs(%1)',
     }, new Interval(), new Interval(0, Infinity)),
+    new MathFunction(['real', 're', 'Re'], 1, {
+        C: ["a1", "0"],
+        latex: '\\operatorname{Re}\\left(%1\\right)',
+        glsl: '%1',
+        cppf: '%1',
+        cppd: '%1',
+        js: '%1',
+    }),
+    new MathFunction(['imaginary', 'imag', 'im', 'Im'], 1, {
+        C: ["b1", "0"],
+        latex: '\\operatorname{Im}\\left(%1\\right)',
+        glsl: '0.0',
+        cppf: '0.0f',
+        cppd: '0.0',
+        js: '0.0',
+    }),
+    new MathFunction(['argument', 'arg'], 1, {
+        C: ["atan2(b1,a1)", "0"],
+        latex: '\\arg\\left(%1\\right)',
+        glsl: '0.0',
+        cppf: '0.0f',
+        cppd: '0.0',
+        js: '0.0',
+    }),
+    new MathFunction(['conjugate', 'conj'], 1, {
+        C: ["a1", "-b1"],
+        latex: '\\overline{%1}',
+        glsl: '%1',
+        cppf: '%1',
+        cppd: '%1',
+        js: '%1',
+    }),
     new MathFunction(['if'], 3, {
         D: "if(f1,g2,g3)",
         latex: '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}',
@@ -694,26 +728,6 @@ BuiltInMathFunctions.rawMathFunctionsR = [
 
 // Built-in complex-only functions
 BuiltInMathFunctions.rawMathFunctionsC = [
-    new MathFunction(['real', 're'], 1, {
-        latex: '\\Re\\left(%1\\right)',
-        glslc: 'vec2(%1.x,0)',
-    }),
-    new MathFunction(['imaginary', 'imag', 'im'], 1, {
-        latex: '\\Im\\left(%1\\right)',
-        glslc: 'vec2(%1.y,0)',
-    }),
-    new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, {
-        latex: '\\left|%1\\right|',
-        glslc: 'vec2(length(%1),0)',
-    }),
-    new MathFunction(['argument', 'arg'], 1, {
-        latex: '\\arg\\left(%1\\right)',
-        glslc: 'vec2(atan(%1.y,%1.x),0)',
-    }),
-    new MathFunction(['conjugate', 'conj'], 1, {
-        latex: '\\overline{%1}',
-        glslc: 'vec2(%1.x,-%1.y)',
-    }),
     new MathFunction(['inverse', 'inv'], 1, {
         latex: '\\left(%1\\right)^{-1}',
         glslc: 'vec2(%1.x,-%1.y)/dot(%1,%1)',
