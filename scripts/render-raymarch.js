@@ -124,6 +124,10 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "rBrightness"), state.rBrightness);
     renderPass();
 
+    // var pixels = new Uint8Array(4*state.width*state.height);
+    // gl.readPixels(0, 0, state.width, state.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    // console.log(getImage(pixels, state.width, state.height));
+
     // render image gradient
     gl.useProgram(antiAliaser.imgGradProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.imgGradFramebuffer);
@@ -490,10 +494,9 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.premarchProgram);
             renderer.premarchProgram = null;
         }
-        try {
+        // try {
             renderer.premarchProgram = createShaderProgram(gl, renderer.vsSource, premarchSource);
-        }
-        catch (e) { console.error(e); }
+        // } catch (e) { console.error(e); }
         prevCode.premarchSource = premarchSource;
     }
 
@@ -503,10 +506,10 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.raymarchProgram);
             renderer.raymarchProgram = null;
         }
-        try {
+        // try {
             renderer.raymarchProgram = createShaderProgram(gl, renderer.vsSource, raymarchSource);
-        }
-        catch (e) { console.error(e); }
+        // }
+        // catch (e) { console.error(e); }
         prevCode.raymarchSource = raymarchSource;
     }
 

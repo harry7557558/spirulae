@@ -451,11 +451,10 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.postProgram);
             renderer.postProgram = null;
         }
-        try {
+        // try {
             renderer.renderProgram = createShaderProgram(gl, renderer.vsSource, renderSource);
             renderer.postProgram = createShaderProgram(gl, renderer.vsSource, postSource);
-        }
-        catch (e) { console.error(e); }
+        // } catch (e) { console.error(e); }
         prevCode.renderSource = renderSource;
     }
 

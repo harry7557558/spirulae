@@ -74,10 +74,11 @@ bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
 
 
 // function and its gradient in world space
+#define ZETA_FAST
 #include "../shaders/complex.glsl"
 
 {%FUN%}
-#line 65
+#line 82
 
 int callCount = 0;
 vec2 funz(vec2 z) {  // function
@@ -85,7 +86,7 @@ vec2 funz(vec2 z) {  // function
     return funRaw(z);
 }
 
-#line 33
+#line 90
 float fun(vec3 p) {
     vec2 z = funz(p.xy);
     return p.z - rZScale*({%HZ%});

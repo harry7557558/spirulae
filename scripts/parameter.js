@@ -365,7 +365,8 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
                 console.warn("Function evaluation involves numerical approximation.");
             if (WarningStack.length != 0)
                 messageWarning(WarningStack.join('\n'));
-            updateShaderFunction(code, null, parameters);
+            try { updateShaderFunction(code, null, parameters); }
+            catch(e) { console.error(e); messageError(e); }
         }
         // JS function
         if (UpdateFunctionInputConfig.jsFunName) {
@@ -378,8 +379,10 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             }
             let display = document.getElementById("value-display");
             if (display) display.style.display = 'none';
-            if (!UpdateFunctionInputConfig.useGL)
-                updateShaderFunction(result.source, null, parameters);
+            if (!UpdateFunctionInputConfig.useGL) {
+                try { updateShaderFunction(result.source, null, parameters); }
+                catch(e) { console.error(e); messageError(e); }
+            }
         }
     } catch (e) {
         console.error(e);

@@ -363,10 +363,26 @@ CodeGenerator.initFunctionComplex = function() {
             fun.complex = null;
             if (!fun.langs.hasOwnProperty("C"))
                 continue;
-            var real = CodeGenerator.parsePrecomputeExpr(fun.langs.C[0]);
-            var imag = CodeGenerator.parsePrecomputeExpr(fun.langs.C[1]);
-            var i = new Token("unit", "i");
-            fun.complex = real.concat(imag).concat([i]);
+            if (typeof fun.langs.C == "string") {
+                var expr = CodeGenerator.parsePrecomputeExpr(fun.langs.C);
+                fun.complex = [];
+                for (var i = 0; i < expr.length; i++) {
+                    if (expr[i].type == "unit") {
+                        var j = i+2;
+                        while (j < expr.length && expr[j].type == "unit") j += 2;
+                        for (var _ = j; _ >= i; _--)
+                            fun.complex.push(expr[_]);
+                        i = j;
+                    }
+                    else fun.complex.push(expr[i]);
+                }
+            }
+            else {
+                var real = CodeGenerator.parsePrecomputeExpr(fun.langs.C[0]);
+                var imag = CodeGenerator.parsePrecomputeExpr(fun.langs.C[1]);
+                var i = new Token("unit", "i");
+                fun.complex = real.concat(imag).concat([i]);
+            }
         }
     }
 }
@@ -590,7 +606,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             throw new Error("Function `" + fun.names[0] + "` does not support differentiation.");
         }
         var fungrad = typeof(fun.grad) == "function" ?
-            CodeGenerator.parseGradient(fun.grad(funArgs.length)) :
+            CodeGenerator.parsePrecomputeExpr(fun.grad(funArgs.length)) :
             fun.grad.slice();
 
         // handle function gradient
@@ -810,11 +826,19 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                     throw new Error("Function `" + token.str + "` does not support complex numbers.");
                 for (var i = 0; i < fun.complex.length; i++) {
                     var t = fun.complex[i];
-                    if (t.type == "variable" && /@/.test(t.str)) {
+                    if (t.type == "unit") {
+                        addToken(stack, t, diffvar);
+                    }
+                    else if (t.type == "variable" && /[ab]@/.test(t.str)) {
                         var v = t.str.split('@');
                         var ridx = v[0] == 'a' ? 0 : 1;
                         var aidx = Number(v[1]) - 1;
                         stack.push(funArgs[aidx][ridx]);
+                    }
+                    else if (t.type == "variable" && /z@\d+/.test(t.str)) {
+                        var ai = Number(t.str.slice(2))-1;
+                        for (var j = 0; j < funArgs[ai].length; j++)
+                            stack.push(funArgs[ai][j]);
                     }
                     else addToken(stack, t, diffvar);
                 }

@@ -219,11 +219,18 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['divconst'], 2, {
         D: "g1/f2",
+        C: ["(a1*a2+b1*b2)/(a2*a2+b2*b2)", "(a2*b1-a1*b2)/(a2*a2+b2*b2)"],
         glsl: '%1/%2',
         glslc: 'vec2(%1.x*%2.x+%1.y*%2.y, %1.y*%2.x-%1.x*%2.y)/dot(%2,%2)',
     }),
+    new MathFunction(['inverse', 'inv'], 1, {
+        latex: '\\left(%1\\right)^{-1}',
+        C: ["a1/(a1*a1+b1*b1)", "-b1/(a1*a1+b1*b1)"],
+        glslc: 'vec2(%1.x,-%1.y)/dot(%1,%1)',
+    }),
     new MathFunction(['sqrt'], 1, {
         D: "g1/(2sqrt(f1))",
+        C: ["sqrt(0.5*(hypot(a1,b1)+a1))", "sign(b1)sqrt(0.5*(hypot(a1,b1)-a1))"],
         latex: '\\sqrt{%1}',
         glsl: 'sqrt(%1)',
         glslc: 'mc_sqrt(%1)',
@@ -231,6 +238,8 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(0, Infinity), new Interval(0, Infinity), Math.sqrt),
     new MathFunction(['cbrt'], 1, {
         D: "g1/(3cbrt(f1)^2)",
+        C: ["(a1^2+b1^2)^(1/6)cos(atan2(b1,a1)/3)",
+            "(a1^2+b1^2)^(1/6)sin(atan2(b1,a1)/3)"],
         latex: '\\sqrt[3]{%1}',
         glsl: 'sign(%1)*pow(abs(%1),1./3.)',
         glslc: 'mc_cbrt(%1)',
@@ -238,6 +247,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, Math.cbrt),
     new MathFunction(['nthroot', 'root'], 2, {
         D: "root(f1,f2)*(g2/(f1f2)-g1ln(f2)/f1^2)",
+        C: "z2^inv(z1)",
         latex: '\\sqrt[{%1}]{%2}',
         glsl: 'pow(%2,1.0/%1)',
         glslc: 'mc_root(%1,%2)',
@@ -293,6 +303,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(-1, 1)),
     new MathFunction(['tan'], 1, {
         D: "g1*(tan(f1)^2+1)",
+        C: ["sin(2a1)/(cos(2a1)+cosh(2b1))", "sinh(2b1)/(cos(2a1)+cosh(2b1))"],
         latex: '\\tan\\left(%1\\right)',
         glsl: 'tan(%1)',
         glslc: 'mc_tan(%1)',
@@ -300,6 +311,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['csc'], 1, {
         D: "-g1csc(f1)cot(f1)",
+        C: ["2sin(a1)cosh(b1)/(cosh(2b1)-cos(2a1))", "-2cos(a1)sinh(b1)/(cosh(2b1)-cos(2a1))"],
         latex: '\\csc\\left(%1\\right)',
         glsl: '1.0/sin(%1)',
         glslc: 'mc_csc(%1)',
@@ -308,6 +320,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['sec'], 1, {
         D: "g1sec(f1)tan(f1)",
+        C: ["2cos(a1)cosh(b1)/(cosh(2b1)+cos(2a1))", "2sin(a1)sinh(b1)/(cosh(2b1)+cos(2a1))"],
         latex: '\\sec\\left(%1\\right)',
         glsl: '1.0/cos(%1)',
         glslc: 'mc_sec(%1)',
@@ -316,6 +329,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['cot'], 1, {
         D: "-g1*(cot(f1)^2+1)",
+        C: ["-sin(2a1)/(cos(2a1)-cosh(2b1))", "sinh(2b1)/(cos(2a1)-cosh(2b1))"],
         latex: '\\cot\\left(%1\\right)',
         glsl: 'cos(%1)/sin(%1)',
         glslc: 'mc_cot(%1)',
@@ -323,6 +337,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['sinh'], 1, {
         D: "g1*cosh(f1)",
+        C: ["sinh(a1)*cos(b1)", "cosh(a1)*sin(b1)"],
         latex: '\\sinh\\left(%1\\right)',
         glsl: 'sinh(%1)',
         glslc: 'mc_sinh(%1)',
@@ -330,6 +345,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(), Math.sinh),
     new MathFunction(['cosh'], 1, {
         D: "g1*sinh(f1)",
+        C: ["cosh(a1)*cos(b1)", "sinh(a1)*sin(b1)"],
         latex: '\\cosh\\left(%1\\right)',
         glsl: 'cosh(%1)',
         glslc: 'mc_cosh(%1)',
@@ -337,6 +353,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(1, Infinity)),
     new MathFunction(['tanh'], 1, {
         D: "g1*(1-tanh(f1)^2)",
+        C: ["sinh(2a1)/(cosh(2a1)+cos(2b1))", "sin(2b1)/(cosh(2a1)+cos(2b1))"],
         latex: '\\tanh\\left(%1\\right)',
         glsl: 'tanh(%1)',
         glslc: 'mc_tanh(%1)',
@@ -344,6 +361,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(-1, 1), Math.tanh),
     new MathFunction(['csch'], 1, {
         D: "-g1csch(f1)coth(f1)",
+        C: ["-2sinh(a1)cos(b1)/(cos(2b1)-cosh(2a1))", "2cosh(a1)sin(b1)/(cos(2b1)-cosh(2a1))"],
         latex: '\\mathrm{csch}\\left(%1\\right)',
         glsl: '1.0/sinh(%1)',
         glslc: 'mc_csch(%1)',
@@ -352,6 +370,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['sech'], 1, {
         D: "-g1sech(f1)tanh(f1)",
+        C: ["2cosh(a1)cos(b1)/(cos(2b1)+cosh(2a1))", "-2sinh(a1)sin(b1)/(cos(2b1)+cosh(2a1))"],
         latex: '\\mathrm{sech}\\left(%1\\right)',
         glsl: '1.0/cosh(%1)',
         glslc: 'mc_sech(%1)',
@@ -360,6 +379,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(0, 1)),
     new MathFunction(['coth'], 1, {
         D: "g1*(1-coth(f1)^2)",
+        C: ["sinh(2a1)/(cosh(2a1)-cos(2b1))", "-sin(2b1)/(cosh(2a1)-cos(2b1))"],
         latex: '\\mathrm{coth}\\left(%1\\right)',
         glsl: '1.0/tanh(%1)',
         glslc: 'mc_coth(%1)',
@@ -368,6 +388,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['arcsin', 'arsin', 'asin'], 1, {
         D: "g1/sqrt(1-f1^2)",
+        C: "-i*ln(iz1+sqrt(1-z1*z1))",
         latex: '\\arcsin\\left(%1\\right)',
         glsl: 'asin(%1)',
         glslc: 'mc_arcsin(%1)',
@@ -375,6 +396,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(-1, 1), new Interval(-0.5 * PI, 0.5 * PI), Math.asin),
     new MathFunction(['arccos', 'arcos', 'acos'], 1, {
         D: "-g1/sqrt(1-f1^2)",
+        C: "-i*ln(z1+i*sqrt(1-z1*z1))",
         latex: '\\arccos\\left(%1\\right)',
         glsl: 'acos(%1)',
         glslc: 'mc_arccos(%1)',
@@ -382,6 +404,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(-1, 1), new Interval(0.0, PI), Math.acos),
     new MathFunction(['arctan', 'artan', 'atan'], 1, {
         D: "g1/(1+f1^2)",
+        C: "-0.5i*ln((i-z1)/(i+z1))",
         latex: '\\arctan\\left(%1\\right)',
         glsl: 'atan(%1)',
         glslc: 'mc_arctan(%1)',
@@ -389,6 +412,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(-0.5 * PI, 0.5 * PI), Math.atan),
     new MathFunction(['arccot', 'arcot', 'acot'], 1, {
         D: "-g1/(1+f1^2)",
+        C: "-0.5i*ln((z1+i)/(z1-i))",
         latex: '\\mathrm{arccot}\\left(%1\\right)',
         glsl: '1.5707963267948966-atan(%1)',
         glslc: 'mc_arccot(%1)',
@@ -397,6 +421,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(-0.5 * PI, 0.5 * PI), (x) => 0.5 * PI - Math.atan(x)),
     new MathFunction(['arcsec', 'arsec', 'asec'], 1, {
         D: "g1/(|f1|sqrt(f1^2-1))",
+        C: "-i*ln(i*sqrt(1-inv(z1*z1))+inv(z1))",
         latex: '\\mathrm{arcsec}\\left(%1\\right)',
         glsl: 'acos(1.0/%1)',
         glslc: 'mc_arcsec(%1)',
@@ -404,6 +429,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(0, 0), new Interval(0, PI)),
     new MathFunction(['arccsc', 'arcsc', 'acsc'], 1, {
         D: "-g1/(|f1|sqrt(f1^2-1))",
+        C: "-i*ln(sqrt(1-inv(z1*z1))+i/z1)",
         latex: '\\mathrm{arccsc}\\left(%1\\right)',
         glsl: 'asin(1.0/%1)',
         glslc: 'mc_arccsc(%1)',
@@ -411,6 +437,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(0, 0), new Interval(-0.5 * PI, 0.5 * PI)),
     new MathFunction(['arcsinh', 'arsinh', 'asinh'], 1, {
         D: "g1/sqrt(1+f1^2)",
+        C: "ln(z1+sqrt(z1*z1+1))",
         latex: '\\mathrm{arcsinh}\\left(%1\\right)',
         glsl: 'asinh(%1)',
         glslc: 'mc_arcsinh(%1)',
@@ -418,6 +445,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(), new Interval(), Math.asinh),
     new MathFunction(['arccosh', 'arcosh', 'acosh'], 1, {
         D: "g1/sqrt(f1^2-1)",
+        C: "ln(z1+sqrt(z1*z1-1))sign(a1)",
         latex: '\\mathrm{arccosh}\\left(%1\\right)',
         glsl: 'acosh(%1)',
         glslc: 'mc_arccosh(%1)',
@@ -425,6 +453,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(1, Infinity), new Interval(0, Infinity), Math.acosh),
     new MathFunction(['arctanh', 'artanh', 'atanh'], 1, {
         D: "g1/(1-f1^2)",
+        C: "0.5*ln((1+z1)/(1-z1))",
         latex: '\\mathrm{arctanh}\\left(%1\\right)',
         glsl: 'atanh(%1)',
         glslc: 'mc_arctanh(%1)',
@@ -432,6 +461,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(-1, 1), new Interval(), Math.atanh),
     new MathFunction(['arccoth', 'arcoth', 'acoth'], 1, {
         D: "g1/(1-f1^2)",
+        C: "0.5*ln((z1+1)/(z1-1))",
         latex: '\\mathrm{arccoth}\\left(%1\\right)',
         glsl: 'atanh(1.0/%1)',
         glslc: 'mc_arccoth(%1)',
@@ -440,6 +470,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['arcsech', 'arsech', 'asech'], 1, {
         D: "-g1/(|f1|sqrt(1-f1^2))",
+        C: "ln(sqrt(inv(z1*z1)-1)+inv(z1))sign(a1)",
         latex: '\\mathrm{arcsech}\\left(%1\\right)',
         glsl: 'acosh(1.0/%1)',
         glslc: 'mc_arcsech(%1)',
@@ -448,36 +479,13 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }, new Interval(0, 1), new Interval(0, Infinity), (x) => Math.acosh(1 / x)),
     new MathFunction(['arccsch', 'arcsch', 'acsch'], 1, {
         D: "-g1/(|f1|sqrt(1+f1^2))",
+        C: "ln(sqrt(inv(z1*z1)+1)+inv(z1))",
         latex: '\\mathrm{arccsch}\\left(%1\\right)',
         glsl: 'asinh(1.0/%1)',
         glslc: 'mc_arccsch(%1)',
         cppf: 'asinh(1.0f/%1)',
         js: 'Math.asinh(1.0/%1)',
     }, new Interval(), new Interval()),
-    new MathFunction(['gamma', 'Gamma'], 1, {
-        latex: '\\Gamma\\left(%1\\right)',
-        glsl: 'mf_gamma(%1)',
-        glslExt: ['mf_lgamma_1', 'gamma'],
-        glslc: 'mc_gamma(%1)',
-        glslcExt: ['mc_gamma'],
-        cppf: 'tgamma(%1)',
-        cppd: 'tgamma(%1)',
-        js: null,
-    }),
-    new MathFunction(['lgamma', 'lGamma', 'lngamma', 'lnGamma', 'loggamma', 'logGamma'], 1, {
-        latex: '\\mathrm{ln\\Gamma}\\left(%1\\right)',
-        glsl: 'mf_loggamma(%1)',
-        glslExt: ['mf_lgamma_1', 'loggamma'],
-        glslc: 'mc_lngamma(%1)',
-        glslcExt: ['mc_lgamma'],
-        cppf: 'lgamma(%1)',
-        cppd: 'lgamma(%1)',
-        js: null,
-    }),
-];
-
-// Built-in real-only functions
-BuiltInMathFunctions.rawMathFunctionsR = [
     new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, {
         D: "g1*sign(f1)",
         C: ["hypot(a1,b1)", "0"],
@@ -487,7 +495,7 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppd: 'fabs(%1)',
         js: 'Math.abs(%1)',
     }, new Interval(), new Interval(0, Infinity)),
-    new MathFunction(['real', 're', 'Re'], 1, {
+    new MathFunction(['real', 'Re'], 1, {
         C: ["a1", "0"],
         latex: '\\operatorname{Re}\\left(%1\\right)',
         glsl: '%1',
@@ -495,7 +503,7 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppd: '%1',
         js: '%1',
     }),
-    new MathFunction(['imaginary', 'imag', 'im', 'Im'], 1, {
+    new MathFunction(['imaginary', 'imag', 'Im'], 1, {
         C: ["b1", "0"],
         latex: '\\operatorname{Im}\\left(%1\\right)',
         glsl: '0.0',
@@ -621,6 +629,7 @@ BuiltInMathFunctions.rawMathFunctionsR = [
     }),
     new MathFunction(['log10'], 1, {
         D: "0.43429448190325176*g1/f1",
+        C: "0.43429448190325176*ln(z1)",
         latex: '\\log_{10}\\left(%1\\right)',
         glsl: '0.43429448190325176*log(%1)',
         cppf: 'log10(%1)',
@@ -629,6 +638,7 @@ BuiltInMathFunctions.rawMathFunctionsR = [
     }, new Interval(0, Infinity), new Interval(), Math.log10),
     new MathFunction(['log2'], 1, {
         D: "1.4426950408889634*g1/f1",
+        C: "1.4426950408889634*ln(z1)",
         latex: '\\log_{2}\\left(%1\\right)',
         glsl: '1.4426950408889634*log(%1)',
         cppf: 'log2(%1)',
@@ -637,6 +647,7 @@ BuiltInMathFunctions.rawMathFunctionsR = [
     }, new Interval(0, Infinity), new Interval(), Math.log2),
     new MathFunction(['log'], 2, {
         D: "g2/(f2ln(f1))-g1ln(f2)/(f1ln(f1)^2)",
+        C: "ln(z2)*inv(ln(z1))",
         latex: '\\log_{%1}\\left(%2\\right)',
         glsl: 'log(%2)/log(%1)',
         js: 'Math.log(%2)/Math.log(%1)',
@@ -724,25 +735,71 @@ BuiltInMathFunctions.rawMathFunctionsR = [
         cppf: null, cppd: null,
         js: null,
     }),
-];
-
-// Built-in complex-only functions
-BuiltInMathFunctions.rawMathFunctionsC = [
-    new MathFunction(['inverse', 'inv'], 1, {
-        latex: '\\left(%1\\right)^{-1}',
-        glslc: 'vec2(%1.x,-%1.y)/dot(%1,%1)',
+    new MathFunction(['gammaRe'], 2, {
+        glsl: "mc_gamma(vec2(%1,%2)).x",
+    }),
+    new MathFunction(['gammaIm'], 2, {
+        glsl: "special_function_cache.y",
+    }),
+    new MathFunction(['gamma', 'Gamma'], 1, {
+        latex: '\\Gamma\\left(%1\\right)',
+        C: ['gammaRe(a1,b1)', 'gammaIm(a1,b1)'],
+        glsl: 'mf_gamma(%1)',
+        glslExt: ['mf_lgamma_1', 'gamma'],
+        glslc: 'mc_gamma(%1)',
+        glslcExt: ['mc_gamma'],
+        cppf: 'tgamma(%1)',
+        cppd: 'tgamma(%1)',
+        js: null,
+    }),
+    new MathFunction(['lgammaRe'], 2, {
+        glsl: "mc_lngamma(vec2(%1,%2)).x",
+    }),
+    new MathFunction(['lgammaIm'], 2, {
+        glsl: "special_function_cache.y",
+    }),
+    new MathFunction(['lgamma', 'lGamma', 'lngamma', 'lnGamma', 'loggamma', 'logGamma'], 1, {
+        latex: '\\mathrm{ln\\Gamma}\\left(%1\\right)',
+        C: ['lgammaRe(a1,b1)', 'lgammaIm(a1,b1)'],
+        glsl: 'mf_loggamma(%1)',
+        glslExt: ['mf_lgamma_1', 'loggamma'],
+        glslc: 'mc_lngamma(%1)',
+        glslcExt: ['mc_lgamma'],
+        cppf: 'lgamma(%1)',
+        cppd: 'lgamma(%1)',
+        js: null,
+    }),
+    new MathFunction(['zetaRe'], 2, {
+        glsl: "mc_zeta(vec2(%1,%2)).x",
+    }),
+    new MathFunction(['zetaIm'], 2, {
+        glsl: "special_function_cache.y",
     }),
     new MathFunction(['zeta'], 1, {
         latex: '\\zeta\\left(%1\\right)',
+        C: ['zetaRe(a1,b1)', 'zetaIm(a1,b1)'],
         glslc: 'mc_zeta(%1)',
         glslcExt: ["mc_zeta"],
     }),
+    new MathFunction(['lzetaRe'], 2, {
+        glsl: "mc_lnzeta(vec2(%1,%2)).x",
+    }),
+    new MathFunction(['lzetaIm'], 2, {
+        glsl: "special_function_cache.y",
+    }),
     new MathFunction(['logzeta', 'lnzeta', 'lzeta'], 1, {
         latex: '\\ln\\zeta\\left(%1\\right)',
+        C: ['lzetaRe(a1,b1)', 'lzetaIm(a1,b1)'],
         glslc: 'mc_lnzeta(%1)',
         glslcExt: ["mc_lzeta"],
     }),
 ];
+
+// Built-in real-only functions
+BuiltInMathFunctions.rawMathFunctionsR = [];
+
+// Built-in complex-only functions
+BuiltInMathFunctions.rawMathFunctionsC = [];
 
 // Uninitialized list of math functions
 let MathFunctions = {};

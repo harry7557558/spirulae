@@ -283,3 +283,34 @@ function calcScreenCenter() {
     com.y = 0.5 + 0.5 * Math.max(-0.6, Math.min(0.6, com.y));
     return com;
 }
+
+
+// Export data
+
+function getImage(pixelData, w, h) {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext('2d');
+
+    const imageData = new Uint8ClampedArray(pixelData);
+    const imgData = new ImageData(imageData, w, h);
+
+    for (let y = 0; y < h / 2; y++) {
+        const topRowIndex = y * w * 4;
+        const bottomRowIndex = (h - y - 1) * w * 4;
+      
+        // Swap rows
+        for (let x = 0; x < w * 4; x++) {
+            const temp = imgData.data[topRowIndex + x];
+            imgData.data[topRowIndex + x] = imgData.data[bottomRowIndex + x];
+            imgData.data[bottomRowIndex + x] = temp;
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    const base64PNG = canvas.toDataURL('image/png');
+    return base64PNG;
+}

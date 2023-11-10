@@ -399,6 +399,10 @@ function updateShaderFunction(funCode, funGradCode, params) {
         prevCode.shaderSource = shaderSource;
     }
 
+    // trigger potential error
+    var nargs = funCode.slice(funCode.indexOf('(')+1, funCode.indexOf(')')).split(',').length;
+    eval('('+funCode+')('+(new Array(nargs)).fill('0').join(',')+')');
+
     if (window.hasOwnProperty('onUpdate'))
         onUpdate(recompile);
 }

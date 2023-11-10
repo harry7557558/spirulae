@@ -118,6 +118,8 @@ vec2 mc_arccoth(vec2 e) { return mc_arctanh(mc_inv(e)); }
 vec2 mc_arccsch(vec2 e) { return mc_arcsinh(mc_inv(e)); }
 vec2 mc_arcsech(vec2 e) { return mc_arccosh(mc_inv(e)); }
 
+vec2 special_function_cache;
+
 // Spouge's method for Gamma function
 vec2 mc_gamma(vec2 z) {
     float N = length(z-vec2(-8.,0.))<1. ? 10. : 8.;
@@ -130,7 +132,7 @@ vec2 mc_gamma(vec2 z) {
         s += mc_inv(z+vec2(k,0.))*c;
 	}
 	s = mc_mul(s,mc_mul(mc_exp(-z-vec2(N,0)),mc_pow(z+vec2(N,0),z+vec2(.5,0))));
-    return mc_div(s,z);
+    return special_function_cache = mc_div(s,z);
 }
 vec2 mc_lngamma(vec2 z) {
     float N = ZERO + length(z-vec2(-8.,0.))<1. ? 10. : 8.;
@@ -146,17 +148,17 @@ vec2 mc_lngamma(vec2 z) {
     s = s + (-z-vec2(N,0)) + mc_mul(z+vec2(.5,0), mc_ln(z+vec2(N,0)));
     s = s - mc_ln(z);
     s.y = mod(s.y+PI, 2.*PI)-PI;
-    return s;
+    return special_function_cache = s;
 }
 
 // Riemann zeta function
 #include "../shaders/complex-zeta.glsl"
-vec2 mc_lnzeta(vec2 z) {
+vec2 mc_lnzeta_0(vec2 z) {
     vec2 s = logzeta(z);
     s.y = mod(s.y+PI, 2.*PI)-PI;
     return s;
 }
-vec2 mc_zeta(vec2 z) {
+vec2 mc_zeta_0(vec2 z) {
     vec2 z1 = cexp(logkhi(z)+clog(eta4(vec2(1.,0.)-z))-clog(vec2(1,0)-cpow(2.,z)));
     vec2 z2 = cexp(clog(eta4(z))-clog(vec2(1,0)-cpow(2.,vec2(1,0)-z)));
     if (z.x < 0.4) return z1;
@@ -187,7 +189,7 @@ vec2 zeta3(vec2 s) {
     }
     return cdiv(sum1+sum2, vec2(1,0) - cpow(2., vec2(1,0) - s));
 }
-vec2 mc_zeta_fast(vec2 z) {
+vec2 mc_zeta_fast_0(vec2 z) {
     float t = smoothstep(40., 55., abs(z.y));
     if (t >= 1. || z.x >= .5) return zeta3(z);
     vec2 a = mc_pow(vec2(2.*PI,0),z)/PI;
@@ -198,7 +200,7 @@ vec2 mc_zeta_fast(vec2 z) {
     if (t <= 0.) return zeta;
     return mix(zeta, zeta3(z), t);
 }
-vec2 mc_lnzeta_fast(vec2 z) {
+vec2 mc_lnzeta_fast_0(vec2 z) {
     float t = smoothstep(20., 24., abs(z.y));
     if (t >= 1. || z.x >= .5) return mc_ln(zeta3(z));
     vec2 ln_a = mc_mul(z, mc_ln(vec2(2.*PI,0))) - mc_ln(vec2(PI,0));
@@ -212,3 +214,19 @@ vec2 mc_lnzeta_fast(vec2 z) {
     ln_zeta.y = mod(ln_zeta.y+PI, 2.*PI)-PI;
     return ln_zeta;
 }
+
+#ifdef ZETA_FAST
+vec2 mc_zeta(vec2 z) {
+    return special_function_cache = mc_zeta_fast_0(z);
+}
+vec2 mc_lnzeta(vec2 z) {
+    return special_function_cache = mc_lnzeta_fast_0(z);
+}
+#else
+vec2 mc_zeta(vec2 z) {
+    return special_function_cache = mc_zeta_0(z);
+}
+vec2 mc_lnzeta(vec2 z) {
+    return special_function_cache = mc_lnzeta_0(z);
+}
+#endif

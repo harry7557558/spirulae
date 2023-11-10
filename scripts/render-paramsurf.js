@@ -510,10 +510,9 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.shaderProgram);
             renderer.shaderProgram = null;
         }
-        try {
+        // try {
             renderer.shaderProgram = createShaderProgram(gl, vsSource, fsSource);
-        }
-        catch (e) { console.error(e); }
+        // } catch (e) { console.error(e); }
         prevCode.vsSource = vsSource;
         prevCode.fsSource = fsSource;
     }

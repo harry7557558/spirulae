@@ -3,6 +3,7 @@
 // Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 // According to Shadertoy terms - https://www.shadertoy.com/terms
 
+#line 7
 
 const float pi = 3.1415926535897932;
 const float LOG2 = 0.6931471805599453;
@@ -30,11 +31,11 @@ vec2 clogsin(vec2 z) {
 
 // Spouge's method for loggamma
 vec2 logspouge(vec2 z){
-    const int N = 16;
+    const float N = 16.;
     float c = sqrt(2.*pi);
 	vec2 s = vec2(c,0.);
     float f = 1.;
-	for(int k = 1; k<N ;k++){
+	for(float k = 1.; k<N ;k++){
 		c = exp(float(N-k)) * pow(float(N-k),float(k)-.5)/f;
         f *= -float(k);
         s += c*cinv(z+vec2(float(k),0.));
@@ -89,11 +90,11 @@ vec2 eta2(vec2 z){
 //ek coeff are calculated on the fly
 //http://numbers.computation.free.fr/Constants/Miscellaneous/zetaevaluations.pdf
 vec2 eta3(vec2 s) {
-  const int N = 120;  
+  const float N = 120.;  
 
   vec2 sum1 = vec2(0);
   float a = 1.0;
-  for(int i = 1; i <= N; i++) {
+  for(float i = 1.; i <= N; i++) {
     sum1 += a*(cpow(float(i), -s));
     a = -a;
   }
@@ -101,9 +102,9 @@ vec2 eta3(vec2 s) {
   a = -1.0;
   float bk= 1.0/pow(2.,float(N));
   float ek= bk;
-  for(int i = 0 ; i <  N; i++) {
-    sum2 += a*ek*(cpow(float(2*N-i),-s));
-    bk *= float(N-i)/float(i+1);
+  for(float i = 0. ; i < N; i++) {
+    sum2 += a*ek*(cpow(float(2.*N-i),-s));
+    bk *= float(N-i)/float(i+1.);
     ek += bk;    
     a = -a;
   }
@@ -214,12 +215,4 @@ vec2 logzeta(vec2 z){
 
 vec2 zeta(vec2 z){
     return cexp(logzeta(z));
-}
-
-vec2 zetabrot(vec2 z){
-    for(int i = 0; i < 12; i++){
-        z=zeta(z);
-        if (dot(z,z)<.7)break;
-        }
-    return z;
 }

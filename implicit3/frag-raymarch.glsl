@@ -365,6 +365,7 @@ void main(void) {
     seed = hash31(vec3(gl_FragCoord.xy,0));
 
     vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
+    // ro_s.xy += 2.*(vec2(randf(),randf())-0.5f) / vec2(4*textureSize(iChannel0,0));
     vec3 rd_s = vec3(0,0,1);
     // vec4 tt = texelFetch(iChannel0, ivec2(vec2(textureSize(iChannel0, 0))*(0.5+0.5*vXy)), 0);
     vec4 tt = texture(iChannel0, 0.5+0.5*vXy);

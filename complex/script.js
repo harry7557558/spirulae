@@ -20,7 +20,7 @@ const builtinFunctions = [
     ["Conjugate Tricorn", "f(x)=x^2+conj(x);f(f(f(f(f(f(z"],
     ["Magenta Horizon", "6(-i+1)(imag(z)conj(z))^-2"],
     ["Rainbow Nautilus", "ln(20e^(5iln(|z|))/z)csc(12arg(z))"],
-    ["Log Real", "log(re(((1/z)^12+1)((2/z)^6+1)"],
+    ["Log Real", "log(real(((1/z)^12+1)((2/z)^6+1)"],
     ["LnGamma", "lngamma(4z)"],
     ["Riemann Zeta", "zeta(10z)"],
     ["Power Fractal", "z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z^z"],

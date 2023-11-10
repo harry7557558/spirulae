@@ -11,13 +11,14 @@ uniform vec2 xyMax;
 uniform float rBrightness;
 
 #define ZERO 0.0
+// #define ZETA_FAST
 #include "../shaders/complex.glsl"
 
 // function
 {%FUN%}
 #define fun(z) funRaw(z)
 
-#line 20
+#line 22
 
 // grid
 float grid1(vec2 p, float w) {
