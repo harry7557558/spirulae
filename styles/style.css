@@ -131,6 +131,13 @@ hr {
     text-decoration: underline;
 }
 
+#help-menu-links {
+    float: right;
+    padding-right: 60px;
+    padding-top: 1.8em;
+    text-align: right;
+}
+
 #help-menu h2 {
     line-height: 1.2em;
     font-size: 1.5em;

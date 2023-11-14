@@ -26,52 +26,56 @@
 
     <div id="container">
 
-        <h1><center>Spirulae</center></h1>
-        <center style="color:#555"><em>by Harry Chen - updated October 2023</em></center>
-        <br/>
+         <h1 style="text-align:center;margin-bottom:0;">Spirulae</h1>
+         <p style="text-align:center;">
+            <em style="color:#555">by Harry Chen - updated November 2023</em>
+            <br/>
+            <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
+            <a href="https://spirulae.github.io/gallery/">Gallery</a>
+         </p>
 
-        <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
-           <img src="home/img-implicit3.jpg" style="width:100%"></img>
-           <br/>
-           3D Implicit Surface Grapher
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/paramsurf/" class="a">
-           <img src="home/img-paramsurf.jpg" style="width:100%"></img>
-           <br/>
-           3D Parametric Surface Grapher
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/complex/" class="a">
-           <img src="home/img-complex.jpg" style="width:100%"></img>
-           <br/>
-           Complex Domain Coloring Grapher
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/complex3/" class="a">
-           <img src="home/img-complex3.jpg" style="width:100%"></img>
-           <br/>
-           3D Complex Function Grapher
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/implicit3-rt/" class="a">
-           <img src="home/img-implicit3-rt.jpg" style="width:100%"></img>
-           <br/>
-           Implicit Surface Path Tracer (beta)
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/meshgen3/" class="a">
-           <img src="home/img-meshgen3.jpg" style="width:100%"></img>
-           <br/>
-           3D Implicit Mesh Generator (dev)
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/ode2/" class="a">
-           <img src="home/img-ode2.jpg" style="width:100%"></img>
-           <br/>
-           2D Vector Field Grapher (dev)
-        </a>
-        <a href="https://harry7557558.github.io/spirulae/meshgen2/" class="a">
-           <img src="home/img-meshgen2.jpg" style="width:100%"></img>
-           <br/>
-           2D to 3D Mesh Generator (dev)
-        </a>
+         <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
+            <img src="home/img-implicit3.jpg" style="width:100%"></img>
+            <br/>
+            3D Implicit Surface Grapher
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/paramsurf/" class="a">
+            <img src="home/img-paramsurf.jpg" style="width:100%"></img>
+            <br/>
+            3D Parametric Surface Grapher
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/complex/" class="a">
+            <img src="home/img-complex.jpg" style="width:100%"></img>
+            <br/>
+            Complex Domain Coloring Grapher
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/complex3/" class="a">
+            <img src="home/img-complex3.jpg" style="width:100%"></img>
+            <br/>
+            3D Complex Function Grapher
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/implicit3-rt/" class="a">
+            <img src="home/img-implicit3-rt.jpg" style="width:100%"></img>
+            <br/>
+            Implicit Surface Path Tracer (beta)
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/meshgen3/" class="a">
+            <img src="home/img-meshgen3.jpg" style="width:100%"></img>
+            <br/>
+            3D Implicit Mesh Generator (dev)
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/ode2/" class="a">
+            <img src="home/img-ode2.jpg" style="width:100%"></img>
+            <br/>
+            2D Vector Field Grapher (dev)
+         </a>
+         <a href="https://harry7557558.github.io/spirulae/meshgen2/" class="a">
+            <img src="home/img-meshgen2.jpg" style="width:100%"></img>
+            <br/>
+            2D to 3D Mesh Generator (dev)
+         </a>
 
-        <p>GPU-accelerated function graphers in a web browser, both 3D and 2D.</p>
+         <p>GPU-accelerated function graphers in a web browser, both 3D and 2D.</p>
 <p>This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
 <p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
 <p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
@@ -82,8 +86,10 @@
 <li>Function and variable definition</li>
 <li>Comments (start with <code>#</code>, <code>%</code>, or <code>//</code>)</li>
 <li>LaTeX preview</li>
-<li>Real-time shader generation</li>
+<li>Complex number support for all graphers</li>
 <li>Special functions</li>
+<li>Automatic differentiation</li>
+<li>etc.</li>
 </ul>
 <p>The 3D graphers have the following features implemented:</p>
 <ul>
@@ -92,8 +98,7 @@
 <li>Speed vs. quality control</li>
 <li>Multiple shading and grid modes</li>
 <li>Dark and light color themes</li>
-<li>Semi-transparent surface shading</li>
-<li>Anti-aliasing</li>
+<li>Transparent surfaces</li>
 <li>Lighting control</li>
 <li>Red highlight discontinuity</li>
 <li>etc.</li>
@@ -115,9 +120,8 @@
 </ul>
 <p>Features that may be implemented in the future (ordered approximately by priority):</p>
 <ul>
-<li>Vectors and complex numbers</li>
-<li>Automatic differentiation</li>
-<li>More robust parsing for copy-paste equations</li>
+<li>Vector support</li>
+<li>More robust equation parsing</li>
 <li>Mathematically-defined custom colors</li>
 <li>More flexible viewport control</li>
 <li>Variable sliders</li>
@@ -130,7 +134,7 @@
 <ul>
 <li>Mesh generation and simplification</li>
 <li>Denoising of path-traced images via deep learning</li>
-<li>Finite element analysis of physically based models</li>
+<li>FEA and general physical simulation</li>
 <li>Visualization of 3D vector and tensor fields</li>
 </ul>
 <hr />
@@ -153,14 +157,15 @@
 </ul>
 <hr />
 <h2>Frequently Asked Questions</h2>
-<p><strong>Q: Is Spirulae written from scratch?</strong></p>
-<p><em>Largely</em>. I tried to make Spirulae with as little dependency as possible, and therefore I wrote the equation parser and renderer from scratch without external libraries and frameworks, although it still uses native browser APIs like WebGL and WebAssembly. Spirulae uses <a href="https://www.mathjax.org/">MathJax</a> to display equations, which can be considered its only dependency.</p>
+<p><strong>Q: What library does Spirulae use?</strong></p>
+<p>I tried to write Spirulae with as few dependencies as possible, therefore I wrote the equation parser and renderer from scratch without use of third-party libraries and frameworks. Spirulae uses native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a> and <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a>, as well as <a href="https://www.mathjax.org/">MathJax</a> for displaying equations. The C++ part (compiled to WebAssembly via <a href="https://emscripten.org/">Emscripten</a>) uses <a href="https://www.glfw.org/">GLFW</a> and <a href="https://github.com/g-truc/glm">GLM</a> for graphics and vector operations.</p>
 <p><strong>Q: How to draw shapes using equations?</strong></p>
 <p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
-<p><strong>Q: How does Spirulae evaluate equations on the GPU?</strong></p>
+<p><strong>Q: How does Spirulae evaluate functions on the GPU?</strong></p>
 <p>For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation">postfix notation</a> and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.</p>
 <hr />
 <h2>Gallery</h2>
+<p>A gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. Note that the page is intended to be a progress overview rather than a showcase gallery.</p>
 <p>Complex domain coloring</p>
 <p><a href="https://harry7557558.github.io/spirulae/complex/"><img alt="" src="./home/gallery-complex-trigs.jpg" /></a></p>
 <p>The gamma function in 3D</p>

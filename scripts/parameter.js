@@ -6,8 +6,13 @@ function initHelpMenu() {
     var req = new XMLHttpRequest();
     req.open("GET", "help.md");  // md instead of html because easier to edit on vscode
     req.onload = function () {
-        if (req.status == 200) container.innerHTML += req.responseText;
-        else container.innerHTML += errorMsg;
+        var html = req.status == 200 ?
+            req.responseText : errorMsg;
+        container.innerHTML += `<div id="help-menu-links">
+            <a href="https://harry7557558.github.io/spirulae/" target="_blank">Home</a> ⋅
+            <a href="https://spirulae.github.io/gallery/" target="_blank">Gallery</a> ⋅
+            <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a>
+        </div>` + html;
     };
     req.onerror = function () {
         container.innerHTML += errorMsg;

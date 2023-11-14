@@ -15,8 +15,10 @@ The equation parser implements the following features:
  - Function and variable definition
  - Comments (start with `#`, `%`, or `//`)
  - LaTeX preview
- - Real-time shader generation
+ - Complex number support for all graphers
  - Special functions
+ - Automatic differentiation
+ - etc.
 
 The 3D graphers have the following features implemented:
 
@@ -25,8 +27,7 @@ The 3D graphers have the following features implemented:
  - Speed vs. quality control
  - Multiple shading and grid modes
  - Dark and light color themes
- - Semi-transparent surface shading
- - Anti-aliasing
+ - Transparent surfaces
  - Lighting control
  - Red highlight discontinuity
  - etc.
@@ -49,9 +50,8 @@ Spirulae is under active development. Tools and features that are being develope
 
 Features that may be implemented in the future (ordered approximately by priority):
 
- - Vectors and complex numbers
- - Automatic differentiation
- - More robust parsing for copy-paste equations
+ - Vector support
+ - More robust equation parsing
  - Mathematically-defined custom colors
  - More flexible viewport control
  - Variable sliders
@@ -63,7 +63,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
 
  - Mesh generation and simplification
  - Denoising of path-traced images via deep learning
- - Finite element analysis of physically based models
+ - FEA and general physical simulation
  - Visualization of 3D vector and tensor fields
 
 ----
@@ -88,9 +88,9 @@ These tools have the following known issues:
 
 ## Frequently Asked Questions
 
-**Q: Is Spirulae written from scratch?**
+**Q: What library does Spirulae use?**
 
-*Largely*. I tried to make Spirulae with as little dependency as possible, and therefore I wrote the equation parser and renderer from scratch without external libraries and frameworks, although it still uses native browser APIs like WebGL and WebAssembly. Spirulae uses [MathJax](https://www.mathjax.org/) to display equations, which can be considered its only dependency.
+I tried to write Spirulae with as few dependencies as possible, therefore I wrote the equation parser and renderer from scratch without use of third-party libraries and frameworks. Spirulae uses native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL) and [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly), as well as [MathJax](https://www.mathjax.org/) for displaying equations. The C++ part (compiled to WebAssembly via [Emscripten](https://emscripten.org/)) uses [GLFW](https://www.glfw.org/) and [GLM](https://github.com/g-truc/glm) for graphics and vector operations.
 
 
 **Q: How to draw shapes using equations?**
@@ -98,13 +98,15 @@ These tools have the following known issues:
 Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check [Inigo Quilez's YouTube channel](https://www.youtube.com/c/InigoQuilez) and videos like [this one](https://www.youtube.com/watch?v=aNR4n0i2ZlM). I also have a [Google Slide](https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit) intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.
 
 
-**Q: How does Spirulae evaluate equations on the GPU?**
+**Q: How does Spirulae evaluate functions on the GPU?**
 
 For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into [postfix notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation) and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.
 
 ----
 
 ## Gallery
+
+A gallery of unfiltered process screenshots can be found [here](https://spirulae.github.io/gallery/). Note that the page is intended to be a progress overview rather than a showcase gallery.
 
 Complex domain coloring
 
