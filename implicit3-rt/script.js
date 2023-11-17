@@ -106,7 +106,7 @@ document.body.onload = function (event) {
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rScale1", "slider-scale1", 0.01, 0.99, 0.5),
         new UniformSlider("rScale2", "slider-scale2", 0.01, 0.99, 0.5),
-        new UniformSlider("rOpacity", "slider-opacity", 0, 1, 1.0),
+        new UniformSlider("rOpacity", "slider-opacity", 0, 1, 0.0),
         new UniformSlider("rIor", "slider-ior", 0, 3, 1.7),
         new UniformSlider("rRoughness1", "slider-roughness1", 0, 1, 0.2),
         new UniformSlider("rRoughness2", "slider-roughness2", 0, 1, 0.3),
@@ -143,6 +143,7 @@ document.body.onload = function (event) {
     // main
     initMain([
         "frag-render.glsl",
+        "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl"
     ]);
 };

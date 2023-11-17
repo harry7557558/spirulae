@@ -4,9 +4,8 @@ precision highp float;
 in vec2 vXy;
 out vec4 fragColor;
 
-uniform int iFrame;
+uniform float iSeed;
 uniform vec2 iResolution;
-uniform sampler2D iChannel0;
 
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
@@ -613,15 +612,12 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
 
 void main(void) {
-    vec4 pixel = texelFetch(iChannel0, ivec2(gl_FragCoord.xy), 0);
-    if (iFrame == 0) pixel = vec4(0);
 
-    int nFrame = 1;
+    float nFrame = 1.0;
     vec4 totcol = vec4(0);
-    for (int fi=0; fi<nFrame; fi++) {
+    for (float fi=0.; fi<nFrame; fi++) {
         // random number seed
-        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy,
-                            sin(float(iFrame*nFrame+fi))));
+        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/nFrame)));
         seed = round(65537.*seed0);
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
@@ -633,9 +629,5 @@ void main(void) {
         if (!isnan(dot(col, vec3(1))))
             totcol += vec4(col, 1);
     }
-    if (totcol.w != 0.0) {
-        pixel.xyz = (pixel.xyz*pixel.w+totcol.xyz)/(pixel.w+totcol.w);
-        pixel.w += totcol.w;
-    }
-    fragColor = pixel;
+    fragColor = totcol;
 }

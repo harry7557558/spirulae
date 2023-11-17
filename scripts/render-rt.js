@@ -5,11 +5,14 @@ var renderer = {
     gl: null,
     vsSource: "",
     renderSource: "",
+    copySource: "",
     postSource: "",
     positionBuffer: null,
     renderProgram: null,
+    copyProgram: null,
     postProgram: null,
     renderTarget: null,
+    renderTargetAccum: null,
     timerExt: null,
 };
 
@@ -58,23 +61,39 @@ async function drawScene(state, transformMatrix, lightDir) {
         gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
     }
 
-    // clear the canvas
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    // accumulation buffer
+    gl.viewport(0, 0, state.width, state.height);
+    if (state.iFrame != 0) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+    }
+    const batch = 64;
+    if (state.iFrame % batch == 0) {
+        if (state.iFrame == 0)
+            gl.disable(gl.BLEND);
+        gl.useProgram(renderer.copyProgram);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAccum.framebuffer);
+        setPositionBuffer(renderer.copyProgram);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
+        gl.uniform1i(gl.getUniformLocation(renderer.copyProgram, "iChannel0"), 0);
+        gl.uniform1f(gl.getUniformLocation(renderer.copyProgram, "sc"),
+            state.iFrame == 0 ? 0.0 : 1.0);
+        renderPass();
+        gl.disable(gl.BLEND);
+    }
 
     // render image
-    gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.renderProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
     setPositionBuffer(renderer.renderProgram);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "ZERO"), 0.0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
-    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iChannel0"), 0);
+    // gl.activeTexture(gl.TEXTURE0);
+    // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    // gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iChannel0"), 0);
     gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "iResolution"),
         state.width, state.height);
-    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iFrame"), state.iFrame);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iSeed"), Math.random());
     gl.uniformMatrix4fv(
         gl.getUniformLocation(renderer.renderProgram, "transformMatrix"),
         false,
@@ -94,17 +113,21 @@ async function drawScene(state, transformMatrix, lightDir) {
         gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, r), state[r]);
     }
     renderPass();
-    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
-    gl.copyTexImage2D(gl.TEXTURE_2D,
-        0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+    gl.disable(gl.BLEND);
+    // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    // gl.copyTexImage2D(gl.TEXTURE_2D,
+    //     0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
 
     // post processing
     gl.useProgram(renderer.postProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     setPositionBuffer(renderer.postProgram);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTargetAccum.texture);
     gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel0"), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
+    gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel1"), 1);
     renderPass();
 
     if (!countIndividualTime && timer != null)
@@ -215,6 +238,7 @@ function initWebGL() {
     renderer.vsSource = "#version 300 es\nin vec4 vertexPosition;out vec2 vXy;" +
         "void main(){vXy=vertexPosition.xy;gl_Position=vertexPosition;}";
     renderer.renderSource = getShaderSource("frag-render.glsl");
+    renderer.copySource = getShaderSource("../shaders/frag-copy.glsl");
     renderer.postSource = getShaderSource("../shaders/frag-rt-post.glsl");
     console.timeEnd("load glsl code");
 
@@ -254,6 +278,10 @@ function updateBuffers() {
     var oldRenderTarget = renderer.renderTarget;
     renderer.renderTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
     if (oldRenderTarget) destroyRenderTarget(gl, oldRenderTarget);
+
+    var oldRenderTargetAccum = renderer.renderTargetAccum;
+    renderer.renderTargetAccum = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldRenderTargetAccum) destroyRenderTarget(gl, oldRenderTargetAccum);
 
     state.renderNeeded = true;
 }
@@ -441,7 +469,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
 
     console.time("compile shader");
 
-    // raymarching program
+    // render program
     if (prevCode.renderSource != renderSource || renderer.renderProgram == null) {
         if (renderer.renderProgram != null) {
             gl.deleteProgram(renderer.renderProgram);
@@ -451,11 +479,13 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.postProgram);
             renderer.postProgram = null;
         }
-        // try {
-            renderer.renderProgram = createShaderProgram(gl, renderer.vsSource, renderSource);
-            renderer.postProgram = createShaderProgram(gl, renderer.vsSource, postSource);
-        // } catch (e) { console.error(e); }
+        renderer.renderProgram = createShaderProgram(gl, renderer.vsSource, renderSource);
+        renderer.postProgram = createShaderProgram(gl, renderer.vsSource, postSource);
         prevCode.renderSource = renderSource;
+    }
+
+    if (!renderer.copyProgram) {
+        renderer.copyProgram = createShaderProgram(gl, renderer.vsSource, renderer.copySource);
     }
 
     console.timeEnd("compile shader");
