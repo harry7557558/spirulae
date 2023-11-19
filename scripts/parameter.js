@@ -57,8 +57,16 @@ function GraphingParameter(name, id, callback=null) {
             this.element.checked = value;
         if (this.name[0] == "s")
             this.element.value = value;
+        state[this.name] = value;
     };
+    var paramc = this;
+    state[this.name] = this.getValue();
     this.callback = callback;
+    this.element.addEventListener("input", function (event) {
+        updateFunctionInput(false, false);
+        state[paramc.name] = paramc.getValue();
+        state.renderNeeded = true;
+    });
 }
 
 // a slider that controls a shader uniform

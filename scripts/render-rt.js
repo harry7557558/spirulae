@@ -13,7 +13,18 @@ var renderer = {
     postProgram: null,
     renderTarget: null,
     renderTargetAccum: null,
+    iNFrame: 1,
     timerExt: null,
+};
+
+var trainingData = {
+    recording: false,
+    state: "unstarted",
+    width: 256,
+    height: 256,
+    spp: 0,
+    iNFrame: 64,
+    frames: [],
 };
 
 // call this function to re-render
@@ -93,6 +104,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iChannel0"), 0);
     gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "iResolution"),
         state.width, state.height);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iNFrame"), renderer.iNFrame);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iSeed"), Math.random());
     gl.uniformMatrix4fv(
         gl.getUniformLocation(renderer.renderProgram, "transformMatrix"),
@@ -162,7 +174,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         if (countIndividualTime) console.log(indivTime.join(' '));
         fpsDisplay.innerHTML = (
             state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s - " :
-            state.iFrame + " spp - ") +
+            (state.iFrame*renderer.iNFrame) + " spp - ") +
             (1000.0 / totTime).toFixed(1) + " fps";
     }
     setTimeout(checkTime, 100);
@@ -272,8 +284,14 @@ function initWebGL() {
 
 function updateBuffers() {
     let gl = renderer.gl;
-    state.width = canvas.width = canvas.style.width = window.innerWidth;
-    state.height = canvas.height = canvas.style.height = window.innerHeight;
+    if (trainingData.recording) {
+        state.width = canvas.width = trainingData.width;
+        state.height = canvas.height = trainingData.height;
+    }
+    else {
+        state.width = canvas.width = window.innerWidth;
+        state.height = canvas.height = window.innerHeight;
+    }
 
     var oldRenderTarget = renderer.renderTarget;
     renderer.renderTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
@@ -307,12 +325,22 @@ function initRenderer() {
         state.screenCenter = screenCenter;
         if (screenCenter.x != oldScreenCenter.x || screenCenter.y != oldScreenCenter.y)
             state.renderNeeded = true;
-        if (state.renderNeeded)
+        // if (state.renderNeeded)
+        if (state.renderNeeded && !trainingData.recording)
             state.iFrame = 0;
-        let maxFrame = Number(parameterToDict(RawParameters).sSpp);
-        if (state.iFrame < maxFrame) {
-            state.width = canvas.width = canvas.style.width = window.innerWidth;
-            state.height = canvas.height = canvas.style.height = window.innerHeight;
+        if (state.iFrame < Number(state.sSpp)) {
+            if (trainingData.recording) {
+                state.width = canvas.width = trainingData.width;
+                state.height = canvas.height = canvas.style.height = trainingData.height;
+                canvas.style.width = state.width + "px";
+                canvas.style.height = state.height + "px";
+            }
+            else {
+                state.width = canvas.width = window.innerWidth;
+                state.height = canvas.height = window.innerHeight;
+                canvas.style.width = window.innerWidth + "px";
+                canvas.style.height = window.innerHeight + "px";
+            }
             try {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
@@ -341,6 +369,7 @@ function initRenderer() {
     // interactions
     var fingerDist = -1;
     canvas.addEventListener("wheel", function (event) {
+        if (trainingData.recording) return;
         if (renderer.renderProgram == null)
             return;
         var sc = Math.exp(0.0002 * event.wheelDeltaY);
@@ -352,6 +381,7 @@ function initRenderer() {
     }, { passive: true });
     var mouseDown = false;
     canvas.addEventListener("contextmenu", function (event) {
+        if (trainingData.recording) return;
         if (event.shiftKey) {
             console.log("Shift");
             event.preventDefault();
@@ -370,6 +400,7 @@ function initRenderer() {
         mouseDown = false;
     });
     canvas.addEventListener("pointermove", function (event) {
+        if (trainingData.recording) return;
         if (renderer.renderProgram == null)
             return;
         if (mouseDown) {
@@ -388,6 +419,7 @@ function initRenderer() {
         }
     });
     canvas.addEventListener("touchstart", function (event) {
+        if (trainingData.recording) return;
         if (event.touches.length == 2) {
             var fingerPos0 = [event.touches[0].pageX, event.touches[0].pageY];
             var fingerPos1 = [event.touches[1].pageX, event.touches[1].pageY];
@@ -395,9 +427,11 @@ function initRenderer() {
         }
     }, { passive: true });
     canvas.addEventListener("touchend", function (event) {
+        if (trainingData.recording) return;
         fingerDist = -1.0;
     }, { passive: true });
     canvas.addEventListener("touchmove", function (event) {
+        if (trainingData.recording) return;
         if (renderer.renderProgram == null)
             return;
         if (event.touches.length == 2) {
@@ -416,7 +450,10 @@ function initRenderer() {
             state.renderNeeded = true;
         }
     }, { passive: true });
-    window.addEventListener("resize", updateBuffers);
+    window.addEventListener("resize", function (event) {
+        if (trainingData.recording) return;
+        updateBuffers();
+    });
     document.getElementById("fps").addEventListener("click", function () {
         state.iTime = -1.0;
     });
@@ -490,4 +527,91 @@ function updateShaderFunction(funCode, funGradCode, params) {
 
     console.timeEnd("compile shader");
     state.renderNeeded = true;
+}
+
+
+function recordTrainingData(spp) {
+
+    if (trainingData.state == "unstarted") {
+        trainingData.recording = true;
+        updateBuffers();
+        trainingData.frames = [];
+        trainingData.spp = spp;
+        state.sSpp = trainingData.spp;
+        renderer.iNFrame = Math.min(state.sSpp, trainingData.iNFrame);
+        state.sSpp /= renderer.iNFrame;
+        state.iFrame = 0;
+        trainingData.state = "wait";
+        setTimeout(recordTrainingData, 100);
+    }
+
+    else if (trainingData.state == "wait") {
+        if (state.iFrame * renderer.iNFrame < trainingData.spp) {
+            setTimeout(recordTrainingData, 100);
+            return;
+        }
+        console.log(trainingData.spp);
+
+        let gl = renderer.gl;
+        var npixels = state.width*state.height;
+        var pixels0 = new Float32Array(4*npixels);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAccum.framebuffer);
+        gl.readPixels(0, 0, state.width, state.height, gl.RGBA, gl.FLOAT, pixels0);
+        var pixels1 = new Float32Array(4*npixels);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
+        gl.readPixels(0, 0, state.width, state.height, gl.RGBA, gl.FLOAT, pixels1);
+        var pixels = new Float32Array(3*npixels);
+        for (var i = 0; i < npixels; i++) {
+            var c = [
+                pixels0[4*i+0] + pixels1[4*i+0],
+                pixels0[4*i+1] + pixels1[4*i+1],
+                pixels0[4*i+2] + pixels1[4*i+2],
+                pixels0[4*i+3] + pixels1[4*i+3]
+            ];
+            pixels[0*npixels+i] = c[0] / c[3];
+            pixels[1*npixels+i] = c[1] / c[3];
+            pixels[2*npixels+i] = c[2] / c[3];
+        }
+        trainingData.frames = [pixels].concat(trainingData.frames);
+
+        if (trainingData.spp == 1) {
+            trainingData.state = "finished";
+            trainingData.spp = 0;
+            setTimeout(recordTrainingData, 1);
+            return;
+        }
+        trainingData.spp /= 2;
+        state.sSpp = trainingData.spp;
+        renderer.iNFrame = Math.min(state.sSpp, trainingData.iNFrame);
+        state.sSpp /= renderer.iNFrame;
+        state.iFrame = 0;
+        setTimeout(recordTrainingData, 100);
+    }
+
+    else if (trainingData.state == "finished") {
+        trainingData.recording = false;
+        trainingData.state = "unstarted";
+        updateBuffers();
+        renderer.iNFrame = 1;
+        state.renderNeeded = true;
+
+        let n = trainingData.frames.length;
+        let w = trainingData.width, h = trainingData.height;
+        let totalLength = 3*w*h*n;
+        let concatenatedArray = new Float32Array(totalLength);
+        let offset = 0;
+        trainingData.frames.forEach((frame) => {
+          concatenatedArray.set(frame, offset);
+          offset += frame.length;
+        });
+        let binaryData = concatenatedArray.buffer;
+        let blob = new Blob([binaryData], { type: 'application/octet-stream' });
+        let hash = Math.floor(Math.random()*0xFFFFFFFF).toString(16).padStart(8, '0');
+        let fileName = hash + `_${n}_${w}_${h}.bin`;
+        let downloadLink = document.createElement('a');
+        downloadLink.href = window.URL.createObjectURL(blob);
+        downloadLink.download = fileName;
+        downloadLink.click();
+    }
+
 }

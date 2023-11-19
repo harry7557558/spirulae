@@ -6,6 +6,7 @@ out vec4 fragColor;
 
 uniform float iSeed;
 uniform vec2 iResolution;
+uniform float iNFrame;
 
 uniform mat4 transformMatrix;
 uniform vec2 screenCenter;
@@ -613,11 +614,10 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
 void main(void) {
 
-    float nFrame = 1.0;
     vec4 totcol = vec4(0);
-    for (float fi=0.; fi<nFrame; fi++) {
+    for (float fi=0.; fi<iNFrame; fi++) {
         // random number seed
-        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/nFrame)));
+        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
         seed = round(65537.*seed0);
 
         vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
