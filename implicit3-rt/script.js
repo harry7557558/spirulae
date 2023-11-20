@@ -146,7 +146,7 @@ document.body.onload = function (event) {
         "frag-render.glsl",
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
-        "../dnn/conv2d311.glsl",
+        "../shaders/dnn-conv2d311.glsl",
     ]);
 };
 
@@ -162,7 +162,6 @@ function initDenoiserModel(params) {
     }
     let gl = renderer.gl;
 
-    console.log(params);
     let convi = new Dnn.Conv2d311(3, 16, params['convi.weight'], params['convi.bias']);
     let conv11 = new Dnn.Conv2d311(16, 16, params['conv11.weight'], params['conv11.bias']);
     let conv12 = new Dnn.Conv2d311(16, 16, params['conv12.weight'], params['conv12.bias']);
@@ -278,7 +277,6 @@ function initDenoiser() {
             new Int16Array(content);
         if (loadedFiles < 2)
             return;
-        console.log(files);
         var params = Dnn.decodeDnnParameters(files.bin, files.json);
         initDenoiserModel(params);
     }

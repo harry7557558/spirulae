@@ -131,9 +131,6 @@ async function drawScene(state, transformMatrix, lightDir) {
         renderer.denoiser !== null);
     renderPass();
 
-    if (!countIndividualTime && timer != null)
-        gl.endQuery(timer.TIME_ELAPSED_EXT);
-
     if (renderer.denoiser) {
         gl.bindTexture(gl.TEXTURE_2D, renderer.denoiseTarget.sampler);
         gl.copyTexImage2D(gl.TEXTURE_2D,
@@ -147,6 +144,9 @@ async function drawScene(state, transformMatrix, lightDir) {
             null
         );
     }
+
+    if (!countIndividualTime && timer != null)
+        gl.endQuery(timer.TIME_ELAPSED_EXT);
 
     // check timer
     function checkTime() {
@@ -269,6 +269,8 @@ function initWebGL() {
         document.getElementById("fps").textContent = "Timer loaded.";
     if (!renderer.gl.getExtension("EXT_color_buffer_float"))
         throw ("Error: your device does not support float framebuffer.");
+    if (!renderer.gl.getExtension("EXT_float_blend"))
+        throw ("Error: your device does not support float framebuffer blending.");
 
     // state
     try {

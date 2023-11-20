@@ -51,6 +51,8 @@ function setScreenCenter() {
 }
 
 
+let state = {};
+
 
 
 function wasmReady() {

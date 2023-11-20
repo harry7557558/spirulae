@@ -73,7 +73,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
 These tools have the following dependencies:
 
  - [WebGL 2](https://webglreport.com/?v=2)
-    - `EXT_color_buffer_float`, required for path tracing and mesh generation
+    - `EXT_color_buffer_float` and `EXT_float_blend`, required for path tracing and mesh generation
     - `EXT_disjoint_timer_query_webgl2` (*optional*), an FPS counter will be shown when available
  - WebAssembly, required for mesh generation
  - [MathJax 3](https://www.mathjax.org/), required for equation preview

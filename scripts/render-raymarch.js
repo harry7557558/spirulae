@@ -29,21 +29,6 @@ async function drawScene(state, transformMatrix, lightDir) {
     let gl = renderer.gl;
     let antiAliaser = renderer.antiAliaser;
 
-    // set position buffer for vertex shader
-    function setPositionBuffer(program) {
-        var vpLocation = gl.getAttribLocation(program, "vertexPosition");
-        const numComponents = 2; // pull out 2 values per iteration
-        const type = gl.FLOAT; // the data in the buffer is 32bit floats
-        const normalize = false; // don't normalize
-        const stride = 0; // how many bytes to get from one set of values to the next
-        const offset = 0; // how many bytes inside the buffer to start from
-        gl.bindBuffer(gl.ARRAY_BUFFER, renderer.positionBuffer);
-        gl.vertexAttribPointer(
-            vpLocation,
-            numComponents, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(vpLocation);
-    }
-
     // render to target + timer
     var timerQueries = [];
     let timer = renderer.timerExt;
@@ -73,7 +58,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.viewport(0, 0, state.premarchWidth, state.premarchHeight);
     gl.useProgram(renderer.premarchProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.premarchTarget.framebuffer);
-    setPositionBuffer(renderer.premarchProgram);
+    setPositionBuffer(gl, renderer.premarchProgram);
     gl.uniform1f(gl.getUniformLocation(renderer.premarchProgram, "ZERO"), 0.0);
     gl.uniformMatrix4fv(
         gl.getUniformLocation(renderer.premarchProgram, "transformMatrix"),
@@ -90,7 +75,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // pooling
     gl.useProgram(renderer.poolProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.poolTarget.framebuffer);
-    setPositionBuffer(renderer.poolProgram);
+    setPositionBuffer(gl, renderer.poolProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, renderer.premarchTarget.texture);
     gl.uniform1i(gl.getUniformLocation(renderer.poolProgram, "iChannel0"), 0);
@@ -102,7 +87,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.viewport(0, 0, state.width, state.height);
     gl.useProgram(renderer.raymarchProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.renderFramebuffer);
-    setPositionBuffer(renderer.raymarchProgram);
+    setPositionBuffer(gl, renderer.raymarchProgram);
     gl.uniform1f(gl.getUniformLocation(renderer.raymarchProgram, "ZERO"), 0.0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, renderer.poolTarget.texture);
@@ -131,7 +116,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // render image gradient
     gl.useProgram(antiAliaser.imgGradProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.imgGradFramebuffer);
-    setPositionBuffer(antiAliaser.imgGradProgram);
+    setPositionBuffer(gl, antiAliaser.imgGradProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
     gl.uniform1i(gl.getUniformLocation(antiAliaser.imgGradProgram, "iChannel0"), 0);
@@ -140,7 +125,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // render anti-aliasing
     gl.useProgram(antiAliaser.aaProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    setPositionBuffer(antiAliaser.aaProgram);
+    setPositionBuffer(gl, antiAliaser.aaProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
     gl.uniform1i(gl.getUniformLocation(antiAliaser.aaProgram, "iChannel0"), 0);

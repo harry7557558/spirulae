@@ -107,7 +107,7 @@ Dnn.Conv2d311 = function(
             throw new Error("Input and output buffer dimensions don't match.");
         if (!Dnn.programConv2d311) {
             Dnn.programConv2d311 = createShaderProgram(gl, null,
-                getShaderSource('../dnn/conv2d311.glsl'))
+                getShaderSource('../shaders/dnn-conv2d311.glsl'))
         }
         let program = Dnn.programConv2d311;
         gl.useProgram(program);

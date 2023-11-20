@@ -146,21 +146,6 @@ async function drawScene(state) {
     let gl = renderer.gl;
     let antiAliaser = renderer.antiAliaser;
 
-    // set position buffer for vertex shader
-    function setPositionBuffer(program) {
-        var vpLocation = gl.getAttribLocation(program, "vertexPosition");
-        const numComponents = 2; // pull out 2 values per iteration
-        const type = gl.FLOAT; // the data in the buffer is 32bit floats
-        const normalize = false; // don't normalize
-        const stride = 0; // how many bytes to get from one set of values to the next
-        const offset = 0; // how many bytes inside the buffer to start from
-        gl.bindBuffer(gl.ARRAY_BUFFER, renderer.positionBuffer);
-        gl.vertexAttribPointer(
-            vpLocation,
-            numComponents, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(vpLocation);
-    }
-
     // render to target + timer
     var timerQueries = [];
     let timer = renderer.timerExt;
@@ -191,7 +176,7 @@ async function drawScene(state) {
     gl.useProgram(renderer.shaderProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER,
         renderer.enableAntiAliasing ? antiAliaser.renderFramebuffer : null);
-    setPositionBuffer(renderer.shaderProgram);
+    setPositionBuffer(gl, renderer.shaderProgram);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "iResolution"), state.width, state.height);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMin"), state.xmin, state.ymin);
     gl.uniform2f(gl.getUniformLocation(renderer.shaderProgram, "xyMax"), state.xmax, state.ymax);
@@ -203,7 +188,7 @@ async function drawScene(state) {
         // render image gradient
         gl.useProgram(antiAliaser.imgGradProgram);
         gl.bindFramebuffer(gl.FRAMEBUFFER, antiAliaser.imgGradFramebuffer);
-        setPositionBuffer(antiAliaser.imgGradProgram);
+        setPositionBuffer(gl, antiAliaser.imgGradProgram);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
         gl.uniform1i(gl.getUniformLocation(antiAliaser.imgGradProgram, "iChannel0"), 0);
@@ -212,7 +197,7 @@ async function drawScene(state) {
         // render anti-aliasing
         gl.useProgram(antiAliaser.aaProgram);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        setPositionBuffer(antiAliaser.aaProgram);
+        setPositionBuffer(gl, antiAliaser.aaProgram);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, antiAliaser.renderTexture);
         gl.uniform1i(gl.getUniformLocation(antiAliaser.aaProgram, "iChannel0"), 0);
