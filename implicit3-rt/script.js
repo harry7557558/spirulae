@@ -219,6 +219,7 @@ function initDenoiserModel(params) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
             vec3 c = texelFetch(uSrc, coord, 0).xyz;
             c = exp(c) - 1.0;
+            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
             fragColor = vec4(c.xyz, 1.0);
         }`);
 
@@ -249,6 +250,11 @@ function initDenoiserModel(params) {
         Dnn.add(gl, layers.x3, layers.c42, layers.x4);
         convo.forward(gl, layers.x4, layers.co);
 
+        // var pixel = new Float32Array(4);
+        // gl.bindFramebuffer(gl.FRAMEBUFFER, layers.c42.imgs[0].framebuffer);
+        // gl.readPixels(64, 64, 1, 1, gl.RGBA, gl.FLOAT, pixel);
+        // console.log(pixel);
+
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.useProgram(programOutput);
@@ -265,37 +271,39 @@ function initDenoiser() {
     let loadedFiles = 0;
     const files = {};
 
-    function onModelLoad(filename, content) {
+    function onModelLoad(key, filename, content) {
         loadedFiles++;
-        files[filename.split('.')[1]] =
-            /\.json$/.test(filename) ?
+        files[key] = /\.json/.test(filename) ?
             JSON.parse(content):
             new Int16Array(content);
         if (loadedFiles < 2)
             return;
+        console.log(files);
         var params = Dnn.decodeDnnParameters(files.bin, files.json);
         initDenoiserModel(params);
     }
 
-    function getFile(filename) {
+    function getFile(key, filename) {
       fetch(filename)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Failed to fetch ${filename}`);
             }
-            return /\.json$/.test(filename) ?
+            return /\.json/.test(filename) ?
                 response.text() :
                 response.arrayBuffer();
         })
         .then(content => {
-            onModelLoad(filename, content);
+            onModelLoad(key, filename, content);
         })
         .catch(error => {
             console.error(error);
         });
     }
-    getFile('denoise_1_index.json');
-    getFile('denoise_1_params.bin');
+
+    var nocache = "?nocache=" + Math.floor(Date.now() / 3600000);
+    getFile('json', 'denoise_1_index.json'+nocache);
+    getFile('bin', 'denoise_1_params.bin'+nocache);
 }
 
 

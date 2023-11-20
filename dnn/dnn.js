@@ -86,7 +86,8 @@ Dnn.Conv2d311 = function(
                     for (var a = 0; a < 4; a++) {
                         for (var b = 0; b < 4; b++) {
                             var mi = (i+b)*n_in+(j+a);
-                            mat[4*a+b] = this.weights[9*mi+(wi*3+wj)];
+                            mat[4*a+b] = (i+b >= n_out || j+a >= n_in) ?
+                                0.0 : this.weights[9*mi+(wi*3+wj)];
                         }
                     }
                     matsj.push(mat);
