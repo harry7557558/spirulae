@@ -3,7 +3,6 @@
 var renderer = {
     canvas: null,
     gl: null,
-    vsSource: "",
     renderSource: "",
     copySource: "",
     postSource: "",
@@ -13,8 +12,10 @@ var renderer = {
     postProgram: null,
     renderTarget: null,
     renderTargetAccum: null,
+    denoiseTarget: null,
     iNFrame: 1,
     timerExt: null,
+    denoiser: null,  // function(textures, framebuffer)
 };
 
 var trainingData = {
@@ -35,21 +36,6 @@ async function drawScene(state, transformMatrix, lightDir) {
     }
     else renderer.canvas.style.cursor = "default";
     let gl = renderer.gl;
-
-    // set position buffer for vertex shader
-    function setPositionBuffer(program) {
-        var vpLocation = gl.getAttribLocation(program, "vertexPosition");
-        const numComponents = 2; // pull out 2 values per iteration
-        const type = gl.FLOAT; // the data in the buffer is 32bit floats
-        const normalize = false; // don't normalize
-        const stride = 0; // how many bytes to get from one set of values to the next
-        const offset = 0; // how many bytes inside the buffer to start from
-        gl.bindBuffer(gl.ARRAY_BUFFER, renderer.positionBuffer);
-        gl.vertexAttribPointer(
-            vpLocation,
-            numComponents, type, normalize, stride, offset);
-        gl.enableVertexAttribArray(vpLocation);
-    }
 
     // render to target + timer
     var timerQueries = [];
@@ -84,7 +70,7 @@ async function drawScene(state, transformMatrix, lightDir) {
             gl.disable(gl.BLEND);
         gl.useProgram(renderer.copyProgram);
         gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAccum.framebuffer);
-        setPositionBuffer(renderer.copyProgram);
+        setPositionBuffer(gl, renderer.copyProgram);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
         gl.uniform1i(gl.getUniformLocation(renderer.copyProgram, "iChannel0"), 0);
@@ -97,7 +83,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // render image
     gl.useProgram(renderer.renderProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
-    setPositionBuffer(renderer.renderProgram);
+    setPositionBuffer(gl, renderer.renderProgram);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "ZERO"), 0.0);
     // gl.activeTexture(gl.TEXTURE0);
     // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
@@ -132,18 +118,35 @@ async function drawScene(state, transformMatrix, lightDir) {
 
     // post processing
     gl.useProgram(renderer.postProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    setPositionBuffer(renderer.postProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,
+        renderer.denoiser ? renderer.denoiseTarget.framebuffer : null);
+    setPositionBuffer(gl, renderer.postProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, renderer.renderTargetAccum.texture);
     gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel0"), 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.texture);
     gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel1"), 1);
+    gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "denoise"),
+        renderer.denoiser !== null);
     renderPass();
 
     if (!countIndividualTime && timer != null)
         gl.endQuery(timer.TIME_ELAPSED_EXT);
+
+    if (renderer.denoiser) {
+        gl.bindTexture(gl.TEXTURE_2D, renderer.denoiseTarget.sampler);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        renderer.denoiser({
+            // 'pixel': renderer.denoiseTarget.texture,
+            'pixel': 'framebuffer',
+            'albedo': null,
+            'normal': null },
+            //renderer.denoiseTarget.framebuffer
+            null
+        );
+    }
 
     // check timer
     function checkTime() {
@@ -300,6 +303,10 @@ function updateBuffers() {
     var oldRenderTargetAccum = renderer.renderTargetAccum;
     renderer.renderTargetAccum = createRenderTarget(gl, state.width, state.height, false, true, true);
     if (oldRenderTargetAccum) destroyRenderTarget(gl, oldRenderTargetAccum);
+
+    var oldDenoiseTarget = renderer.denoiseTarget;
+    renderer.denoiseTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldDenoiseTarget) destroyRenderTarget(gl, oldDenoiseTarget);
 
     state.renderNeeded = true;
 }
@@ -516,13 +523,13 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.postProgram);
             renderer.postProgram = null;
         }
-        renderer.renderProgram = createShaderProgram(gl, renderer.vsSource, renderSource);
-        renderer.postProgram = createShaderProgram(gl, renderer.vsSource, postSource);
+        renderer.renderProgram = createShaderProgram(gl, null, renderSource);
+        renderer.postProgram = createShaderProgram(gl, null, postSource);
         prevCode.renderSource = renderSource;
     }
 
     if (!renderer.copyProgram) {
-        renderer.copyProgram = createShaderProgram(gl, renderer.vsSource, renderer.copySource);
+        renderer.copyProgram = createShaderProgram(gl, null, renderer.copySource);
     }
 
     console.timeEnd("compile shader");
