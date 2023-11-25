@@ -1,11 +1,15 @@
 "use strict";
 
-function calcTransformMatrix(state, inverse = true) {
+function calcTransformMatrix(state, inverse = true,
+        screenCenter = { x: 0.5, y: 0.5 }) {
     var sc = (state.height / Math.min(state.width, state.height)) / state.scale;
     var transformMatrix = mat4Perspective(
         0.25 * Math.PI,
         canvas.width / canvas.height,
         0.5 * sc, 10.0 * sc);
+    var translateMatrix = mat4Translate(mat4(1.0),
+        [2.0*screenCenter.x-1.0, 2.0*screenCenter.y-1.0, 0.0]);
+    transformMatrix = mat4Mul(translateMatrix, transformMatrix);
     transformMatrix = mat4Translate(transformMatrix, [0, 0, -3.0 * sc]);
     transformMatrix = mat4Rotate(transformMatrix, state.rx, [1, 0, 0]);
     transformMatrix = mat4Rotate(transformMatrix, state.rz, [0, 0, 1]);

@@ -9,7 +9,6 @@ uniform vec2 iResolution;
 uniform float iNFrame;
 
 uniform mat4 transformMatrix;
-uniform vec2 screenCenter;
 uniform float uScale;
 uniform vec3 uClipBox;
 
@@ -18,6 +17,12 @@ uniform float rScale2;
 
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
+
+uniform int uOutput;
+#define OUTPUT_RADIANCE 0
+#define OUTPUT_ALBEDO 1
+#define OUTPUT_WORLD_NORMAL 2
+#define OUTPUT_WORLD_POSITION 3
 
 // Random number generator
 float seed0, seed;
@@ -92,8 +97,6 @@ vec3 worldToScreen(vec3 p) {
 }
 
 
-// function and its gradient in world space
-
 {%FUN%}
 #line 97
 
@@ -152,10 +155,6 @@ vec3 funGradC(vec3 p, out bool isBoundary) {
 }
 
 // function and its gradient in screen space
-
-float funS(vec3 p) {
-    return fun(screenToWorld(p));
-}
 
 
 #define STEP_SIZE (({%STEP_SIZE%})*(0.5))
@@ -481,9 +480,9 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
     for (int iter = int(ZERO); iter < 32; iter++) {
         if (iter != 0) ro += 1e-4*length(ro) * rd;
-        vec3 n, min_n;
+        vec3 n, min_n = vec3(0);
         float t, min_t = 1e6;
-        vec3 min_ro = ro, min_rd = rd;
+        vec3 min_rd = rd, min_ro = ro+1e6*rd;
         int material = MAT_BACKGROUND;
 
         // plane
@@ -562,8 +561,16 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             m_col *= pow(getAbsorbColor(), vec3(absorb));
         }
 
+        // buffer
+        if (uOutput == OUTPUT_WORLD_NORMAL)
+            return isnan(dot(min_n,vec3(1))) ? vec3(0) : min_n;
+        if (uOutput == OUTPUT_WORLD_POSITION)
+            return min_ro;
+
         // update ray
         if (material == MAT_BACKGROUND) {
+            if (uOutput == OUTPUT_ALBEDO)
+                return vec3(0);
             float soft = pow(rLightSoftness, 4.0);
             // https://www.desmos.com/3d/750cc71ae5
             float k1 = 1.0 / soft;
@@ -575,7 +582,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             return m_col * col + t_col;
         }
         if (isnan(dot(min_n, col))) {
-            return m_col * vec3(0, 1, 0) + t_col;  // this glows, should fix it
+            return m_col * vec3(0,1,0) + t_col;  // this glows, should fix it
         }
         ro = min_ro, rd = min_rd;
         min_n = dot(rd,min_n) < 0. ? min_n : -min_n;
@@ -606,6 +613,9 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             }
         }
         prev_col = col;
+
+        if (uOutput == OUTPUT_ALBEDO)
+            return m_col;
     }
     // return m_col + t_col;
     return t_col;
@@ -620,7 +630,8 @@ void main(void) {
         seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
         seed = round(65537.*seed0);
 
-        vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
+        // vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
+        vec3 ro_s = vec3(vXy,0);
         ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
         vec3 rd_s = vec3(0,0,1);
         vec3 ro = screenToWorld(ro_s);

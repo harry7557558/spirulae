@@ -15,6 +15,7 @@ var renderer = {
     denoiseTarget: null,
     iNFrame: 1,
     timerExt: null,
+    uOutput: 0,
     denoiser: null,  // function(textures, framebuffer)
 };
 
@@ -90,6 +91,7 @@ async function drawScene(state, transformMatrix, lightDir) {
     // gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "iChannel0"), 0);
     gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "iResolution"),
         state.width, state.height);
+    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "uOutput"), renderer.uOutput);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iNFrame"), renderer.iNFrame);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iSeed"), Math.random());
     gl.uniformMatrix4fv(
@@ -97,8 +99,6 @@ async function drawScene(state, transformMatrix, lightDir) {
         false,
         mat4ToFloat32Array(transformMatrix));
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iTime"), state.iTime);
-    gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "screenCenter"),
-        state.screenCenter.x, state.screenCenter.y);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "uScale"), state.scale);
     gl.uniform3f(gl.getUniformLocation(renderer.renderProgram, "uClipBox"),
         state.clipSize[0], state.clipSize[1], state.clipSize[2]);
@@ -353,7 +353,7 @@ function initRenderer() {
             try {
                 localStorage.setItem(state.name, JSON.stringify(state));
             } catch (e) { console.error(e); }
-            var transformMatrix = calcTransformMatrix(state);
+            var transformMatrix = calcTransformMatrix(state, true, screenCenter);
             var lightDir = calcLightDirection(
                 [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
                 state.rTheta, state.rPhi);
@@ -559,7 +559,9 @@ function recordTrainingData(spp) {
             setTimeout(recordTrainingData, 100);
             return;
         }
-        console.log(trainingData.spp);
+        console.log(renderer.uOutput == 0 ?
+            trainingData.spp + " spp" :
+            { 1: 'albedo', 2: 'normal', 3: 'position' }[renderer.uOutput]);
 
         let gl = renderer.gl;
         var npixels = state.width*state.height;
@@ -583,9 +585,24 @@ function recordTrainingData(spp) {
         }
         trainingData.frames = [pixels].concat(trainingData.frames);
 
-        if (trainingData.spp == 1) {
+        if (renderer.uOutput == 3) {
             trainingData.state = "finished";
-            trainingData.spp = 0;
+            renderer.uOutput = 0;
+            setTimeout(recordTrainingData, 1);
+            return;
+        }
+        if (renderer.uOutput != 0) {
+            renderer.uOutput += 1;
+            state.iFrame = 0;
+            setTimeout(recordTrainingData, 1);
+            return;
+        }
+        if (renderer.uOutput == 0 && trainingData.spp == 1) {
+            trainingData.spp = 1;
+            state.sSpp = 1;
+            renderer.iNFrame = 1;
+            renderer.uOutput = 1;
+            state.iFrame = 0;
             setTimeout(recordTrainingData, 1);
             return;
         }
@@ -594,7 +611,7 @@ function recordTrainingData(spp) {
         renderer.iNFrame = Math.min(state.sSpp, trainingData.iNFrame);
         state.sSpp /= renderer.iNFrame;
         state.iFrame = 0;
-        setTimeout(recordTrainingData, 100);
+        setTimeout(recordTrainingData, 1);
     }
 
     else if (trainingData.state == "finished") {
@@ -607,8 +624,12 @@ function recordTrainingData(spp) {
         let n = trainingData.frames.length;
         let w = trainingData.width, h = trainingData.height;
         let totalLength = 3*w*h*n;
-        let concatenatedArray = new Float32Array(totalLength);
-        let offset = 0;
+        let concatenatedArray = new Float32Array(totalLength+16);
+        let mat = calcTransformMatrix(state, false, state.screenCenter);
+        for (var i = 0; i < 4; i++)
+            for (var j = 0; j < 4; j++)
+                concatenatedArray[4*i+j] = mat[j][i];
+        let offset = 16;
         trainingData.frames.forEach((frame) => {
           concatenatedArray.set(frame, offset);
           offset += frame.length;
