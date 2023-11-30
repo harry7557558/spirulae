@@ -517,7 +517,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             float r = randf();
             float tsc = -log(r) / A_sca;
             vec3 colmid = 0.5*(prev_col+col);
-            if (tsc < min_t) {
+            if (tsc < min_t && uOutput == OUTPUT_RADIANCE) {
                 min_t = tsc, min_n = vec3(0);
                 min_ro = ro+rd*tsc, min_rd = rd;
                 colmid = mix(prev_col, col, tsc/min_t);
@@ -547,7 +547,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             float k_sca = k0_sca * rd.z;
             // scattering
             float r = randf();
-            if (r > exp(-A_sca/k_sca) || k_sca < 0.0) {
+            if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
+                && uOutput == OUTPUT_RADIANCE) {
                 float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
                 if (tsc < min_t) {
                     min_t = tsc, min_n = vec3(0);
@@ -566,11 +567,12 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             return isnan(dot(min_n,vec3(1))) ? vec3(0) : min_n;
         if (uOutput == OUTPUT_WORLD_POSITION)
             return min_ro;
+        if (uOutput == OUTPUT_ALBEDO)
+            return material == MAT_BACKGROUND ?
+                vec3(0) : m_col * col;
 
         // update ray
         if (material == MAT_BACKGROUND) {
-            if (uOutput == OUTPUT_ALBEDO)
-                return vec3(0);
             float soft = pow(rLightSoftness, 4.0);
             // https://www.desmos.com/3d/750cc71ae5
             float k1 = 1.0 / soft;
@@ -613,9 +615,6 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             }
         }
         prev_col = col;
-
-        if (uOutput == OUTPUT_ALBEDO)
-            return m_col;
     }
     // return m_col + t_col;
     return t_col;
