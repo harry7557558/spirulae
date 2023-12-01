@@ -16,6 +16,10 @@ var renderer = {
     iNFrame: 1,
     timerExt: null,
     uOutput: 0,
+    requireAlbedo: false,
+    renderTargetAlbedo: null,
+    requireNormal: false,
+    renderTargetNormal: null,
     denoiser: null,  // function(textures, framebuffer)
 };
 
@@ -115,6 +119,22 @@ async function drawScene(state, transformMatrix, lightDir) {
     // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
     // gl.copyTexImage2D(gl.TEXTURE_2D,
     //     0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+
+    // auxiliary buffers
+    if (state.iFrame == 0) {
+        if (renderer.requireAlbedo) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAlbedo.framebuffer);
+            setPositionBuffer(gl, renderer.renderProgram);
+            gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "uOutput"), 4);
+            renderPass();
+        }
+        if (renderer.requireNormal) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetNormal.framebuffer);
+            setPositionBuffer(gl, renderer.renderProgram);
+            gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "uOutput"), 5);
+            renderPass();
+        }
+    }
 
     // post processing
     gl.useProgram(renderer.postProgram);
@@ -305,6 +325,14 @@ function updateBuffers() {
     var oldRenderTargetAccum = renderer.renderTargetAccum;
     renderer.renderTargetAccum = createRenderTarget(gl, state.width, state.height, false, true, true);
     if (oldRenderTargetAccum) destroyRenderTarget(gl, oldRenderTargetAccum);
+
+    var oldRenderTargetAlbedo = renderer.renderTargetAlbedo;
+    renderer.renderTargetAlbedo = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldRenderTargetAlbedo) destroyRenderTarget(gl, oldRenderTargetAlbedo);
+
+    var oldRenderTargetNormal = renderer.renderTargetNormal;
+    renderer.renderTargetNormal = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldRenderTargetNormal) destroyRenderTarget(gl, oldRenderTargetNormal);
 
     var oldDenoiseTarget = renderer.denoiseTarget;
     renderer.denoiseTarget = createRenderTarget(gl, state.width, state.height, false, true, true);

@@ -52,7 +52,7 @@
                 <option value="0.01" selected>medium</option>
                 <option value="0.004">high</option>
                 <option value="0.001">ultra high</option>
-            </select>quality</span>&ensp;
+            </select>precision</span>&ensp;
         <span style="display:none" title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <span><select id="select-spp" title="Maximum samples per pixel">
                 <option value="16">2⁴</option>
@@ -79,6 +79,13 @@
         <span title="Use y-up coordinate system convension"><input type="checkbox"
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
         <br />
+        <span><select id="select-denoise">
+            <option value="null" selected>no</option>
+            <option value="runet1an">ResUNet [an]</option>
+            <option value="runet1">ResUNet</option>
+            <option value="unet1">UNet</option>
+            <option value="resnet1">ResNet</option>
+        </select>denoise</span>&ensp;
         <hr />
         <span title="Surface color mode"><select id="select-color">
                 <option value="0">default</option>
@@ -87,11 +94,6 @@
             </select>color</span>&ensp;
         <!-- <span title="Glass instead of opaque material"><input type="checkbox"
                 id="checkbox-transparency" checked />transparency</span> -->
-        <span><select id="select-denoise">
-            <option value="null" selected>no</option>
-            <option value="unet1">UNet 1</option>
-            <option value="resnet1">ResNet 1</option>
-        </select>denoise</span>&ensp;
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"

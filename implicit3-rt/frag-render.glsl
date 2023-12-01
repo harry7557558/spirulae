@@ -23,6 +23,8 @@ uniform int uOutput;
 #define OUTPUT_ALBEDO 1
 #define OUTPUT_WORLD_NORMAL 2
 #define OUTPUT_WORLD_POSITION 3
+#define OUTPUT_DENOISE_ALBEDO 4
+#define OUTPUT_DENOISE_NORMAL 5
 
 // Random number generator
 float seed0, seed;
@@ -563,11 +565,13 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         }
 
         // buffer
-        if (uOutput == OUTPUT_WORLD_NORMAL)
+        if (uOutput == OUTPUT_WORLD_NORMAL ||
+            uOutput == OUTPUT_DENOISE_NORMAL)
             return isnan(dot(min_n,vec3(1))) ? vec3(0) : min_n;
         if (uOutput == OUTPUT_WORLD_POSITION)
             return min_ro;
-        if (uOutput == OUTPUT_ALBEDO)
+        if (uOutput == OUTPUT_ALBEDO ||
+            uOutput == OUTPUT_DENOISE_ALBEDO)
             return material == MAT_BACKGROUND ?
                 vec3(0) : m_col * col;
 
@@ -636,8 +640,17 @@ void main(void) {
         vec3 ro = screenToWorld(ro_s);
         vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
         vec3 col = mainRender(ro, rd);
-        if (!isnan(dot(col, vec3(1))))
-            totcol += vec4(col, 1);
+        if (!isnan(dot(col, vec3(1)))) {
+            if (uOutput == OUTPUT_DENOISE_ALBEDO)
+                totcol = vec4(col, length(col));
+            else if (uOutput == OUTPUT_DENOISE_NORMAL) {
+                vec3 ru = normalize(screenToWorld(ro_s+vec3(1,0,0))-ro);
+                vec3 rv = normalize(screenToWorld(ro_s+vec3(0,1,0))-ro);
+                float u = dot(col, ru), v = dot(col, rv), w = dot(col, rd);
+                totcol = vec4(u, v, w, u*u+v*v);
+            }
+            else totcol += vec4(col, 1);
+        }
     }
     fragColor = totcol;
 }

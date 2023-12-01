@@ -102,7 +102,7 @@ function initDenoiserModel_resnet1(params) {
         // console.log(pixel);
 
         gl.disable(gl.BLEND);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.useProgram(programOutput);
         setPositionBuffer(gl, programOutput);
         gl.activeTexture(gl.TEXTURE0);
@@ -114,17 +114,9 @@ function initDenoiserModel_resnet1(params) {
 }
 
 
-function initDenoiserModel_unet1(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_unet1(params);
-        }, 1);
-        return;
-    }
+function UNet1(nin, n0, n1, n2, n3, params) {
     let gl = renderer.gl;
-
-    let n0 = 16, n1 = 24, n2 = 48, n3 = 64;
-    let econv0a = new Dnn.Conv2d311(3, n0, params['econv0a.weight'], params['econv0a.bias']);
+    let econv0a = new Dnn.Conv2d311(nin, n0, params['econv0a.weight'], params['econv0a.bias']);
     let econv0b = new Dnn.Conv2d311(n0, n0, params['econv0b.weight'], params['econv0b.bias']);
     let econv1 = new Dnn.Conv2d311(n0, n1, params['econv1.weight'], params['econv1.bias']);
     let econv2 = new Dnn.Conv2d311(n1, n2, params['econv2.weight'], params['econv2.bias']);
@@ -139,16 +131,16 @@ function initDenoiserModel_unet1(params) {
     let dconv0 = new Dnn.Conv2d311(n0, 3, params['dconv0.weight'], params['dconv0.bias']);
 
     let layers = {};
-
     function updateLayer(key, n, scale) {
         var w = Math.ceil(state.width/16)*16;
         var h = Math.ceil(state.height/16)*16;
         var oldLayer = layers[key];
         layers[key] = new Dnn.CNNLayer(gl, n, w/scale, h/scale);
         if (oldLayer) Dnn.destroyCnnLayer(gl, oldLayer);
-    }
-    function updateLayers() {
-        updateLayer("input", 3, 1);
+    };
+    this.layers = layers;
+    this.updateLayers = function() {
+        updateLayer("input", nin, 1);
         updateLayer("e0a", n0, 1);
         updateLayer("e0ar", n0, 1);
         updateLayer("e0b", n0, 1);
@@ -175,33 +167,9 @@ function initDenoiserModel_unet1(params) {
         updateLayer("d0br", n0, 1);
         updateLayer("output", 3, 1);
     }
-    window.addEventListener("resize", function (event) {
-        setTimeout(updateLayers, 20);
-    });
-    updateLayers();
+    this.updateLayers();
 
-    let programOutput = createShaderProgram(gl, null,
-        `#version 300 es
-        precision highp float;
-        
-        uniform sampler2D uSrc;
-        
-        out vec4 fragColor;
-        void main() {
-            ivec2 coord = ivec2(gl_FragCoord.xy);
-            vec3 c = texelFetch(uSrc, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
-            fragColor = vec4(c.xyz, 1.0);
-        }`);
-
-    renderer.denoiser = function(inputs, framebuffer) {
-        if (inputs.pixel !== 'framebuffer')
-            throw new Error("Unsupported NN input");
-        gl.bindTexture(gl.TEXTURE_2D, layers.input.imgs[0].texture);
-        gl.copyTexImage2D(gl.TEXTURE_2D,
-            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
-
+    this.forward = function() {
         econv0a.forward(gl, layers.input, layers.e0a);
         Dnn.relu(gl, layers.e0a, layers.e0ar);
         econv0b.forward(gl, layers.e0ar, layers.e0b);
@@ -227,22 +195,172 @@ function initDenoiserModel_unet1(params) {
         dconv0b.forward(gl, Dnn.shallowConcat(layers.d0ar, layers.e0b), layers.d0b);
         Dnn.relu(gl, layers.d0b, layers.d0br);
         dconv0.forward(gl, layers.d0br, layers.output);
+    };
+}
 
-        // var pixel = new Float32Array(4);
-        // gl.bindFramebuffer(gl.FRAMEBUFFER, layers.e0a.imgs[0].framebuffer);
-        // gl.readPixels(64, 64, 1, 1, gl.RGBA, gl.FLOAT, pixel);
-        // console.log(pixel);
 
+function initDenoiserModel_unet1(params) {
+    if (!renderer.gl) {
+        setTimeout(function() {
+            initDenoiserModel_unet1(params);
+        }, 1);
+        return;
+    }
+    let gl = renderer.gl;
+
+    let unet = new UNet1(3, 16, 24, 48, 64, params);
+    window.addEventListener("resize", function (event) {
+        setTimeout(unet.updateLayers, 20);
+    });
+
+    let programOutput = createShaderProgram(gl, null,
+        `#version 300 es
+        precision highp float;
+        
+        uniform sampler2D uSrc;
+        
+        out vec4 fragColor;
+        void main() {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+            vec3 c = texelFetch(uSrc, coord, 0).xyz;
+            c = exp(c) - 1.0;
+            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            fragColor = vec4(c.xyz, 1.0);
+        }`);
+
+    renderer.denoiser = function(inputs, framebuffer) {
+        if (inputs.pixel !== 'framebuffer')
+            throw new Error("Unsupported NN input");
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[0].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        unet.forward();
         gl.disable(gl.BLEND);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.useProgram(programOutput);
         setPositionBuffer(gl, programOutput);
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, layers.output.imgs[0].texture);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.output.imgs[0].texture);
         gl.uniform1i(gl.getUniformLocation(programOutput, "uSrc"), 0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     useDenoiser.denoisers['unet1'] = renderer.denoiser;
+}
+
+
+function initDenoiserModel_runet1(params) {
+    if (!renderer.gl) {
+        setTimeout(function() {
+            initDenoiserModel_runet1(params);
+        }, 1);
+        return;
+    }
+    let gl = renderer.gl;
+
+    let unet = new UNet1(3, 12, 16, 24, 32, params);
+    window.addEventListener("resize", function (event) {
+        setTimeout(unet.updateLayers, 20);
+    });
+
+    let programOutput = createShaderProgram(gl, null,
+        `#version 300 es
+        precision highp float;
+        
+        uniform sampler2D uSrc;
+        uniform sampler2D uSrcRes;
+        
+        out vec4 fragColor;
+        void main() {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+            vec3 c = texelFetch(uSrc, coord, 0).xyz +
+                texelFetch(uSrcRes, coord, 0).xyz;
+            c = exp(c) - 1.0;
+            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            fragColor = vec4(c.xyz, 1.0);
+        }`);
+
+    renderer.denoiser = function(inputs, framebuffer) {
+        if (inputs.pixel !== 'framebuffer')
+            throw new Error("Unsupported NN input");
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[0].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        unet.forward();
+        gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.useProgram(programOutput);
+        setPositionBuffer(gl, programOutput);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[0].texture);
+        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrc"), 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.output.imgs[0].texture);
+        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrcRes"), 1);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    useDenoiser.denoisers['runet1'] = renderer.denoiser;
+}
+
+
+function initDenoiserModel_runet1an(params) {
+    if (!renderer.gl) {
+        setTimeout(function() {
+            initDenoiserModel_runet1an(params);
+        }, 1);
+        return;
+    }
+    let gl = renderer.gl;
+
+    let unet = new UNet1(11, 12, 16, 24, 32, params);
+    window.addEventListener("resize", function (event) {
+        setTimeout(unet.updateLayers, 20);
+    });
+
+    let programOutput = createShaderProgram(gl, null,
+        `#version 300 es
+        precision highp float;
+        
+        uniform sampler2D uSrc;
+        uniform sampler2D uSrcRes;
+        
+        out vec4 fragColor;
+        void main() {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+            vec3 c = texelFetch(uSrc, coord, 0).xyz +
+                texelFetch(uSrcRes, coord, 0).xyz;
+            c = exp(c) - 1.0;
+            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            fragColor = vec4(c.xyz, 1.0);
+        }`);
+
+    renderer.denoiser = function(inputs, framebuffer) {
+        if (inputs.pixel !== 'framebuffer')
+            throw new Error("Unsupported NN input");
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[2].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAlbedo.framebuffer);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[0].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetNormal.framebuffer);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[1].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        unet.forward();
+        gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.useProgram(programOutput);
+        setPositionBuffer(gl, programOutput);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.input.imgs[2].texture);
+        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrc"), 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, unet.layers.output.imgs[0].texture);
+        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrcRes"), 1);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    useDenoiser.denoisers['runet1an'] = renderer.denoiser;
 }
 
 
@@ -251,11 +369,17 @@ function useDenoiser(model_id) {
 
     if (!useDenoiser.hasOwnProperty('denoisers'))
         useDenoiser.denoisers = {};
+    renderer.requireAlbedo = false;
+    renderer.requireNormal = false;
     if (model_id == null || model_id == "null") {
         renderer.denoiser = null;
         state.renderNeeded = true;
         return;
     }
+    if (/an$/.test(model_id) || /a$/.test(model_id))
+        renderer.requireAlbedo = true;
+    if (/n$/.test(model_id))
+        renderer.requireNormal = true;
     if (useDenoiser.denoisers.hasOwnProperty(model_id)) {
         renderer.denoiser = useDenoiser.denoisers[model_id];
         state.renderNeeded = true;
