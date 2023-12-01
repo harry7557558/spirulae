@@ -127,10 +127,17 @@ document.body.onload = function (event) {
         new UniformSlider("rLightAmbient", "slider-light-ambient", 0, 1, 0.0),
         new UniformSlider("rLightSoftness", "slider-light-softness", 0.001, 1, 0.8),
         new UniformSlider("rLightHardness", "slider-light-hardness", 0, 1, 0.0),
+        new GraphingParameter("sDenoise", "select-denoise"),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
     UpdateFunctionInputConfig.warnNaN = true;
+
+    // denoise
+    let selectDenoise = document.getElementById("select-denoise");
+    useDenoiser(selectDenoise.value);
+    selectDenoise.addEventListener("input",
+        () => useDenoiser(selectDenoise.value));
 
     // init viewport
     resetState({
@@ -141,168 +148,14 @@ document.body.onload = function (event) {
     }, false);
 
     // main
-    initDenoiser();
     initMain([
         "frag-render.glsl",
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
         "../shaders/dnn-conv2d311.glsl",
+        "../shaders/dnn-convtranspose2d421.glsl",
     ]);
 };
-
-
-// denoise
-
-function initDenoiserModel(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel(params);
-        }, 1);
-        return;
-    }
-    let gl = renderer.gl;
-
-    let convi = new Dnn.Conv2d311(3, 16, params['convi.weight'], params['convi.bias']);
-    let conv11 = new Dnn.Conv2d311(16, 16, params['conv11.weight'], params['conv11.bias']);
-    let conv12 = new Dnn.Conv2d311(16, 16, params['conv12.weight'], params['conv12.bias']);
-    let conv21 = new Dnn.Conv2d311(16, 16, params['conv21.weight'], params['conv21.bias']);
-    let conv22 = new Dnn.Conv2d311(16, 16, params['conv22.weight'], params['conv22.bias']);
-    let conv31 = new Dnn.Conv2d311(16, 16, params['conv31.weight'], params['conv31.bias']);
-    let conv32 = new Dnn.Conv2d311(16, 16, params['conv32.weight'], params['conv32.bias']);
-    let conv41 = new Dnn.Conv2d311(16, 16, params['conv41.weight'], params['conv41.bias']);
-    let conv42 = new Dnn.Conv2d311(16, 16, params['conv42.weight'], params['conv42.bias']);
-    let convo = new Dnn.Conv2d311(16, 3, params['convo.weight'], params['convo.bias']);
-
-    let layers = {};
-
-    function updateLayer(key, n) {
-        var oldLayer = layers[key];
-        layers[key] = new Dnn.CNNLayer(gl, n, state.width, state.height);
-        if (oldLayer) Dnn.destroyCnnLayer(gl, oldLayer);
-    }
-    function updateLayers() {
-        updateLayer("input", 3);
-        updateLayer("ci", 16);
-        updateLayer("xi", 16);
-        updateLayer("c11", 16);
-        updateLayer("r11", 16);
-        updateLayer("c12", 16);
-        updateLayer("x1", 16);
-        updateLayer("c21", 16);
-        updateLayer("r21", 16);
-        updateLayer("c22", 16);
-        updateLayer("x2", 16);
-        updateLayer("c31", 16);
-        updateLayer("r31", 16);
-        updateLayer("c32", 16);
-        updateLayer("x3", 16);
-        updateLayer("c41", 16);
-        updateLayer("r41", 16);
-        updateLayer("c42", 16);
-        updateLayer("x4", 16);
-        updateLayer("co", 3);
-    }
-    window.addEventListener("resize", function (event) {
-        setTimeout(updateLayers, 20);
-    });
-    updateLayers();
-
-    let programOutput = createShaderProgram(gl, null,
-        `#version 300 es
-        precision highp float;
-        
-        uniform sampler2D uSrc;
-        
-        out vec4 fragColor;
-        void main() {
-            ivec2 coord = ivec2(gl_FragCoord.xy);
-            vec3 c = texelFetch(uSrc, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
-            fragColor = vec4(c.xyz, 1.0);
-        }`);
-
-    if (false) renderer.denoiser = function(inputs, framebuffer) {
-        if (inputs.pixel !== 'framebuffer')
-            throw new Error("Unsupported NN input");
-        gl.bindTexture(gl.TEXTURE_2D, layers.input.imgs[0].texture);
-        gl.copyTexImage2D(gl.TEXTURE_2D,
-            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
-
-        convi.forward(gl, layers.input, layers.ci);
-        Dnn.relu(gl, layers.ci, layers.xi);
-        conv11.forward(gl, layers.xi, layers.c11);
-        Dnn.relu(gl, layers.c11, layers.r11);
-        conv12.forward(gl, layers.r11, layers.c12);
-        Dnn.add(gl, layers.xi, layers.c12, layers.x1);
-        conv21.forward(gl, layers.x1, layers.c21);
-        Dnn.relu(gl, layers.c21, layers.r21);
-        conv22.forward(gl, layers.r21, layers.c22);
-        Dnn.add(gl, layers.x1, layers.c22, layers.x2);
-        conv31.forward(gl, layers.x2, layers.c31);
-        Dnn.relu(gl, layers.c31, layers.r31);
-        conv32.forward(gl, layers.r31, layers.c32);
-        Dnn.add(gl, layers.x2, layers.c32, layers.x3);
-        conv41.forward(gl, layers.x3, layers.c41);
-        Dnn.relu(gl, layers.c41, layers.r41);
-        conv42.forward(gl, layers.r41, layers.c42);
-        Dnn.add(gl, layers.x3, layers.c42, layers.x4);
-        convo.forward(gl, layers.x4, layers.co);
-
-        // var pixel = new Float32Array(4);
-        // gl.bindFramebuffer(gl.FRAMEBUFFER, layers.c42.imgs[0].framebuffer);
-        // gl.readPixels(64, 64, 1, 1, gl.RGBA, gl.FLOAT, pixel);
-        // console.log(pixel);
-
-        gl.disable(gl.BLEND);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.useProgram(programOutput);
-        setPositionBuffer(gl, programOutput);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, layers.co.imgs[0].texture);
-        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrc"), 0);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        
-    }
-}
-
-function initDenoiser() {
-    let loadedFiles = 0;
-    const files = {};
-
-    function onModelLoad(key, filename, content) {
-        loadedFiles++;
-        files[key] = /\.json/.test(filename) ?
-            JSON.parse(content):
-            new Int16Array(content);
-        if (loadedFiles < 2)
-            return;
-        var params = Dnn.decodeDnnParameters(files.bin, files.json);
-        initDenoiserModel(params);
-    }
-
-    function getFile(key, filename) {
-      fetch(filename)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Failed to fetch ${filename}`);
-            }
-            return /\.json/.test(filename) ?
-                response.text() :
-                response.arrayBuffer();
-        })
-        .then(content => {
-            onModelLoad(key, filename, content);
-        })
-        .catch(error => {
-            console.error(error);
-        });
-    }
-
-    var nocache = "?nocache=" + Math.floor(Date.now() / 3600000);
-    getFile('json', 'denoise_1_index.json'+nocache);
-    getFile('bin', 'denoise_1_params.bin'+nocache);
-}
 
 
 

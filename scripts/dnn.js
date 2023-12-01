@@ -12,8 +12,9 @@ let Dnn = {
 
 
 Dnn.decodeDnnParameters = function(params, info) {
-    if (info.dtype != 'int16')
-        throw new Error("Unsupported DNN parameter type");
+    if (info.dtype == 'int16') params = new Int16Array(params);
+    else if (info.dtype == 'int8') params = new Int8Array(params);
+    else throw new Error("Unsupported DNN parameter type");
     var res = {};
     for (var key in info.state_dict) {
         var param = info.state_dict[key];
@@ -136,6 +137,78 @@ Dnn.Conv2d311 = function(
 }
 
 
+Dnn.ConvTranspose2D421 = function(
+    n_in, n_out, weights, biases = []
+) {
+    if (weights.length != n_in*n_out*16)
+        throw new Error("Incorrect weight size");
+    if (biases.length != n_out)
+        throw new Error("Incorrect bias size");
+    this.n_in = n_in;
+    this.n_out = n_out;
+    this.weights = weights;
+    this.biases = Array.from(biases);
+    while (this.biases.length % 4 != 0.0)
+        this.biases.push(0.0);
+
+    this.mats = [];
+    for (var i = 0; i < this.n_out; i += 4) {
+        var mats = [];
+        for (var j = 0; j < this.n_in; j += 4) {
+            var matsj = [];
+            for (var wi = 0; wi < 4; wi++) {
+                for (var wj = 0; wj < 4; wj++) {
+                    var mat = new Float32Array(16);
+                    for (var a = 0; a < 4; a++) {
+                        for (var b = 0; b < 4; b++) {
+                            var mi = (j+a)*n_out+(i+b);
+                            mat[4*a+b] = this.weights[16*mi+((3-wi)*4+(3-wj))];
+                        }
+                    }
+                    matsj.push(mat);
+                }
+            }
+            mats.push(matsj);
+        }
+        this.mats.push(mats);
+    }
+
+    this.forward = function(gl, buffer_in, buffer_out) {
+        if (buffer_in.n != this.n_in)
+            throw new Error("Incorrect input buffer length ("+buffer_in.n+","+this.n_in+")");
+        if (buffer_out.n != this.n_out)
+            throw new Error("Incorrect output buffer length ("+buffer_out.n+","+this.n_out+")");
+        if (!Dnn.programConvTranspose2d421) {
+            Dnn.programConvTranspose2d421 = createShaderProgram(gl, null,
+                getShaderSource('../shaders/dnn-convtranspose2d421.glsl'))
+        }
+        let program = Dnn.programConvTranspose2d421;
+        gl.useProgram(program);
+        gl.viewport(0, 0, buffer_out.w, buffer_out.h);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        for (var i = 0; i < this.n_out; i += 4) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+            gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            for (var j = 0; j < this.n_in; j += 4) {
+                for (var li = 0; li < 16; li++) {
+                    let uniformLocation = gl.getUniformLocation(program, 'w['+li+']');
+                    var mat = this.mats[i/4][j/4][li];
+                    gl.uniformMatrix4fv(uniformLocation, false, mat);
+                }
+                setPositionBuffer(gl, program);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor(j/4)].texture);
+                gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+        }
+        gl.disable(gl.BLEND);
+    }
+}
+
+
 Dnn.relu = function(gl, buffer_in, buffer_out) {
     if (buffer_in.n != buffer_out.n)
         throw new Error("Input and output buffer sizes don't match.");
@@ -207,3 +280,53 @@ Dnn.add = function(gl, buffer_in1, buffer_in2, buffer_out) {
     }
 }
 
+
+Dnn.maxpool2d2 = function(gl, buffer_in, buffer_out) {
+    if (buffer_in.n != buffer_out.n)
+        throw new Error("Input and output buffer sizes don't match.");
+    if (2*buffer_out.w != buffer_in.w || 2*buffer_out.h != buffer_in.h)
+        throw new Error("Input and output buffer dimensions don't match.");
+    if (!Dnn.programMaxPool2d2) {
+        Dnn.programMaxPool2d2 = createShaderProgram(gl, null,
+            `#version 300 es
+            precision highp float;
+            
+            uniform sampler2D uSrc;
+            out vec4 fragColor;
+            
+            void main() {
+                ivec2 xy = 2*ivec2(gl_FragCoord.xy);
+                vec4 c00 = texelFetch(uSrc, xy+ivec2(0,0), 0);
+                vec4 c10 = texelFetch(uSrc, xy+ivec2(1,0), 0);
+                vec4 c01 = texelFetch(uSrc, xy+ivec2(0,1), 0);
+                vec4 c11 = texelFetch(uSrc, xy+ivec2(1,1), 0);
+                fragColor = max(max(c00, c10), max(c01, c11));
+            }`);
+    }
+    let program = Dnn.programMaxPool2d2;
+    gl.useProgram(program);
+    gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+    gl.disable(gl.BLEND);
+    for (var i = 0; i < buffer_in.n; i += 4) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+        setPositionBuffer(gl, program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor(i/4)].texture);
+        gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+}
+
+
+Dnn.shallowConcat = function(buffer1, buffer2) {
+    if (buffer1.n % 4 != 0)
+        throw new Error("First channel size must be a multiple of 4.");
+    if (buffer1.w != buffer2.w || buffer1.h != buffer2.h)
+        throw new Error("Input and output buffer dimensions don't match.");
+    return {
+        n: buffer1.n + buffer2.n,
+        w: buffer1.w,
+        h: buffer1.h,
+        imgs: buffer1.imgs.concat(buffer2.imgs)
+    };
+}

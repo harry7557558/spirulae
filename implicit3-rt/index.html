@@ -87,6 +87,11 @@
             </select>color</span>&ensp;
         <!-- <span title="Glass instead of opaque material"><input type="checkbox"
                 id="checkbox-transparency" checked />transparency</span> -->
+        <span><select id="select-denoise">
+            <option value="null" selected>no</option>
+            <option value="unet1">UNet 1</option>
+            <option value="resnet1">ResNet 1</option>
+        </select>denoise</span>&ensp;
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
@@ -163,6 +168,7 @@
             loadScript("../scripts/dnn.js");
             loadScript("../scripts/latex.js");
             loadScript("script.js");
+            loadScript("denoise.js");
         })();
     </script>
 
