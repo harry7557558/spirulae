@@ -197,7 +197,15 @@ function createSampleTexture(gl, width, height, floatTexture=false) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     if (floatTexture) {
-        gl.texImage2D(gl.TEXTURE_2D, 0,
+        if (floatTexture == 'half') {
+            if (!renderer.halfFloatExt)
+                renderer.halfFloatExt = gl.getExtension("OES_texture_half_float");
+        }
+        if (floatTexture == 'half' && renderer.halfFloatExt)
+            gl.texImage2D(gl.TEXTURE_2D, 0,
+                gl.RGBA, width, height, 0, gl.RGBA,
+                renderer.halfFloatExt.HALF_FLOAT_OES, null);
+        else gl.texImage2D(gl.TEXTURE_2D, 0,
             gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);

@@ -1,5 +1,6 @@
 #version 300 es
-precision highp float;
+precision mediump float;
+precision mediump int;
 
 // 4x4 deconvolution, stride 2, zero padding 1
 

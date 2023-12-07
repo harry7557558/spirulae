@@ -49,10 +49,13 @@ svg:hover .axis-3d-active {
     position: fixed;
     top: 10px;
     right: 10px;
+    box-sizing: border-box;
     width: min-content;
     height: min-content;
     min-width: 240px;
     max-width: 80%;
+    max-height: 95%;
+    overflow-y: auto;
     background-color: rgba(14, 14, 101, 0.5);
     padding: 15px 20px;
     color: white;
