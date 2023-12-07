@@ -141,9 +141,10 @@ Dnn.Conv2d311 = function(
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
         for (var i = 0; i < this.n_out; i += 4) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
             gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
+            // weight texture
             if (useWeightTexture) for (var j = 0; j < this.n_in; j += 32) {
                 gl.activeTexture(gl.TEXTURE9);
                 gl.bindTexture(gl.TEXTURE_2D, this.weightTexture);
@@ -156,12 +157,13 @@ Dnn.Conv2d311 = function(
                         continue;
                     }
                     gl.activeTexture(gl['TEXTURE'+(dj/4)]);
-                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor((j+dj)/4)].texture);
+                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[(j+dj)/4].texture);
                     gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), dj/4);
                 }
                 setPositionBuffer(gl, program);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
+            // uniform
             else for (var j = 0; j < this.n_in; j += 4*maxChannel) {
                 gl.uniform1i(gl.getUniformLocation(program, "nChannel"),
                     Math.min(maxChannel, this.m_in-(j/4)));
@@ -177,7 +179,124 @@ Dnn.Conv2d311 = function(
                         gl.uniformMatrix4fv(uniformLocation, false, mat);
                     }
                     gl.activeTexture(gl['TEXTURE'+(dj/4)]);
-                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor((j+dj)/4)].texture);
+                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[(j+dj)/4].texture);
+                    gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), dj/4);
+                }
+                setPositionBuffer(gl, program);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+        }
+    }
+}
+
+
+Dnn.Conv2d110 = function(
+    n_in, n_out, weights, biases = []
+) {
+    if (weights.length != n_in*n_out)
+        throw new Error("Incorrect weight size");
+    if (biases.length != n_out)
+        throw new Error("Incorrect bias size");
+    this.n_in = n_in;
+    this.n_out = n_out;
+    this.weights = weights;
+    this.biases = Array.from(biases);
+    while (this.biases.length % 4 != 0.0)
+        this.biases.push(0.0);
+
+    this.mats = [];
+    this.m_in = Math.ceil(this.n_in/4);
+    this.m_out = Math.ceil(this.n_out/4);
+    this.weightTextureData = new Float32Array(16*this.m_in*this.m_out);
+    for (var i = 0; i < this.n_out; i += 4) {
+        var mats = [];
+        for (var j = 0; j < this.n_in; j += 4) {
+            var mat = new Float32Array(16);
+            for (var a = 0; a < 4; a++) {
+                for (var b = 0; b < 4; b++) {
+                    var mi = (i+b)*n_in+(j+a);
+                    mat[4*a+b] = (i+b >= n_out || j+a >= n_in) ?
+                        0.0 : this.weights[mi];
+                }
+            }
+            this.weightTextureData.set(mat, ((i/4)*this.m_in+(j/4))*16);
+            mats.push(mat);
+        }
+        this.mats.push(mats);
+    }
+
+    this.forward = function(gl, buffer_in, buffer_out) {
+        if (buffer_in.n != this.n_in)
+            throw new Error("Incorrect input buffer length ("+buffer_in.n+","+this.n_in+")");
+        if (buffer_out.n != this.n_out)
+            throw new Error("Incorrect output buffer length ("+buffer_out.n+","+this.n_out+")");
+        if (buffer_out.w != buffer_in.w || buffer_out.h != buffer_in.h)
+            throw new Error("Input and output buffer dimensions don't match.");
+
+        let maxChannel = Math.min(8, Math.floor(
+            gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) / 4 - 1));
+        maxChannel = 4;
+        if (!Dnn.programConv2d110 || !Dnn.programConv2d110wt) {
+            let src = getShaderSource('../shaders/dnn-conv2d110.glsl');
+            src = src.replaceAll("{%MAX_CHANNEL%}", maxChannel);
+            Dnn.programConv2d110 = createShaderProgram(gl, null,
+                src.replaceAll("{%USE_WEIGHT_TEXTURE%}", 0) );
+            Dnn.programConv2d110wt = createShaderProgram(gl, null,
+                src.replaceAll("{%USE_WEIGHT_TEXTURE%}", 1) );
+        }
+        if (!this.weightTexture) {
+            this.weightTexture = createSampleTexture(gl, 4, this.m_in*this.m_out, true);
+            gl.bindTexture(gl.TEXTURE_2D, this.weightTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F,
+                4, this.m_in*this.m_out, 0,
+                gl.RGBA, gl.FLOAT,
+                this.weightTextureData);
+        }
+
+        let useWeightTexture = (buffer_in.w*buffer_in.h < 1e+4);
+        let program = useWeightTexture ?
+            Dnn.programConv2d110wt : Dnn.programConv2d110;
+        gl.useProgram(program);
+        gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        for (var i = 0; i < this.n_out; i += 4) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
+            gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            // weight texture
+            if (useWeightTexture) for (var j = 0; j < this.n_in; j += 32) {
+                gl.activeTexture(gl.TEXTURE9);
+                gl.bindTexture(gl.TEXTURE_2D, this.weightTexture);
+                gl.uniform1i(gl.getUniformLocation(program, "uWeight"), 9);
+                gl.uniform2i(gl.getUniformLocation(program, "uWeightRow"),
+                    i/4*this.m_in+j/4, i/4*this.m_in+Math.min(j/4+8, this.m_in));
+                for (var dj = 0; dj < 32; dj += 4) {
+                    if (j+dj >= this.n_in) {
+                        gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), 15);
+                        continue;
+                    }
+                    gl.activeTexture(gl['TEXTURE'+(dj/4)]);
+                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[(j+dj)/4].texture);
+                    gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), dj/4);
+                }
+                setPositionBuffer(gl, program);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+            // uniform
+            else for (var j = 0; j < this.n_in; j += 4*maxChannel) {
+                gl.uniform1i(gl.getUniformLocation(program, "nChannel"),
+                    Math.min(maxChannel, this.m_in-(j/4)));
+                for (var dj = 0; dj < 4*maxChannel; dj += 4) {
+                    if (j+dj >= this.n_in) {
+                        gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), 15);
+                        continue;
+                    }
+                    let uniformLocation = gl.getUniformLocation(program, 'w['+(dj/4)+']');
+                    var mat = this.mats[i/4][(j+dj)/4];
+                    gl.uniformMatrix4fv(uniformLocation, false, mat);
+                    gl.activeTexture(gl['TEXTURE'+(dj/4)]);
+                    gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[(j+dj)/4].texture);
                     gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), dj/4);
                 }
                 setPositionBuffer(gl, program);
@@ -340,7 +459,7 @@ Dnn.maxpool2d2 = function(gl, buffer_in, buffer_out) {
     if (!Dnn.programMaxPool2d2) {
         Dnn.programMaxPool2d2 = createShaderProgram(gl, null,
             `#version 300 es
-            precision highp float;
+            precision mediump float;
             
             uniform sampler2D uSrc;
             out vec4 fragColor;
