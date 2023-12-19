@@ -88,9 +88,11 @@ These tools have the following known issues:
 
 ## Frequently Asked Questions
 
-**Q: What library does Spirulae use?**
+**Q: What libraries do Spirulae use?**
 
-I tried to write Spirulae with as few dependencies as possible, therefore I wrote the equation parser and renderer from scratch without use of third-party libraries and frameworks. Spirulae uses native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL) and [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly), as well as [MathJax](https://www.mathjax.org/) for displaying equations. The C++ part (compiled to WebAssembly via [Emscripten](https://emscripten.org/)) uses [GLFW](https://www.glfw.org/) and [GLM](https://github.com/g-truc/glm) for graphics and vector operations.
+To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of [MathJax](https://www.mathjax.org/) for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL). The C++ part that powers mesh generation is compiled to [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly) with [Emscripten](https://emscripten.org/), which uses the following third-party libraries:  
+ - [Triangle](https://www.cs.cmu.edu/~quake/triangle.html), a fast header-only 2D Delaunay triangulation library
+ - [GLM](https://github.com/g-truc/glm) and [GLFW](https://www.glfw.org/), popular math and GUI libraries for OpenGL
 
 
 **Q: How to draw shapes using equations?**

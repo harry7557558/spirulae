@@ -1,0 +1,7 @@
+* text=auto
+* text eol=lf
+
+*.bin binary
+*.wasm binary
+
+include/Triangle/* linguist-vendored

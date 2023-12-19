@@ -28,7 +28,7 @@
 
          <h1 style="text-align:center;margin-bottom:0;">Spirulae</h1>
          <p style="text-align:center;">
-            <em style="color:#555">by Harry Chen - updated November 2023</em>
+            <em style="color:#555">by Harry Chen - updated December 2023</em>
             <br/>
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
@@ -157,8 +157,10 @@
 </ul>
 <hr />
 <h2>Frequently Asked Questions</h2>
-<p><strong>Q: What library does Spirulae use?</strong></p>
-<p>I tried to write Spirulae with as few dependencies as possible, therefore I wrote the equation parser and renderer from scratch without use of third-party libraries and frameworks. Spirulae uses native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a> and <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a>, as well as <a href="https://www.mathjax.org/">MathJax</a> for displaying equations. The C++ part (compiled to WebAssembly via <a href="https://emscripten.org/">Emscripten</a>) uses <a href="https://www.glfw.org/">GLFW</a> and <a href="https://github.com/g-truc/glm">GLM</a> for graphics and vector operations.</p>
+<p><strong>Q: What libraries do Spirulae use?</strong></p>
+<p>To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of <a href="https://www.mathjax.org/">MathJax</a> for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a>. The C++ part that powers mesh generation is compiled to <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a> with <a href="https://emscripten.org/">Emscripten</a>, which uses the following third-party libraries:<br />
+ - <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a fast header-only 2D Delaunay triangulation library
+ - <a href="https://github.com/g-truc/glm">GLM</a> and <a href="https://www.glfw.org/">GLFW</a>, popular math and GUI libraries for OpenGL</p>
 <p><strong>Q: How to draw shapes using equations?</strong></p>
 <p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
 <p><strong>Q: How does Spirulae evaluate functions on the GPU?</strong></p>

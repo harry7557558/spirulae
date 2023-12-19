@@ -142,30 +142,40 @@ void GlBatchEvaluator2::evaluateFunction(
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glViewport(0, 0, textureW, textureH);
+    glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 
     GLuint vbo;
     glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    std::vector<glm::vec4> coords(pn);
-    for (int i = 0; i < pn; i++) {
-        float x = i % textureW, y = i / textureW;
-        coords[i] = glm::vec4(
-            (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f,
-            points[i]);
+
+    size_t batch_size = textureW * textureH;
+    for (size_t batchi = 0; batchi < pn; batchi += batch_size) {
+        size_t batchn = std::min(batch_size, pn - batchi);
+    
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        std::vector<glm::vec4> coords(pn);
+        for (int i = 0; i < batchn; i++) {
+            float x = i % textureW, y = i / textureW;
+            coords[i] = glm::vec4(
+                (glm::vec2(x, y) + 0.5f) / glm::vec2(textureW, textureH) * 2.0f - 1.0f,
+                points[batchi+i]);
+        }
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * coords.size(), coords.data(), GL_STATIC_DRAW);
+
+        glUseProgram(shaderProgram);
+        GLint posAttrib = glGetAttribLocation(shaderProgram, "aPosition");
+        glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(posAttrib);
+
+        glDrawArrays(GL_POINTS, 0, batchn);
+
+        std::vector<glm::vec4> pixels(batch_size);
+        glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
+        for (int i = 0; i < batchn; i++)
+            v[batchi+i] = pixels[i].x;
+        // break;
     }
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * coords.size(), coords.data(), GL_STATIC_DRAW);
-
-    glUseProgram(shaderProgram);
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "aPosition");
-    glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(posAttrib);
-
-    glDrawArrays(GL_POINTS, 0, pn);
-
-    std::vector<glm::vec4> pixels(textureW * textureH);
-    glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
-    for (int i = 0; i < pn; i++)
-        v[i] = pixels[i].x;
 
     glDeleteBuffers(1, &vbo);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)NULL);

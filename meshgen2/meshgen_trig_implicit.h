@@ -22,8 +22,10 @@ namespace MeshgenTrigLoss {
 
 void generateInitialMesh(
     ScalarFieldFBatch Fs, vec2 b0, vec2 b1, ivec2 bn, int nd,
+    bool boundary_mode,
     std::vector<vec2> &vertices, std::vector<ivec3> &trigs,
-    std::vector<bool> isConstrained[2]
+    std::vector<bool> isConstrained[2],
+    std::vector<std::vector<vec2>> &boundary
 ) {
     assert(bn.x >= 1 && bn.y >= 1);
     nd++;
@@ -33,6 +35,9 @@ void generateInitialMesh(
     std::unordered_map<int, int> vmap;
     std::vector<float> vals;
     std::vector<int> reqValIdx;
+    std::vector<vec2> bverts;
+    std::unordered_map<ivec2, int> bvmap;
+    std::vector<ivec2> bedges;
 
     auto getIdx = [&](int i, int j) {
         return (i << 16) | j;
@@ -97,9 +102,47 @@ void generateInitialMesh(
         return p.x - 0 * p.y >= 1;
     };
     auto addTrig = [&](int t1, int t2, int t3) {
-        ivec2 p = calcTrig(t1, t2, t3);
-        if (testTrig(p))
-            trigs.push_back(ivec3(t1, t2, t3));
+        if (boundary_mode) {
+            ivec3 t(t1, t2, t3);
+            bool s[3] = {
+                vals[vmap[t1]] < 0.0f,
+                vals[vmap[t2]] < 0.0f,
+                vals[vmap[t3]] < 0.0f,
+            };
+            for (int _ = 0; _ < 3; _++) {
+                assert(!(s[_] && (isConstrainedX(t[_]) || isConstrainedY(t[_]))));
+                if (s[_] ^ s[(_+1)%3]) {
+                    ivec2 e(t[_], t[(_+1)%3]);
+                    if (e.x > e.y) std::swap(e.x, e.y);
+                    if (bvmap.find(e) == bvmap.end()) {
+                        bvmap[e] = (int)bverts.size();
+                        float t = -vals[vmap[e.x]] / (vals[vmap[e.y]]-vals[vmap[e.x]]);
+                        t = clamp(t, 0.001f, 0.999f);
+                        vec2 p = mix(idxToPos(e.x), idxToPos(e.y), t);
+                        bverts.push_back(p);
+                    }
+                }
+            }
+            for (int _ = 0; _ < 3; _++) {
+                if ((s[_] ^ s[(_+1)%3]) && (s[_] ^ s[(_+2)%3])) {
+                    ivec2 e1(t[_], t[(_+1)%3]);
+                    ivec2 e2(t[_], t[(_+2)%3]);
+                    if (e1.x > e1.y) std::swap(e1.x, e1.y);
+                    if (e2.x > e2.y) std::swap(e2.x, e2.y);
+                    assert(bvmap.find(e1) != bvmap.end());
+                    assert(bvmap.find(e2) != bvmap.end());
+                    ivec2 b(bvmap[e1], bvmap[e2]);
+                    if (!s[_]) std::swap(b[0], b[1]);
+                    bedges.push_back(b);
+                    break;
+                }
+            }
+        }
+        else {
+            ivec2 p = calcTrig(t1, t2, t3);
+            if (testTrig(p))
+                trigs.push_back(ivec3(t1, t2, t3));
+        }
     };
     std::vector<ivec2> squaresToAdd;
     std::vector<int> squareSizes;
@@ -272,6 +315,42 @@ void generateInitialMesh(
         addT2(getIdx(i2, j2), getIdx(i0, j2), idxc, getIdx(i1, j2), s);
         addT2(getIdx(i0, j2), getIdx(i0, j0), idxc, getIdx(i0, j1), s);
     }
+
+    // boundary
+    if (boundary_mode) {
+        assert(bverts.size() == bedges.size());
+        std::vector<ivec2> neighbors(bverts.size(), ivec2(-1));
+        for (ivec2 e : bedges) {
+            assert(neighbors[e.x][1] == -1);
+            neighbors[e.x][1] = e.y;
+            assert(neighbors[e.y][0] == -1);
+            neighbors[e.y][0] = e.x;
+        }
+        for (ivec2 n : neighbors)
+            assert(n.x != -1 && n.y != -1);
+
+        std::unordered_set<int> remainingVerts;
+        for (int i = 0; i < (int)bverts.size(); i++)
+            remainingVerts.insert(i);
+
+        boundary.clear();
+        while (!remainingVerts.empty()) {
+            int p = -1;
+            for (int p1 : remainingVerts)
+                { p = p1; break; }
+            std::vector<vec2> contour;
+            int p0 = p;
+            do  {
+                contour.push_back(bverts[p]);
+                p = neighbors[p][1];
+                remainingVerts.erase(p);
+            } while (p != p0);
+            boundary.push_back(contour);
+        }
+        printf("%d contours\n", (int)boundary.size());
+        return;
+    }
+
 
     // remove unused vertices
     std::vector<int> vpsa(vmap.size(), 0);

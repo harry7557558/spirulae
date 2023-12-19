@@ -9,6 +9,7 @@
 #include "render.h"
 
 #include "meshgen_trig_implicit.h"
+#include "triangle_wrapper.h"
 
 #include "../include/write_model.h"
 
@@ -17,11 +18,16 @@ DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
 
     GlBatchEvaluator2 evaluator(funDeclaration);
     int batchEvalCount = 0;
+    vec2 bc = vec2(0), br = vec2(2);
     MeshgenTrigImplicit::ScalarFieldFBatch Fs = [&](size_t n, const vec2 *p, float *v) {
         // printf("Batch eval %d %d\n", ++batchEvalCount, (int)n);
         evaluator.evaluateFunction(n, p, v);
+        for (size_t i = 0; i < n; i++) {
+            vec2 dp = abs(p[i] - bc) / br;
+            float clip = fmax(dp.x, dp.y);
+            v[i] = std::isfinite(v[i]) ? fmax(v[i], clip-1.0f) : clip;
+        }
     };
-    vec2 bc = vec2(0), br = vec2(2);
     auto constraint = [=](vec2 p) {
         p -= bc;
         return -vec2(
@@ -30,32 +36,49 @@ DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
         );
     };
 
+    const bool useTriangle = true;
+
     float t0 = getTimePast();
     std::vector<vec2> vs;
     std::vector<ivec3> trigs;
     std::vector<bool> isConstrained[2];
+    std::vector<std::vector<vec2>> boundary;
+    float k = 1.01f;
+    ivec2 gdiv(64, 64);
+    int sdiv = 3;
     MeshgenTrigImplicit::generateInitialMesh(
-        Fs, bc-br, bc+br,
-        // ivec2(16, 16), 5,
-        // ivec2(32, 32), 4,
-        ivec2(48, 48), 3,
-        // ivec2(64, 64), 3,
-        vs, trigs, isConstrained
+        Fs, bc-k*br, bc+k*br,
+        gdiv, sdiv,
+        useTriangle,
+        vs, trigs, isConstrained, boundary
     );
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
-    float t1 = getTimePast();
-    printf("Mesh generated in %.2g secs.\n", t1-t0);
-    int vn0 = (int)vs.size();
-    MeshgenTrigImplicit::splitStickyVertices(vs, trigs, isConstrained);
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
-    float t2 = getTimePast();
-    printf("Mesh cleaned in %.2g secs.\n", t2-t1);
-    MeshgenTrigImplicit::smoothMesh(
-        vs, trigs, 5, Fs,
-        constraint, isConstrained);
-    MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
-    float t3 = getTimePast();
-    printf("Mesh optimized in %.2g secs.\n", t3-t2);
+    if (useTriangle) {
+        float t1 = getTimePast();
+        printf("Boundary extracted in %.2g secs.\n", t1-t0);
+        float a = 4.0f*br.x*br.y/float(gdiv.x*gdiv.y);
+        triangleGenerateMesh(a, boundary, vs, trigs);
+        float t2 = getTimePast();
+        printf("Mesh generated in %.2g secs.\n", t2-t1);
+        splitBridgeEdges(vs, trigs);
+        float t3 = getTimePast();
+        printf("Mesh debridged in %.2g secs.\n", t3-t2);
+    }
+    else {
+        MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+        float t1 = getTimePast();
+        printf("Mesh generated in %.2g secs.\n", t1-t0);
+        int vn0 = (int)vs.size();
+        MeshgenTrigImplicit::splitStickyVertices(vs, trigs, isConstrained);
+        MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+        float t2 = getTimePast();
+        printf("Mesh cleaned in %.2g secs.\n", t2-t1);
+        MeshgenTrigImplicit::smoothMesh(
+            vs, trigs, 5, Fs,
+            constraint, isConstrained);
+        MeshgenTrigImplicit::assertAreaEqual(vs, trigs);
+        float t3 = getTimePast();
+        printf("Mesh optimized in %.2g secs.\n", t3-t2);
+    }
 
     DiscretizedModel<float, float> res = solveLaplacianLinearTrig(
         vs, std::vector<float>(vs.size(), 4.0f), trigs);

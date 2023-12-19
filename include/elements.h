@@ -47,7 +47,7 @@ namespace std {
     template<>
     struct hash<glm::ivec2> {
         size_t operator()(const glm::ivec2& v) const {
-            return hash<int>()(v.x) ^ hash<int>()(v.y);
+            return hash<uint64_t>()(*(uint64_t*)&v);
         }
     };
     template<>
