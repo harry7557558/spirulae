@@ -11,6 +11,9 @@ uniform vec3 uClipBox;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
+#define ZETA_FAST
+#include "../shaders/complex.glsl"
+
 
 // Random number generator
 float seed;

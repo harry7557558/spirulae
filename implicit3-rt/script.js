@@ -155,6 +155,8 @@ document.body.onload = function (event) {
         "../shaders/dnn-conv2d311.glsl",
         "../shaders/dnn-conv2d110.glsl",
         "../shaders/dnn-convtranspose2d421.glsl",
+        "../shaders/complex-zeta.glsl",
+        "../shaders/complex.glsl",
     ]);
 };
 

@@ -143,6 +143,8 @@ document.body.onload = function (event) {
         "vert.glsl",
         "frag.glsl",
         "../shaders/frag-imggrad.glsl",
-        "../shaders/frag-aa.glsl"
+        "../shaders/frag-aa.glsl",
+        "../shaders/complex-zeta.glsl",
+        "../shaders/complex.glsl",
     ]);
 };

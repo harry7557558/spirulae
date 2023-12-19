@@ -128,7 +128,9 @@ document.body.onload = function (event) {
         "../shaders/frag-pool.glsl",
         "frag-raymarch.glsl",
         "../shaders/frag-imggrad.glsl",
-        "../shaders/frag-aa.glsl"
+        "../shaders/frag-aa.glsl",
+        "../shaders/complex-zeta.glsl",
+        "../shaders/complex.glsl",
     ]);
 };
 

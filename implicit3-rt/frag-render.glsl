@@ -18,6 +18,9 @@ uniform float rScale2;
 uniform float ZERO;  // used in loops to reduce compilation time
 #define PI 3.1415926
 
+#define ZETA_FAST
+#include "../shaders/complex.glsl"
+
 uniform int uOutput;
 #define OUTPUT_RADIANCE 0
 #define OUTPUT_ALBEDO 1
@@ -48,17 +51,21 @@ float randf() {
 #define BACKGROUND_COLOR vec3(4e-4, 5e-4, 6e-4)
 #endif
 
+#define STEP_SIZE (({%STEP_SIZE%})*(0.5))
+#define MAX_STEP int(10.0/(STEP_SIZE))
+#define step_size (8.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z))
+
 #if {%CLOSED%}
-#define CLIP_OFFSET 1.01
+#define CLIP_OFFSET (1.0*step_size)
 #else
-#define CLIP_OFFSET 1.0
+#define CLIP_OFFSET 0.0
 #endif
 
 #if {%CLIP%}==1
 bool clipIntersection(vec3 ro, vec3 rd, out float tn, out float tf) {
     vec3 inv_rd = 1.0 / rd;
     vec3 n = inv_rd*(ro);
-    vec3 k = abs(inv_rd)*uClipBox*CLIP_OFFSET;
+    vec3 k = abs(inv_rd)*uClipBox+CLIP_OFFSET;
     vec3 t1 = -n - k, t2 = -n + k;
     tn = max(max(t1.x, t1.y), t1.z);
     tf = min(min(t2.x, t2.y), t2.z);
@@ -71,7 +78,7 @@ float clipFunction(vec3 p) {
 }
 #elif {%CLIP%}==2
 bool clipIntersection(vec3 ro, vec3 rd, out float t1, out float t2) {
-    vec3 clipBox = uClipBox*CLIP_OFFSET;
+    vec3 clipBox = uClipBox+CLIP_OFFSET;
 	float a = dot(rd/clipBox,rd/clipBox);
 	float b = -dot(rd/clipBox,ro/clipBox);
 	float c = dot(ro/clipBox,ro/clipBox)-1.0;
@@ -159,9 +166,6 @@ vec3 funGradC(vec3 p, out bool isBoundary) {
 // function and its gradient in screen space
 
 
-#define STEP_SIZE (({%STEP_SIZE%})*(0.5))
-#define MAX_STEP int(10.0/(STEP_SIZE))
-
 uniform vec3 LDIR;
 uniform float rLightIntensity;
 uniform float rLightAmbient;
@@ -197,6 +201,8 @@ vec3 calcAlbedo(vec3 p, vec3 n0, bool isBoundary) {
     n0 = vec3(n0.x, n0.z, -n0.y);
 #endif // {%Y_UP%}
     float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.1;
+    if (isBoundary)
+        return vec3(0.9*g);
 #if {%COLOR%} == 0
     // return g * vec3(1, 0.5, 0.2);
     return vec3(clamp(0.8*g, 0.0, 1.0));
@@ -211,8 +217,6 @@ vec3 calcAlbedo(vec3 p, vec3 n0, bool isBoundary) {
     vec3 albedo = vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*grad
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
 #endif // {%COLOR%} == 1
-    if (isBoundary)
-        albedo = vec3(0.9);
     albedo *= g;
     return pow(albedo, vec3(1.5));
 #endif // {%COLOR%} == 0
@@ -254,7 +258,6 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
         return -1.0;
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
     totalv = 0.0;
-    float step_size = 8.0 * STEP_SIZE * min(min(uClipBox.x, uClipBox.y), uClipBox.z);
     float t = t0, dt = step_size;
     float v = 0.0, v0 = v, v00 = v, v1;
     float dt0 = 0.0, dt00 = 0.0;
@@ -264,8 +267,9 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
     vec3 totemi = vec3(0.0);
     float totabs = 1.0;
     float prevField = 0.0; vec3 prevFieldCol;
+    float tfar = t1;
     while (true) {
-        if (++i >= MAX_STEP || t > t1) {
+        if (++i >= MAX_STEP || t > tfar) {
             return -1.0;
         }
         v = fun(ro+rd*t);
@@ -320,7 +324,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
             dt00 = dt0, dt0 = dt, t0 = t, v00 = v0, v0 = v;
             float ddt = abs(v/g);
             dt = (ddt > step_size || isnan(ddt) || isinf(ddt)) ? step_size :
-                clamp(min(ddt-step_size, t1-t0-0.01*step_size), 0.05*step_size, step_size);
+                clamp(min(ddt-step_size, tfar-t0-0.01*step_size), 0.05*step_size, step_size);
             if (i == 1) dt *= randf();
             t += dt;
         }

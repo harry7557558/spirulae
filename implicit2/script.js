@@ -209,7 +209,9 @@ document.body.onload = function (event) {
         "../shaders/functions.glsl",
         "frag-shader.glsl",
         "../shaders/frag-imggrad.glsl",
-        "../shaders/frag-aa.glsl"
+        "../shaders/frag-aa.glsl",
+        "../shaders/complex-zeta.glsl",
+        "../shaders/complex.glsl",
     ]);
 };
 

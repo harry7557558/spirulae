@@ -11,6 +11,9 @@ uniform float uScale;
 
 uniform vec4 uvRange;  // u0, v0, u1, v1
 
+#define ZERO 0.0
+#include "../shaders/complex.glsl"
+
 {%FUN%}
 
 
