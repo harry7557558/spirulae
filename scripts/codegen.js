@@ -131,6 +131,22 @@ CodeGenerator.langs.glsl = {
     float s = sign(sin(pi*min(x+1.0,0.5)))*sign(sin(pi*min(x-y+1.0,0.5)));\n\
     return s*exp(c);\n\
 }"
+        },
+        {
+            name: 'mc_gamma',
+            source: ""
+        },
+        {
+            name: 'mc_lgamma',
+            source: ""
+        },
+        {
+            name: 'mc_zeta',
+            source: "#define NO_AA"
+        },
+        {
+            name: 'mc_lzeta',
+            source: "#define NO_AA"
         }
     ],
 };
@@ -822,7 +838,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             // complex
             if (!isRealScalar) {
                 fun = fun[numArgs];
-                if (!fun.complex)
+                if (!fun || !fun.complex)
                     throw new Error("Function `" + token.str + "` does not support complex numbers.");
                 for (var i = 0; i < fun.complex.length; i++) {
                     var t = fun.complex[i];

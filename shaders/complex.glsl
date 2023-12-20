@@ -121,7 +121,9 @@ vec2 mc_arcsech(vec2 e) { return mc_arccosh(mc_inv(e)); }
 vec2 special_function_cache;
 
 // Spouge's method for Gamma function
+vec4 mc_gamma_cache = vec4(1,0,1,0);
 vec2 mc_gamma(vec2 z) {
+    if (z == mc_gamma_cache.xy) return mc_gamma_cache.zw;
     float N = length(z-vec2(-8.,0.))<1. ? 10. : 8.;
     float c = sqrt(2.*PI);
 	vec2 s = vec2(c, 0);
@@ -132,9 +134,12 @@ vec2 mc_gamma(vec2 z) {
         s += mc_inv(z+vec2(k,0.))*c;
 	}
 	s = mc_mul(s,mc_mul(mc_exp(-z-vec2(N,0)),mc_pow(z+vec2(N,0),z+vec2(.5,0))));
-    return special_function_cache = mc_div(s,z);
+    mc_gamma_cache = vec4(z, mc_div(s,z));
+    return mc_gamma_cache.zw;
 }
+vec4 mc_lngamma_cache = vec4(1,0,0,0);
 vec2 mc_lngamma(vec2 z) {
+    if (z == mc_lngamma_cache.xy) return mc_lngamma_cache.zw;
     float N = ZERO + length(z-vec2(-8.,0.))<1. ? 10. : 8.;
     float c = sqrt(2.*PI);
 	vec2 s = vec2(c, 0);
@@ -148,7 +153,8 @@ vec2 mc_lngamma(vec2 z) {
     s = s + (-z-vec2(N,0)) + mc_mul(z+vec2(.5,0), mc_ln(z+vec2(N,0)));
     s = s - mc_ln(z);
     s.y = mod(s.y+PI, 2.*PI)-PI;
-    return special_function_cache = s;
+    mc_lngamma_cache = vec4(z, s);
+    return s;
 }
 
 // Riemann zeta function
@@ -215,18 +221,25 @@ vec2 mc_lnzeta_fast_0(vec2 z) {
     return ln_zeta;
 }
 
-#ifdef ZETA_FAST
+vec4 mc_zeta_cache = vec4(0,0,-0.5,0);
 vec2 mc_zeta(vec2 z) {
-    return special_function_cache = mc_zeta_fast_0(z);
+    if (z == mc_zeta_cache.xy) return mc_zeta_cache.zw;
+    return (mc_zeta_cache = vec4(z,
+    #ifdef ZETA_FAST
+        mc_zeta_fast_0(z)
+    #else
+        mc_zeta_0(z)
+    #endif
+    )).zw;
 }
+vec4 mc_lnzeta_cache = vec4(0,0,-log(2.0),-PI);
 vec2 mc_lnzeta(vec2 z) {
-    return special_function_cache = mc_lnzeta_fast_0(z);
+    if (z == mc_lnzeta_cache.xy) return mc_lnzeta_cache.zw;
+    return (mc_lnzeta_cache = vec4(z,
+    #ifdef ZETA_FAST
+        mc_lnzeta_fast_0(z)
+    #else
+        mc_lnzeta_0(z)
+    #endif
+    )).zw;
 }
-#else
-vec2 mc_zeta(vec2 z) {
-    return special_function_cache = mc_zeta_0(z);
-}
-vec2 mc_lnzeta(vec2 z) {
-    return special_function_cache = mc_lnzeta_0(z);
-}
-#endif

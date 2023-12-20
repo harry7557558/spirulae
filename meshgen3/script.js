@@ -101,6 +101,7 @@ document.body.onload = function (event) {
             }),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+        new GraphingParameter("bLight", "checkbox-light"),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;
