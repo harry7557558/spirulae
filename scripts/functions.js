@@ -486,9 +486,12 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         cppf: 'asinh(1.0f/%1)',
         js: 'Math.asinh(1.0/%1)',
     }, new Interval(), new Interval()),
-    new MathFunction(['magnitude', 'mag', 'length', 'abs'], 1, {
+    new MathFunction(['magnitude', 'mag', 'length', 'abs', 'norm'], 1, {
         D: "g1*sign(f1)",
         C: ["hypot(a1,b1)", "0"],
+        vec2: 'hypot(a1,a2)',
+        vec3: 'hypot(a1,a2,a3)',
+        vec4: 'hypot(a1,a2,a3,a4)',
         latex: '\\left|%1\\right|',
         glsl: 'abs(%1)',
         cppf: 'fabs(%1)',
@@ -808,6 +811,68 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         glslc: 'mc_lnzeta(%1)',
         glslExt: ["mc_lzeta"],
         js: null,
+    }),
+    new MathFunction(['vec2'], 2, {
+        latex: '\\left(%1,%2\\right)'
+    }),
+    new MathFunction(['vec3'], 3, {
+        latex: '\\left(%1,%2,%3\\right)'
+    }),
+    new MathFunction(['vec4'], 4, {
+        latex: '\\left(%1,%2,%3,%4\\right)'
+    }),
+    new MathFunction(['VecCompX'], 1, {
+        latex: '{%1}_x',
+        vec2: 'a1',
+        vec3: 'a1',
+        vec4: 'a1',
+    }),
+    new MathFunction(['VecCompY'], 1, {
+        latex: '{%1}_y',
+        vec2: 'a2',
+        vec3: 'a2',
+        vec4: 'a2',
+    }),
+    new MathFunction(['VecCompZ'], 1, {
+        latex: '{%1}_z',
+        vec3: 'a3',
+        vec4: 'a3',
+    }),
+    new MathFunction(['VecCompW'], 1, {
+        latex: '{%1}_w',
+        vec4: 'a4',
+    }),
+    new MathFunction(['dot'], 2, {
+        latex: '{%1}\\cdot{%2}',
+        vec2: 'a1b1+a2b2',
+        vec3: 'a1b1+a2b2+a3b3',
+        vec4: 'a1b1+a2b2+a3b3+a4b4',
+    }),
+    new MathFunction(['dot2', 'norm2', 'length2',
+        'norm_squared', 'squared_norm',
+        'length_squared', 'squared_length'], 1, {
+        latex: '\\left|%1\\right|^2',
+        vec2: 'a1^2+a2^2',
+        vec3: 'a1^2+a2^2+a3^2',
+        vec4: 'a1^2+a2^2+a3^2+a4^2',
+    }),
+    new MathFunction(['det'], 2, {
+        latex: '\\begin{vmatrix}{%1}\\\\{%2}\\end{vmatrix}',
+        vec2: 'a1b2-a2b1',
+    }),
+    new MathFunction(['det'], 3, {
+        latex: '\\begin{vmatrix}{%1}\\\\{%2}\\\\{%3}\\end{vmatrix}',
+        vec3: 'a1(b2c3-b3c2)+a2(b3c1-b1c3)+a3(b1c2-b2c1)',
+    }),
+    new MathFunction(['cross'], 2, {
+        latex: '{%1}\\times{%2}',
+        vec3: 'vec3(a2b3-a3b2,a3b1-a1b3,a1b2-a2b1)',
+    }),
+    new MathFunction(['normalize'], 1, {
+        latex: '\\operatorname{normalize}\\left(%1\\right)',
+        vec2: 'vec2(a1,a2)/hypot(a1,a2)',
+        vec3: 'vec3(a1,a2,a3)/hypot(a1,a2,a3)',
+        vec4: 'vec3(a1,a2,a3,a4)/hypot(a1,a2,a3,a4)',
     }),
 ];
 
@@ -1183,8 +1248,8 @@ BuiltInMathFunctions.initMathFunctions = function (funList) {
     // gradients
     CodeGenerator.initFunctionGradients();
 
-    // complex
-    CodeGenerator.initFunctionComplex();
+    // complex and vector
+    CodeGenerator.initFunctionComplexVector();
 
     // special substitutions
     funs['ADD']['2'].subSource = function (args, lang) {

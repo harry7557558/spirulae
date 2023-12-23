@@ -372,7 +372,7 @@ CodeGenerator.initFunctionGradients = function () {
     }
 }
 
-CodeGenerator.initFunctionComplex = function() {
+CodeGenerator.initFunctionComplexVector = function() {
     for (var name in MathFunctions) {
         for (var nparam in MathFunctions[name]) {
             var fun = MathFunctions[name][nparam];
@@ -398,6 +398,31 @@ CodeGenerator.initFunctionComplex = function() {
                 var imag = CodeGenerator.parsePrecomputeExpr(fun.langs.C[1]);
                 var i = new Token("unit", "i");
                 fun.complex = real.concat(imag).concat([i]);
+            }
+        }
+    }
+    for (var name in MathFunctions) {
+        for (var nparam in MathFunctions[name]) {
+            var fun = MathFunctions[name][nparam];
+            for (var ncomp = 2; ncomp <= 4; ncomp++) {
+                var vecname = 'vec' + ncomp;
+                fun[vecname] = null;
+                if (!fun.langs.hasOwnProperty(vecname))
+                    continue;
+                fun[vecname] = [];
+                if (typeof fun.langs[vecname] == "string") {
+                    var p = CodeGenerator.parsePrecomputeExpr(fun.langs[vecname]);
+                    fun[vecname] = fun[vecname].concat(p);
+                    continue;
+                }
+                for (var i = 0; i < ncomp; i++) {
+                    var p = CodeGenerator.parsePrecomputeExpr(fun.langs[vecname][i]);
+                    fun[vecname] = fun[vecname].concat(p);
+                    if (i > 0) {
+                        var u = new Token('unit', new String(i));
+                        fun[vecname].push(i);
+                    }
+                }
             }
         }
     }
@@ -662,6 +687,13 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             stack.pop(); stack.pop(); stack.pop();
             return res;
         }
+        if (/^\\[123]$/.test(stack[i].code)) {
+            var n = 2 * Number(stack[i].code[1]) + 1;
+            var res = stack.slice(stack.length-n);
+            for (var i = 0; i < n; i++)
+                stack.pop();
+            return res;
+        }
         throw new Error("Unrecognized unit " + stack[i].code);
     }
 
@@ -672,10 +704,21 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         let imag = new EvalObject([new Token('unit', 'i')], "\\i", false);
         return [v[0], zero, imag];
     }
+    function toVector(v, n) {
+        let zero = new EvalObject([new Token('number', '0')],
+            constexpr.replaceAll("%1", '0.0'),
+            true, new Interval(0.0, 0.0), true);
+        var res = [v[0]];
+        for (var i = 1; i < n; i++) {
+            res.push(v[0]);
+            res.push(new EvalObject([new Token('unit', '\\'+i)], '\\'+i, false));
+        }
+        return res;
+    }
 
     function addToken(stack, token, diffvar) {
         var obj = null, objAlt = null, fun = null;
-        var funArgs = [];
+
         // ??
         if (token.type == "variable" && /@/.test(token.str)) {
             throw new Error();
@@ -748,13 +791,36 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         else if (token.type == "operator") {
             var v2 = popStackValue(stack);
             var v1 = popStackValue(stack);
-            if (v1.length == 3 && v2.length == 1)
+            var isComplex1 = v1.length == 3 && v1[2].code == "\\i";
+            var isComplex2 = v2.length == 3 && v2[2].code == "\\i";
+            if (isComplex1 && isComplex2);
+            else if (isComplex1 ^ isComplex2 && v1.length > 1 && v2.length > 1)
+                throw new Error("Vectors only support real components.");
+            else if (v1.length > 1 && v1.length == v2.length) {
+                if (token.str == '*')
+                    throw new Error("Cannot multiply a vector by a vector. For dot product of a and b, use dot(a,b).");
+                if (token.str == '/')
+                    throw new Error("Cannot divide a vector by a vector.");
+                if (token.str == '^')
+                    throw new Error("Cannot raise a vector to the power of a vector.");
+            }
+            if (isComplex1 && v2.length == 1)
                 v2 = toComplex(v2);
-            if (v1.length == 1 && v2.length == 3)
+            else if (v1.length > 1 && v2.length == 1 && /[\*\/]/.test(token.str))
+                v2 = toVector(v2, (v1.length+1)/2);
+            if (v1.length == 1 && isComplex2)
                 v1 = toComplex(v1);
+            else if (v2.length > 1 && v1.length == 1 && (token.str == "*" ||
+                    (token.str == '-' && v1[0].range.x0 == 0 && v1[0].range.x1 == 0)))
+                v1 = toVector(v1, (v2.length+1)/2);
+            if (v1.length != v2.length) {
+                if (v1.length == 1 || v2.length == 1)
+                    throw new Error("Mixed vector and scalar in operator `"+token.str+"`.");
+                throw new Error("Mixed vectors of different dimensions in operator `"+token.str+"`.");
+            }
 
             // complex
-            if (v1.length == 3 && v2.length == 3) {
+            if (v1.length == 3 && v1[2].code == "\\i") {
                 var fun = MathFunctions[{
                     '+': 'ADD', '-': "SUB",
                     '*': 'MUL', '/': 'DIV', '^': 'pow'
@@ -775,6 +841,27 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                     var imag = stack[stack.length-2];
                     if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
                         stack.pop(), stack.pop();
+                }
+                return;
+            }
+
+            // vector
+            if (v1.length > 1) {
+                var fun = MathFunctions[{
+                    '+': 'ADD', '-': "SUB",
+                    '*': 'MUL', '/': 'DIV', '^': 'pow'
+                }[token.str]]['2'];
+                var ncomps = (v1.length+1)/2;
+                var vecname = 'vec'+ncomps;
+                for (var i = 0; i < 2*ncomps-1; i++) {
+                    if (/^\\\d$/.test(v1[i].code)) {
+                        stack.push(v1[i]);
+                    }
+                    else {
+                        stack.push(v1[i]);
+                        stack.push(v2[i]);
+                        addToken(stack, token, diffvar);
+                    }
                 }
                 return;
             }
@@ -820,23 +907,51 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         else if (token.type == 'function') {
             fun = MathFunctions[token.str];
             var numArgs = token.numArgs;
+            var funArgs = [];
             for (var j = numArgs; j > 0; j--)
                 funArgs = [popStackValue(stack)].concat(funArgs);
 
-            // real/complex
+            // real/complex, scalar/vector
             var isRealScalar = true;
+            var isComplex = false;
+            var maxComps = 0;
             for (var i = 0; i < numArgs; i++)
-                if (funArgs[i].length > 1)
+                if (funArgs[i].length > 1) {
                     isRealScalar = false;
+                    if (funArgs[i][funArgs[i].length-1].code == "\\i")
+                        isComplex = true;
+                    maxComps = Math.max(maxComps, (funArgs[i].length+1)/2);
+                }
             for (var i = 0; i < numArgs; i++) {
-                if (!isRealScalar && funArgs[i].length == 1)
+                if (isComplex && funArgs[i].length == 1)
                     funArgs[i] = toComplex(funArgs[i]);
                 if (isRealScalar)
                     funArgs[i] = funArgs[i][0];
+                else {
+                    if (funArgs[i].length != 2*maxComps-1)
+                        throw new Error("Mixed vectors with different dimensions in `"
+                                + token.str + "`.");
+                }
+            }
+
+            // vector function
+            if (/^vec[2-4]$/.test(token.str)) {
+                if (!isRealScalar)
+                    throw new Error("Vector components must be real scalars.");
+                var n = Number(token.str.slice(3));
+                if (n != numArgs)
+                    throw new Error("Incorrect number of components for "
+                        + token.str + " (" + numArgs + ")");
+                for (var i = 0; i < n; i++) {
+                    stack.push(funArgs[i]);
+                    if (i > 0)
+                        addToken(stack, new Token('unit', ''+i));
+                }
+                return;
             }
 
             // complex
-            if (!isRealScalar) {
+            if (isComplex) {
                 fun = fun[numArgs];
                 if (!fun || !fun.complex)
                     throw new Error("Function `" + token.str + "` does not support complex numbers.");
@@ -862,6 +977,29 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                     var imag = stack[stack.length-2];
                     if (imag.range.x0 == 0.0 && imag.range.x1 == 0.0)
                         stack.pop(), stack.pop();
+                }
+                return;
+            }
+
+            // vector arguments
+            if (!isRealScalar) {
+                fun = fun[numArgs];
+                var vecname = 'vec' + maxComps;
+                if (!fun || !fun[vecname])
+                    throw new Error("Function `"+token.str+'['+numArgs+"]` does not support `"+vecname+"`.");
+                for (var i = 0; i < fun[vecname].length; i++) {
+                    var t = fun[vecname][i];
+                    if (t.type == "unit") {
+                        addToken(stack, t, diffvar);
+                    }
+                    else if (t.type == "variable" && /[abc]@/.test(t.str)) {
+                        var v = t.str.split('@');
+                        var aidx = v[0].charCodeAt(0) - 'a'.charCodeAt(0);
+                        var ridx = Number(v[1]) - 1;
+                        ridx = Math.max(2*ridx-1, 0);
+                        stack.push(funArgs[aidx][ridx]);
+                    }
+                    else addToken(stack, t, diffvar);
                 }
                 return;
             }
@@ -933,8 +1071,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         var res = popStackValue(stack);
         if (res.length > 2*vecn-1 || res.length % 2 != 1) {
             if (vecn == 1 && stack.length == 0)
-                throw new Error("Result is not a real scalar. " +
-                    "Please explicitly convert result to a real scalar using a function like Re() and abs().");
+                throw new Error("Result is not a real scalar.");
             throw new Error("Result stack length is not 1");
         }
         if (vecn == 1) {
