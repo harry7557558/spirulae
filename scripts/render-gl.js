@@ -105,6 +105,13 @@ function mat4ToFloat32Array(m) {
 
 // ============================ WEBGL ==============================
 
+
+function webglRaiseNotSupportedError() {
+    throw new Error("Your web browser may not support WebGL&nbsp;2, which is required for this tool.<br/>\n" + 
+        "Try restarting your browser if you are seeing this error after a crash.");
+}
+
+
 // request shader sources
 let loadShaderSourceCache = {};
 function getShaderSource(path) {

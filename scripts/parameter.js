@@ -354,7 +354,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         messageNone();
         console.log(expr.trim().replace(/\r?\n/g, ';').replace(/\s/g, "&#32;"));
         if (checkboxLatex.checked) {
-            console.log(parsed.latex.join(' \\\\\n'));
+            // console.log(parsed.latex.join(' \\\\\n'));
             updateLatex(parsed.latex);
         }
         // shader function

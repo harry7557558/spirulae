@@ -247,7 +247,7 @@ function initWebGL() {
     renderer.gl = canvas.getContext("webgl2", { antialias: false })
         || canvas.getContext("experimental-webgl2", { antialias: false });
     if (renderer.gl == null)
-        throw ("Error: Your browser may not support WebGL2, which is required to run this tool.<br/>It is recommended to use a Chrome-based browser on a desktop device with an updated graphics driver.");
+        webglRaiseNotSupportedError();
     canvas.addEventListener("webglcontextlost", function (event) {
         event.preventDefault();
         document.body.innerHTML = "<h1 style='color:red;'>Error: WebGL context lost. Please refresh this page.</h1>";

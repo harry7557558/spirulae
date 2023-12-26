@@ -87,6 +87,7 @@ function updateLatex(latexList, color = null) {
         container.appendChild(line);
         texContainer.appendChild(container);
     }
+    console.log(latexList.join('\n'));
     try {
         MathJax.typesetClear();
         MathJax.typeset();

@@ -152,7 +152,7 @@ MathParser.balanceParenthesis = function (expr) {
 }
 
 
-// "sinx" -> "sin x"
+// "sinx" -> "sin(x)"
 MathParser.addFunctionParenthesis = function (expr) {
     expr = expr.replaceAll(/\s+/g, ' ');
     const MINFL = 2;  // minimum function length
@@ -274,6 +274,11 @@ MathParser.addFunctionParenthesis = function (expr) {
                     var bi = close.indexOf('}')+pow.length;
                     close = close.slice(0, bi) + c + close.slice(bi);
                 }
+            }
+            // ,
+            else if (c == ',') {
+                tmp += c;
+                continue;
             }
             // exit function
             else {
