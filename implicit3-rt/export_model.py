@@ -5,8 +5,9 @@ import json
 class Model(torch.nn.Module):
     pass
 
-model = torch.load('../../Graphics/image/denoise/data_spirulae_4/model5_small.pth',
-                   map_location=torch.device('cpu'))
+model = torch.load(
+    '../../Graphics/image/denoise/data_spirulae_4/model6_3.pth',
+    map_location=torch.device('cpu'))
 
 state_dict = model.state_dict()
 
@@ -35,6 +36,6 @@ for key, tensor in state_dict.items():
     data = np.concatenate((data, data_))
     print(key, tensor.shape, (amin, amax), sep='\t')
 
-with open("denoise_models/denoise_runet2.json", 'w') as fp:
+with open("denoise_models/denoise_runet2gan.json", 'w') as fp:
     json.dump(info, fp)
-data.tofile("denoise_models/denoise_runet2.bin")
+data.tofile("denoise_models/denoise_runet2gan.bin")
