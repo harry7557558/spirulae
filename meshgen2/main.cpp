@@ -56,7 +56,8 @@ DiscretizedModel<float, float> generateMesh(std::string funDeclaration) {
         float t1 = getTimePast();
         printf("Boundary extracted in %.2g secs.\n", t1-t0);
         float a = 4.0f*br.x*br.y/float(gdiv.x*gdiv.y);
-        triangleGenerateMesh(a, boundary, vs, trigs);
+        float tol = 0.2f * sqrt(a) / (float)(1<<sdiv);
+        generateMesh(tol, a, boundary, vs, trigs);
         float t2 = getTimePast();
         printf("Mesh generated in %.2g secs.\n", t2-t1);
         splitBridgeEdges(vs, trigs);

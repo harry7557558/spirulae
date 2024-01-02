@@ -78,7 +78,8 @@ void DiscretizedModel<float, float>::constructCotangentMatrix(
             vec2 a = X[v[1]] - X[v[0]];
             vec2 b = X[v[2]] - X[v[0]];
             vec2 c = X[v[2]] - X[v[1]];
-            float cos = dot(a, b) / sqrt(dot(a, a) * dot(b, b));
+            float cos = dot(a, b) / fmax(sqrt(dot(a, a) * dot(b, b)), 1e-12f);
+            cos = clamp(cos, -0.9999f, 0.9999f);
             float w = 0.5f * cos / sqrt(1.0f - cos * cos);
             lil.addValue(Imap[v[1]], Imap[v[1]], w);
             lil.addValue(Imap[v[1]], Imap[v[2]], -w);
