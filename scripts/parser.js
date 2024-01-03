@@ -373,11 +373,23 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         var has_ = false;
         for (var j = 0; j < v.length;) {
             if (expr1.length > 0) {
-                if ((/\)/.test(expr1[expr1.length - 1]) && /[A-Za-zΑ-Ωα-ω_\d\.\(]/.test(v[j]))
-                    || (j != 0 && /[A-Za-zΑ-Ωα-ω_\d\.\)]/.test(v[j - 1]) && /\(/.test(v[j]))) expr1 += "*";
-                else if (!has_ && /[A-Za-zΑ-Ωα-ω\d\.]/.test(expr1[expr1.length - 1]) && /[A-Za-zΑ-Ωα-ω]/.test(v[j]) && v[j] != "_")
+                var expr1back = expr1[expr1.length-1];
+                if ((/\)/.test(expr1back) && (
+                        /[A-Za-zΑ-Ωα-ω_\d\(]/.test(v[j]) ||
+                        (v[j]=="." && j+1<v.length && /\d/.test(v[j+1]))
+                        )) ||
+                    (j != 0 && /[A-Za-zΑ-Ωα-ω_\d\.\)]/.test(v[j-1])
+                        && /\(/.test(v[j])))
                     expr1 += "*";
-                else if (!has_ && /[A-Za-zΑ-Ωα-ω]/.test(expr1[expr1.length - 1]) && /\d/.test(v[j]))
+                else if (!has_ && (
+                        /[A-Za-zΑ-Ωα-ω]/.test(expr1back) ||
+                        /\d\.?$/.test(expr1)
+                    ) && (/[A-Za-zΑ-Ωα-ω]/.test(v[j]) ||
+                        (/^\.\d/.test(v.slice(j)) && !/[\d\.]/.test(expr1back)))
+                    && v[j] != "_")
+                    expr1 += "*";
+                else if (!has_ && /[A-Za-zΑ-Ωα-ω]/.test(expr1back)
+                        && /\d/.test(v[j]))
                     expr1 += "_";
             }
             var next_lp = v.substring(j, v.length).search(/\(/);
@@ -414,11 +426,13 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
     const operators = {
         '+': 1, '-': 1,
         '*': 2, '/': 2,
-        '^': 3
+        '^': 3,
+        '.': 4,
     };
     const isLeftAssociative = {
         '+': true, '-': true, '*': true, '/': true,
-        '^': false
+        '^': false,
+        '.': true,
     };
 
     // console.log("preprocessed", expr);
@@ -428,7 +442,12 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
     for (var i = 0; i < expr.length;) {
         // get token
         var token = "";
-        while (i < expr.length && /[A-Za-zΑ-Ωα-ω0-9_\.]/.test(expr[i])) {
+        while (i < expr.length && (/[A-Za-zΑ-Ωα-ω0-9_]/.test(expr[i])
+                || (expr[i] == '.' && ((
+                /\d/.test(token[token.length-1]) &&
+                    !/_/.test(expr)
+                ) || (i+1 < expr.length && /\d/.test(expr[i+1])))
+            ))) {
             token += expr[i];
             i++;
         }
@@ -437,7 +456,9 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             i++;
         }
         // number
-        if (/^[0-9]*\.{0,1}[0-9]*$/.test(token) || /^[0-9]*\.{0,1}[0-9]+$/.test(token)) {
+        if ((/^[0-9]*\.{0,1}[0-9]*$/.test(token) ||
+                /^[0-9]*\.{0,1}[0-9]+$/.test(token)) &&
+                token != ".") {
             if (!isFinite(Number(token))) throw "Failed to parse number " + token;
             var num = token.trim('0');
             if (num == "") num = "0";
@@ -459,6 +480,13 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             queue.push(new Token("number", '1.0'));
             queue.push(new Token("number", '0.0'));
         }
+        // vector subscript
+        else if (/^[xyzw]$/.test(token) && stack.length > 0 &&
+                stack[stack.length-1].str == ".") {
+            var fun = new Token("function", 'VecComp'+token.toUpperCase(), 1);
+            stack.pop();
+            queue.push(fun);
+        }
         // variable name
         else if (/^[A-Za-zΑ-Ωα-ω](_[A-Za-zΑ-Ωα-ω0-9]+)?$/.test(token)) {
             var variable = new Token("variable", token);
@@ -479,7 +507,7 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
             stack.push(new Token(null, '('));
         }
         // operator
-        else if (operators[token] != undefined) {
+        else if (operators.hasOwnProperty(token)) {
             while (stack.length != 0 && stack[stack.length - 1].type == "operator" &&
                 (operators[stack[stack.length - 1].str] > operators[token] ||
                     (isLeftAssociative[token] && operators[stack[stack.length - 1].str] == operators[token]))) {
@@ -524,6 +552,8 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         else {
             throw "Unrecognized token " + token;
         }
+        // console.log("stack", stack.slice());
+        // console.log('queue', queue.slice());
     }
     while (stack.length != 0) {
         queue.push(stack[stack.length - 1]);
@@ -690,7 +720,6 @@ MathParser.replaceDesmosCopyPaste = function(input) {
             else input += s[i];
         }
         if (si + 1 != sf.length) {
-            console.log("sqrt[");
             sqrt++;
             depths.push(depth);
             depth++;
