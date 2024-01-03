@@ -266,7 +266,7 @@ document.getElementById("error-message").addEventListener("contextmenu", message
 var UpdateFunctionInputConfig = {
     complexMode: false,
     implicitMode: true,  // add =0 to the end
-    enableMain: true,  // requires a main equation
+    enableMain: true,  // require at least one main equation
     warnNaN: true,
     useGL: true,
     jsFunName: null,
@@ -308,8 +308,11 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         var errmsg = "";
         if (UpdateFunctionInputConfig.implicitMode && parsed.val.length == 0)
             errmsg = "No function to graph.";
-        if (parsed.val.length > 1)
-            errmsg = "Multiple main equations found.";
+        if (parsed.val.length > 1) {
+            if (UpdateFunctionInputConfig.implicitMode)
+                parsed.val[0] = CodeGenerator.mergeImplicitExpressions(parsed.val);
+            else errmsg = "Multiple main equations found.";
+        }
         parsed.val.push([]);
         parsed.val = parsed.val[0];
         if (UpdateFunctionInputConfig.complexMode) {
@@ -327,7 +330,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
                 parsed.latex[i] = parsed.latex[i].replace(/=0$/, '');
         }
         if (errmsg != "") {
-            messageError(errmsg);
+            messageError("Error: " + errmsg);
             updateShaderFunction(null);
             if (checkboxLatex.checked)
                 updateLatex(parsed.latex);

@@ -570,6 +570,26 @@ CodeGenerator.postfixToLatex = function (queue) {
 }
 
 
+// merge multiple implicit equations
+CodeGenerator.mergeImplicitExpressions = function(expressions) {
+    var sign = [], mag = [];
+    for (var i = 0; i < expressions.length; i++) {
+        var expr = expressions[i];
+        // sign
+        sign = sign.concat(expr);
+        sign.push(new Token('function', 'sign', 1));
+        if (i > 0)
+            sign.push(new Token('operator', '*', 2));
+        // magnitude
+        mag = mag.concat(expr);
+        mag.push(new Token('function', 'abs', 1));
+    }
+    mag.push(new Token('function', 'min', expressions.length));
+
+    return sign.concat(mag).concat([new Token('operator', '*', 2)]);
+}
+
+
 // Convert a single postfix math expression to source code, used by `postfixToSource`
 CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensionMap) {
     let langpack = this.langs[lang];
