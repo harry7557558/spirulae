@@ -3,12 +3,18 @@
 function calcTransformMatrix(state, inverse = true,
         screenCenter = { x: 0.5, y: 0.5 }) {
     var sc = (state.height / Math.min(state.width, state.height)) / state.scale;
+    var aspect = canvas.width / canvas.height;
     var transformMatrix = mat4Perspective(
         0.25 * Math.PI,
-        canvas.width / canvas.height,
+        aspect,
         0.5 * sc, 10.0 * sc);
     var translateMatrix = mat4Translate(mat4(1.0),
         [2.0*screenCenter.x-1.0, 2.0*screenCenter.y-1.0, 0.0]);
+    if (typeof state.ry == 'number' && isFinite(state.ry)) {
+        translateMatrix = mat4Scale(translateMatrix, [1.0/aspect, 1.0]);
+        translateMatrix = mat4Rotate(translateMatrix, state.ry, [0, 0, 1]);
+        translateMatrix = mat4Scale(translateMatrix, [aspect, 1.0]);
+    }
     transformMatrix = mat4Mul(translateMatrix, transformMatrix);
     transformMatrix = mat4Translate(transformMatrix, [0, 0, -3.0 * sc]);
     transformMatrix = mat4Rotate(transformMatrix, state.rx, [1, 0, 0]);

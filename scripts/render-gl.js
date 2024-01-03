@@ -25,6 +25,14 @@ function mat4Perspective(fovy, aspect, zNear, zFar) {
     res[3][2] = -(2.0 * zFar * zNear) / (zFar - zNear);
     return res;
 }
+function mat4Scale(m, sc) {
+    var res = mat4(1.0);
+    if (typeof sc == "number")
+        sc = new Array(3).fill(sc);
+    for (var i = 0; i < sc.length; i++)
+        res[i][i] *= sc[i];
+    return mat4Mul(m, res);
+}
 function mat4Translate(m, v) {
     var res = mat4(m);
     for (var i = 0; i < 4; i++) {

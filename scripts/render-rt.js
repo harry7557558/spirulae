@@ -110,7 +110,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         lightDir[0], lightDir[1], lightDir[2]);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "rZScale"), calcZScale());
     for (var r in state) {
-        if (!/^r[A-Z]/.test(r))
+        if (!/^r[A-Zx-z]/.test(r))
             continue;
         gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, r), state[r]);
     }
@@ -216,6 +216,7 @@ var state = {
     iTime: -1.0,
     rz: null,
     rx: null,
+    ry: null,
     scale: null,
     clipSize: null,
     rTheta: null,

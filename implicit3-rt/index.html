@@ -66,9 +66,7 @@
         <span title="Shape clipping boundary"><select id="select-clip">
             <option value="1" selected>box</option>
             <option value="2">sphere</option>
-        </select>clip</span>
-        <!-- (<span title="Fixed box size independent of zooming"><input type="checkbox"
-                id="checkbox-clip-fixed" checked />fixed</span>)&ensp; -->&ensp;
+        </select>clip</span>&ensp;
             <span style="display:none;" title="Visualize scalar field with volume contour lines"><select id="select-field">
                 <option value="0" selected>no</option>
                 <option value="1">linear</option>
@@ -94,8 +92,6 @@
                 <option value="1">normal</option>
                 <option value="2" selected>gradient</option>
             </select>color</span>&ensp;
-        <!-- <span title="Glass instead of opaque material"><input type="checkbox"
-                id="checkbox-transparency" checked />transparency</span> -->
         <br />
         <span title="Show grid on the surface"><input type="checkbox" id="checkbox-grid" />grid</span>&ensp;
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
@@ -143,6 +139,16 @@
         <br />
         <span title="transition from point to dome light">softness&nbsp;<input type="range" id="slider-light-softness" style="width:60px" /></span>
         <span title="sun light boundary sharpness">hardness&nbsp;<input type="range" id="slider-light-hardness" style="width:60px" /></span>
+        <br />
+        <hr />
+        <span title="camera roll">roll&nbsp;<input type="range" id="slider-camera-roll" style="width:75px" /></span>
+        <span title="camera lens radial distortion">distortion&nbsp;<input type="range" id="slider-camera-distortion" style="width:75px" /></span>
+        <br />
+        <span title="camera focal length">focal&nbsp;<input type="range" id="slider-focal-length" style="width:75px" /></span>
+        <span title="camera aperture size">aperture&nbsp;<input type="range" id="slider-aperture-size" style="width:75px" /></span>
+        <br />
+        <span title="number of aperture blades">shape&nbsp;<input type="range" id="slider-aperture-shape" style="width:75px" /></span>
+        <span title="camera aperture rotation">rotate&nbsp;<input type="range" id="slider-aperture-rotate" style="width:75px" /></span>
         <br />
         <p id="error-message" style="display:none"></p>
     </div>

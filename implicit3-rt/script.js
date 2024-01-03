@@ -90,22 +90,23 @@ document.body.onload = function (event) {
 
     // init parameters
     initParameters([
+        new GraphingParameter("cLatex", "checkbox-latex"),
+        new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new GraphingParameter("sStep", "select-step"),
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("sSpp", "select-spp"),
         new GraphingParameter("sClip", "select-clip"),
-        // new GraphingParameter("bClipFixed", "checkbox-clip-fixed"),
         new GraphingParameter("cClosed", "checkbox-closed"),
+        new GraphingParameter("sDenoise", "select-denoise"),
+        // basic
+        new GraphingParameter("sColor", "select-color"),
         new GraphingParameter("sField", "select-field"),
         new GraphingParameter("bGrid", "checkbox-grid"),
-        new GraphingParameter("sColor", "select-color"),
-        // new GraphingParameter("bTransparency", "checkbox-transparency"),
         new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
-        new GraphingParameter("cLatex", "checkbox-latex"),
-        new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new UniformSlider("rScale1", "slider-scale1", 0.01, 0.99, 0.5),
         new UniformSlider("rScale2", "slider-scale2", 0.01, 0.99, 0.5),
+        // appearance
         new UniformSlider("rOpacity", "slider-opacity", 0, 1, 0.0),
         new UniformSlider("rIor", "slider-ior", 0, 3, 1.7),
         new UniformSlider("rRoughness1", "slider-roughness1", 0, 1, 0.2),
@@ -121,13 +122,20 @@ document.body.onload = function (event) {
         new UniformSlider("rVAbsorbHue", "slider-vabsorb-hue", 0, 1, 0.55),
         new UniformSlider("rVAbsorbChr", "slider-vabsorb-chr", 0, 1, 0.4),
         new UniformSlider("rVAbsorbBri", "slider-vabsorb-bri", 0, 1, 0.97),
+        // lighting
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, 1.0 * Math.PI),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, 0.75 * Math.PI),
         new UniformSlider("rLightIntensity", "slider-light-intensity", 0, 1, 0.5),
         new UniformSlider("rLightAmbient", "slider-light-ambient", 0, 1, 0.0),
         new UniformSlider("rLightSoftness", "slider-light-softness", 0.001, 1, 0.8),
         new UniformSlider("rLightHardness", "slider-light-hardness", 0, 1, 0.0),
-        new GraphingParameter("sDenoise", "select-denoise"),
+        // camera
+        new UniformSlider("ry", "slider-camera-roll", -Math.PI, Math.PI, 0.0),
+        new UniformSlider("rCameraDistortion", "slider-camera-distortion", -0.9, 0.9, 0.0),
+        new UniformSlider("rFocalLength", "slider-focal-length", 0.01, 0.99, 0.5),
+        new UniformSlider("rApertureSize", "slider-aperture-size", 0.01, 0.99, 0.99),
+        new UniformSlider("rApertureShape", "slider-aperture-shape", 0.0, 1.0, 0.0),
+        new UniformSlider("rApertureRotate", "slider-aperture-rotate", -Math.PI, Math.PI, 0.0),
     ]);
     UpdateFunctionInputConfig.complexMode = false;
     UpdateFunctionInputConfig.implicitMode = true;

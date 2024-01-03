@@ -629,7 +629,53 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 }
 
 
+uniform float ry;
+uniform float rCameraDistortion;
+uniform float rFocalLength;
+uniform float rApertureSize;
+uniform float rApertureShape;
+uniform float rApertureRotate;
+
+// https://www.shadertoy.com/view/7lGXWK
+vec2 randPointInsideCircle(float r1, float r2) {
+    float u = 2.0*PI*r1;  // θ
+    float v = sqrt(r2);  // r
+    return v*vec2(cos(u), sin(u));
+}
+vec2 randPointInsideHeart(float r1, float r2) {
+    float u = 2.0*PI*r1;  // θ
+    float v = sqrt(r2);  // r
+    vec2 c = v*vec2(cos(u), sin(u));  // unit circle
+    c = mat2(1.0,1.0,-0.577,0.577)*c;  // ellipse
+    if (c.x<0.0) c.y=-c.y;  // mirror
+    return 0.939695*(c-vec2(0,0.245035));
+}
+vec2 randomPointInsideRegularPolygon(float n, float r1, float r2) {
+    float u = n*r1;
+    float v = r2;
+    float ui = floor(u);  // index of triangle
+    float uf = fract(u);  // interpolating in triangle
+    vec2 v0 = vec2(cos(2.*PI*ui/n), sin(2.*PI*ui/n));  // triangle edge #1
+    vec2 v1 = vec2(cos(2.*PI*(ui+1.)/n), sin(2.*PI*(ui+1.)/n));  // triangle edge #2
+    float a = 0.5*n*sin(2.0*PI/n);
+    return sqrt(v*PI/a) * mix(v0, v1, uf);  // sample inside triangle
+}
+vec2 randomPointInsideAperture() {
+    float r1 = randf(), r2 = randf();
+    float size = 1.0 / (50.0 * rApertureSize / (1.0-rApertureSize));
+    float rotate = rApertureRotate+ry;
+    mat2 m = mat2(cos(rotate), sin(rotate),
+                 -sin(rotate), cos(rotate));
+    float shape = 1.0 + 7.99 * rApertureShape;
+    vec2 p = shape < 2.0 ? randPointInsideCircle(r1, r2) :
+        shape < 3.0 ? randPointInsideHeart(r1, r2) :
+        randomPointInsideRegularPolygon(floor(shape), r1, r2);
+    return size * m * p;
+}
+
 void main(void) {
+    float focal = length(screenToWorld(vec3(0)));
+    focal *= 1.0 + 0.5 * (rFocalLength-0.5) / (rFocalLength*(1.0-rFocalLength));
 
     vec4 totcol = vec4(0);
     for (float fi=0.; fi<iNFrame; fi++) {
@@ -637,23 +683,28 @@ void main(void) {
         seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
         seed = round(65537.*seed0);
 
-        // vec3 ro_s = vec3(vXy-(-1.0+2.0*screenCenter),0);
-        vec3 ro_s = vec3(vXy,0);
-        ro_s.xy += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
-        vec3 rd_s = vec3(0,0,1);
-        vec3 ro = screenToWorld(ro_s);
-        vec3 rd = normalize(screenToWorld(ro_s+rd_s)-ro);
+        vec2 ro_s = vXy;
+        ro_s += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
+        vec2 ro_sc = worldToScreen(vec3(0)).xy;
+        ro_s = ro_sc + (ro_s-ro_sc)/(1.0-0.5*rCameraDistortion*dot(ro_s,ro_s));
+        vec3 ro = screenToWorld(vec3(ro_s,0));
+        vec3 rd = normalize(screenToWorld(vec3(ro_s,0)+vec3(0,0,1))-ro);
+        vec3 ru = normalize(screenToWorld(vec3(ro_s,0)+vec3(1,0,0))-ro);
+        vec3 rv = normalize(screenToWorld(vec3(ro_s,0)+vec3(0,1,0))-ro);
+        vec2 offset = randomPointInsideAperture();
+        vec3 dp = offset.x * ru + offset.y * rv;
+        rd = normalize(rd - dp);
+        ro = ro + focal*dp;
+
         vec3 col = mainRender(ro, rd);
         if (!isnan(dot(col, vec3(1)))) {
             if (uOutput == OUTPUT_DENOISE_ALBEDO)
                 totcol = vec4(col, length(col));
             else if (uOutput == OUTPUT_DENOISE_NORMAL) {
-                vec3 ru = normalize(screenToWorld(ro_s+vec3(1,0,0))-ro);
-                vec3 rv = normalize(screenToWorld(ro_s+vec3(0,1,0))-ro);
                 float u = dot(col, ru), v = dot(col, rv), w = dot(col, rd);
                 totcol = vec4(u, v, w, u*u+v*v);
             }
-            else totcol += vec4(col, 1);
+            else totcol += vec4(col, 1) / iNFrame;
         }
     }
     fragColor = totcol;
