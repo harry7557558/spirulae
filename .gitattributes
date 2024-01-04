@@ -3,5 +3,7 @@
 
 *.bin binary
 *.wasm binary
+*.jpg binary
+*.png binary
 
 include/Triangle/* linguist-vendored
