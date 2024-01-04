@@ -20,7 +20,7 @@
 
 <p>- <b>Lighting</b>: θ and φ specify light direction, intensity specify total integral of radiance; light consists of direction independent ambient light and spot light, ambient specify the factor of ambient light and softness/hardness specify concentration of spot light</p>
 
-<p>- <b>Camera</b>: parameters for camera roll, lens radial distortion, focal length, relative aperture size, number of aperture blades, and aperture rotation</p>
+<p>- <b>Camera</b>: parameters for camera roll, amount of screen-space radial distortion, focal length, relative aperture size, number of aperture blades, and aperture rotation</p>
 
 <p><hr/></p>
 

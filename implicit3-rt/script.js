@@ -131,10 +131,12 @@ document.body.onload = function (event) {
         new UniformSlider("rLightSoftness", "slider-light-softness", 0.001, 1, 0.8),
         new UniformSlider("rLightHardness", "slider-light-hardness", 0, 1, 0.0),
         // camera
+        new UniformSlider("fov", "slider-camera-fov", 0.01*Math.PI, 0.9*Math.PI, 0.25*Math.PI),
+        new UniformSlider("rExposure", "slider-camera-exposure", 0.01, 0.99, 0.5),
         new UniformSlider("ry", "slider-camera-roll", -Math.PI, Math.PI, 0.0),
-        new UniformSlider("rCameraDistortion", "slider-camera-distortion", -0.9, 0.9, 0.0),
+        new UniformSlider("rCameraDistortion", "slider-camera-distortion", 0.0, 1.0, 0.5),
         new UniformSlider("rFocalLength", "slider-focal-length", 0.01, 0.99, 0.5),
-        new UniformSlider("rApertureSize", "slider-aperture-size", 0.01, 0.99, 0.99),
+        new UniformSlider("rApertureSize", "slider-aperture-size", 0.01, 0.99, 0.01),
         new UniformSlider("rApertureShape", "slider-aperture-shape", 0.0, 1.0, 0.0),
         new UniformSlider("rApertureRotate", "slider-aperture-rotate", -Math.PI, Math.PI, 0.0),
     ]);

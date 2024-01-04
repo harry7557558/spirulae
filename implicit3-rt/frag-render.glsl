@@ -107,7 +107,7 @@ vec3 worldToScreen(vec3 p) {
 
 
 {%FUN%}
-#line 97
+#line 111
 
 float getScale1() {
     return rScale1/(1.0-rScale1);
@@ -484,6 +484,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
     vec3 prev_col = vec3(1.0);
     rd = normalize(rd);
 
+    bool is_inside = false;
+
     for (int iter = int(ZERO); iter < 32; iter++) {
         if (iter != 0) ro += 1e-4*length(ro) * rd;
         vec3 n, min_n = vec3(0);
@@ -505,7 +507,6 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
         // object
         float totalv;
-        bool is_inside = false;
         t = intersectObject(ro, rd, 0.0, min_t, tmpcol, n, totalv);
         if (t > 0.0 && t < min_t) {
             min_t = t, min_n = n;
@@ -513,7 +514,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             col = tmpcol;
             material = MAT_OBJECT;
         }
-        is_inside = (totalv < 0.0);
+        if (bool({%CLOSED%}))
+            is_inside = (totalv < 0.0);
 
         // absorption and scattering
         if (is_inside) {
@@ -623,6 +625,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             }
         }
         prev_col = col;
+        if (dot(rd, min_n) < 0.0 && false)
+            is_inside = !is_inside;
     }
     // return m_col + t_col;
     return t_col;
@@ -630,6 +634,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
 
 uniform float ry;
+uniform float rExposure;
 uniform float rCameraDistortion;
 uniform float rFocalLength;
 uniform float rApertureSize;
@@ -662,7 +667,7 @@ vec2 randomPointInsideRegularPolygon(float n, float r1, float r2) {
 }
 vec2 randomPointInsideAperture() {
     float r1 = randf(), r2 = randf();
-    float size = 1.0 / (50.0 * rApertureSize / (1.0-rApertureSize));
+    float size = 1.0 / (50.0 * (1.0-rApertureSize) / rApertureSize);
     float rotate = rApertureRotate+ry;
     mat2 m = mat2(cos(rotate), sin(rotate),
                  -sin(rotate), cos(rotate));
@@ -686,7 +691,9 @@ void main(void) {
         vec2 ro_s = vXy;
         ro_s += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
         vec2 ro_sc = worldToScreen(vec3(0)).xy;
-        ro_s = ro_sc + (ro_s-ro_sc)/(1.0-0.5*rCameraDistortion*dot(ro_s,ro_s));
+        // float distort = 1.0/(1.0-rCameraDistortion) - 2.0;
+        float distort = -2.0*rCameraDistortion+1.0;
+        ro_s = ro_sc + (ro_s-ro_sc)/(1.0+distort*0.5*dot(ro_s,ro_s));
         vec3 ro = screenToWorld(vec3(ro_s,0));
         vec3 rd = normalize(screenToWorld(vec3(ro_s,0)+vec3(0,0,1))-ro);
         vec3 ru = normalize(screenToWorld(vec3(ro_s,0)+vec3(1,0,0))-ro);
@@ -697,6 +704,7 @@ void main(void) {
         ro = ro + focal*dp;
 
         vec3 col = mainRender(ro, rd);
+        col *= pow(rExposure/(1.0-rExposure), 2.2);
         if (!isnan(dot(col, vec3(1)))) {
             if (uOutput == OUTPUT_DENOISE_ALBEDO)
                 totcol = vec4(col, length(col));

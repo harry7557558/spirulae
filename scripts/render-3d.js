@@ -4,10 +4,13 @@ function calcTransformMatrix(state, inverse = true,
         screenCenter = { x: 0.5, y: 0.5 }) {
     var sc = (state.height / Math.min(state.width, state.height)) / state.scale;
     var aspect = canvas.width / canvas.height;
+    var fov = (typeof state.fov == 'number' && isFinite(state.fov)) ?
+            state.fov : 0.25 * Math.PI;
+    sc *= Math.tan(0.125*Math.PI) / Math.tan(0.5*fov);
     var transformMatrix = mat4Perspective(
-        0.25 * Math.PI,
-        aspect,
-        0.5 * sc, 10.0 * sc);
+        fov, aspect,
+        state.worldSpace ? 0.001*sc : 0.5*sc,
+        state.worldSpace ? 0.01*sc : 10.0*sc);
     var translateMatrix = mat4Translate(mat4(1.0),
         [2.0*screenCenter.x-1.0, 2.0*screenCenter.y-1.0, 0.0]);
     if (typeof state.ry == 'number' && isFinite(state.ry)) {
@@ -81,7 +84,7 @@ function renderLegend(state) {
         var x = (s * mat[j][0] + mat[3][0]) / m * (0.5 * state.width);
         var y = (s * mat[j][1] + mat[3][1]) / m * (0.5 * state.height);
         var z = (s * mat[j][2] + mat[3][2]) / m;
-        if (!(z > 0. && z < 1.)) x = y = 0.;
+        // if (!(z > 0. && z < 1.)) x = y = 0.;
         axes[i].setAttribute("x2", x);
         axes[i].setAttribute("y2", -y);
     }
