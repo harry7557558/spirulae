@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Spirulae | GPU-accelerated online function graphers</title>
-    <meta name="description" content="GPU-accelerated function graphers in a web browser, both 3D and 2D." />
+    <title>Spirulae | Web-Based Math Visualization</title>
+    <meta name="description" content="GPU-accelerated math function graphers in a web browser, both 3D and 2D." />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/" />
@@ -26,9 +26,10 @@
 
     <div id="container">
 
-         <h1 style="text-align:center;margin-bottom:0;">Spirulae</h1>
+         <h1 style="text-align:center;margin-bottom:0;">Spirulae:
+            Web-Based Math Visualization</h1>
          <p style="text-align:center;">
-            <em style="color:#555">by Harry Chen - updated December 2023</em>
+            <em style="color:#555">by Harry Chen - updated January 2024</em>
             <br/>
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
@@ -75,8 +76,8 @@
             2D to 3D Mesh Generator (dev)
          </a>
 
-         <p>GPU-accelerated function graphers in a web browser, both 3D and 2D.</p>
-<p>This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
+         <p>GPU-accelerated math function graphers in a web browser, both 3D and 2D.</p>
+<p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
 <p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
 <p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
 <hr />
@@ -84,9 +85,9 @@
 <p>The equation parser implements the following features:</p>
 <ul>
 <li>Function and variable definition</li>
+<li>Vector and complex number supports</li>
 <li>Comments (start with <code>#</code>, <code>%</code>, or <code>//</code>)</li>
 <li>LaTeX preview</li>
-<li>Complex number support for all graphers</li>
 <li>Special functions</li>
 <li>Automatic differentiation</li>
 <li>etc.</li>
@@ -120,7 +121,6 @@
 </ul>
 <p>Features that may be implemented in the future (ordered approximately by priority):</p>
 <ul>
-<li>Vector support</li>
 <li>More robust equation parsing</li>
 <li>Mathematically-defined custom colors</li>
 <li>More flexible viewport control</li>
@@ -132,14 +132,14 @@
 </ul>
 <p>Ongoing and proposed research topics (ordered approximately by progress):</p>
 <ul>
-<li>Mesh generation and simplification</li>
 <li>Denoising of path-traced images via deep learning</li>
+<li>Mesh generation and simplification</li>
 <li>FEA and general physical simulation</li>
 <li>Visualization of 3D vector and tensor fields</li>
 </ul>
 <hr />
 <h2>Limitations</h2>
-<p>These tools have the following dependencies:</p>
+<p>Spirulae have the following web dependencies:</p>
 <ul>
 <li><a href="https://webglreport.com/?v=2">WebGL 2</a><ul>
 <li><code>EXT_color_buffer_float</code> and <code>EXT_float_blend</code>, required for path tracing and mesh generation</li>
@@ -149,12 +149,13 @@
 <li>WebAssembly, required for mesh generation</li>
 <li><a href="https://www.mathjax.org/">MathJax 3</a>, required for equation preview</li>
 </ul>
-<p>These tools have the following known issues:</p>
+<p>Spirulae have the following known issues:</p>
 <ul>
 <li>GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior</li>
 <li>The parser has ambiguity in resolving conflicting variable names</li>
 <li>Incomplete documentation for some graphers</li>
 </ul>
+<p>Spirulae is not available for commercial licensing due to dependency on some C++ packages like <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> and is currently distributed under GPLv3. Spirulae is <a href="https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b">previously</a> distributed under MIT license.</p>
 <hr />
 <h2>Frequently Asked Questions</h2>
 <p><strong>Q: What libraries do Spirulae use?</strong></p>

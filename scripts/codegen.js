@@ -13,7 +13,7 @@ let CodeGenerator = {
     langs: {}
 };
 
-// scalar-valued GLSL
+// GLSL
 CodeGenerator.langs.glsl = {
     inherit: [],
     config: null,
@@ -186,7 +186,7 @@ CodeGenerator.langs.glslc = {
     ],
 };
 
-// scalar-valued C++, float
+// C++, float
 CodeGenerator.langs.cppf = {
     inherit: ['glsl'],
     config: null,
@@ -246,7 +246,7 @@ CodeGenerator.langs.cppf = {
     ],
 };
 
-// scalar-valued C++, double
+// C++, double
 CodeGenerator.langs.cppd = {
     inherit: ['glsl', 'cppf'],
     config: null,
@@ -433,7 +433,7 @@ CodeGenerator.initFunctionComplexVector = function() {
 CodeGenerator.postfixToLatex = function (queue) {
     const operators = {
         '-': 1, '+': 1,
-        '*': 2, '/': 2,
+        '*': 2, '/': 2, 'dot': 2, 'cross': 2,
         '^': 3
     };
     function varnameToLatex(varname) {
@@ -492,7 +492,9 @@ CodeGenerator.postfixToLatex = function (queue) {
             stack.push(new EvalLatexObject([token], s, Infinity));
         }
         // operators
-        else if (token.type == "operator") {
+        else if (token.type == "operator" ||
+            (token.type == "function" &&
+                (token.str == "dot" || token.str == "cross"))) {
             var precedence = operators[token.str];
             var v1 = stack[stack.length - 2];
             var v2 = stack[stack.length - 1];
@@ -526,6 +528,12 @@ CodeGenerator.postfixToLatex = function (queue) {
                 latex = "{" + tex1 + "}^{" + tex2 + "}";
                 if (token.str == "^" && tex1 == "\\operatorname{e}" && false)
                     latex = MathFunctions['exp']['1'].subLatex([v2]);
+            }
+            else if (token.str == "dot") {
+                latex = "{" + tex1 + "}\\cdot{" + tex2 + "}";
+            }
+            else if (token.str == "cross") {
+                latex = "{" + tex1 + "}\\times{" + tex2 + "}";
             }
             else throw new Error("Unrecognized operator" + token.str);
             var obj = new EvalLatexObject(
@@ -1055,6 +1063,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
     }
 
     function getObjectGradient(obj, diffvar) {
+        if (typeof obj != 'object')
+            return null;
         if (obj.grad.hasOwnProperty(diffvar))
             return obj.grad[diffvar];
         var stack = [];
@@ -1086,8 +1096,10 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             addToken(stack, { ...queue[i] }, null);
         }
         var vecn = 1;
-        if (dvars.hasOwnProperty(qi) && dvars[qi].type === "complex")
+        if (dvars.hasOwnProperty(qi) && /^(complex|vec2)$/.test(dvars[qi].type))
             vecn = 2;
+        if (dvars.hasOwnProperty(qi) && dvars[qi].type === "vec3")
+            vecn = 3;
         var res = popStackValue(stack);
         if (res.length > 2*vecn-1 || res.length % 2 != 1) {
             if (vecn == 1 && stack.length == 0)
@@ -1130,7 +1142,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             getObjectGradient(qmap[varname], diffs[0]) :
             getObjectGradient(qmap[varname+';'+diffs.slice(0,nd-1).join(',')], diffs[nd-1]);
         // console.log(grad);
-        qmap[varname+';'+diffs.join(',')] = grad;
+        if (grad)
+            qmap[varname+';'+diffs.join(',')] = grad;
     }
     // console.log(qmap);
 
@@ -1204,8 +1217,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
         for (var fi = 0; fi < langpack.config.fun.length; fi++) {
             var code = langpack.config.fun[fi];
             var isAllHave = true;
-            for (var qi in queues) {
-                if (code.search("{%"+qi+"%}") == -1)
+            for (var qi in qmap) {
+                if (code.indexOf("{%"+qi+"%}") == -1)
                     isAllHave = false;
             }
             if (isAllHave) {
@@ -1234,10 +1247,16 @@ CodeGenerator.postfixToSource = function (exprs, funnames, lang) {
 
     // get required gradients
     var grads = [];
-    var matches = null;
+    var funs = [];
     if (typeof langpack.config.fun == 'string') {
-        var matches = langpack.config.fun.match(/\{\%[\w_\,\;]+\%\}/g);
+        funs = langpack.config.fun;
     }
+    else {
+        for (var i = 0; i < langpack.config.fun.length; i++)
+            funs.push(langpack.config.fun[i]);
+        funs = funs.join('\n');
+    }
+    var matches = funs.match(/\{\%[\w_\,\;\[\]]+\%\}/g);
     if (matches != null) {
         var norepeat = {};
         for (var i = 0; i < matches.length; i++) {

@@ -1,12 +1,12 @@
-<h1><a style='color:inherit;text-decoration:none' href="https://harry7557558.github.io/spirulae/">Spirulae</a></h1>
+# Spirulae: Web-Based Math Visualization
 
-*by Harry Chen - updated December 2023*
+*by Harry Chen - updated January 2024*
 
 [![spirulae.jpg](home/spirulae.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
-GPU-accelerated function graphers in a web browser, both 3D and 2D.
+GPU-accelerated math function graphers in a web browser, both 3D and 2D.
 
-This is a personal passion project. I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.
+This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.
 
 It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirulae/issues).
 
@@ -19,9 +19,9 @@ The name "Spirulae" comes from the name of a [deep-ocean cephalopod mollusk](htt
 The equation parser implements the following features:
 
  - Function and variable definition
+ - Vector and complex number supports
  - Comments (start with `#`, `%`, or `//`)
  - LaTeX preview
- - Complex number support for all graphers
  - Special functions
  - Automatic differentiation
  - etc.
@@ -56,7 +56,6 @@ Spirulae is under active development. Tools and features that are being develope
 
 Features that may be implemented in the future (ordered approximately by priority):
 
- - Vector support
  - More robust equation parsing
  - Mathematically-defined custom colors
  - More flexible viewport control
@@ -67,8 +66,8 @@ Features that may be implemented in the future (ordered approximately by priorit
 
 Ongoing and proposed research topics (ordered approximately by progress):
 
- - Mesh generation and simplification
  - Denoising of path-traced images via deep learning
+ - Mesh generation and simplification
  - FEA and general physical simulation
  - Visualization of 3D vector and tensor fields
 
@@ -76,7 +75,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
 
 ## Limitations
 
-These tools have the following dependencies:
+Spirulae have the following web dependencies:
 
  - [WebGL 2](https://webglreport.com/?v=2)
     - `EXT_color_buffer_float` and `EXT_float_blend`, required for path tracing and mesh generation
@@ -84,11 +83,13 @@ These tools have the following dependencies:
  - WebAssembly, required for mesh generation
  - [MathJax 3](https://www.mathjax.org/), required for equation preview
 
-These tools have the following known issues:
+Spirulae have the following known issues:
 
  - GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior
  - The parser has ambiguity in resolving conflicting variable names
  - Incomplete documentation for some graphers
+
+Spirulae is not available for commercial licensing due to dependency on some C++ packages like [Triangle](https://www.cs.cmu.edu/~quake/triangle.html) and is currently distributed under GPLv3. Spirulae is [previously](https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b) distributed under MIT license.
 
 ----
 

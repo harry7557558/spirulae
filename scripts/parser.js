@@ -277,7 +277,8 @@ MathParser.addFunctionParenthesis = function (expr) {
             }
             // ,
             else if (c == ',') {
-                tmp += c;
+                tmp += close + c;
+                close = "";
                 continue;
             }
             // exit function
@@ -672,25 +673,30 @@ MathParser.replaceDesmosCopyPaste = function(input) {
     input = input.replaceAll("\\left|", "abs(").replaceAll("\\right|", ")");
     input = input.replaceAll(/\\[ \!\,\:\;]/g, " ");
     input = input.replaceAll("\\cdot", "*");
-    input = input.replaceAll(/\\(arccos|arcsin|arctan|cos|cosh|cot|coth|csc|exp|ln|log|sec|sin|sinh|tan|tanh)/g, "$1");
+    input = input.replaceAll(/\\(arccos|arcsin|arctan|cos|cosh|cot|coth|csc|exp|ln|log|sec|sin|sinh|tan|tanh|min|max)/g, "$1");
     input = input.replaceAll(/\\operatorname\{(\w+)\}/g, "$1");
+    input = input.replaceAll(/\\([Α-Ωα-ω])/g, "$1");
+    input = input.replaceAll(/_\{([A-Za-z0-9]+)\}/g, "_$1");
 
     // \frac
     var sf = input.replaceAll("\\dfrac", "\\frac").split("\\frac");
     input = "";
-    var frac = 0, depth = 0, depths = [];
+    var frac = 0, depth = 1, depths = [];
     for (var si = 0; si < sf.length; si++) {
         var s = sf[si];
+        if (si != 0) input += "(";
         for (var i = 0; i < s.length; i++) {
             input += s[i];
             if (s[i] == '{' && (i == 0 || s[i-1] != '\\'))
                 depth++;
             else if (s[i] == '}' && (i == 0 || s[i-1] != '\\')) {
                 depth--;
-                if (frac > 0 && depth < depths[frac-1])
+                if (frac > 0 && depth < Math.abs(depths[frac-1]))
                     throw new Error("LaTeX fraction not match.");
                 if (frac > 0 && depth == depths[frac-1])
-                    input += "/", frac--, depths.pop();
+                    input += "/", depths[frac-1] *= -1;
+                else if (frac > 0 && depth == -depths[frac-1])
+                    input += ")", frac--, depths.pop();
             }
         }
         if (si + 1 != sf.length) {
@@ -763,9 +769,6 @@ MathParser.parseInput = function (input) {
         return res;
     });
 
-    // Desmos copy paste
-    input = MathParser.replaceDesmosCopyPaste(input);
-
     // split to arrays
     input = input.replace(/\r?\n/g, ';');
     input = input.replace(/\s+/, ' ');
@@ -783,6 +786,8 @@ MathParser.parseInput = function (input) {
         }
         before = before.replace(/\=+/, "=");
         input[i] = before + after;
+        // Desmos copy paste
+        input[i] = MathParser.replaceDesmosCopyPaste(input[i]);
     }
 
     // read each line of input
@@ -973,6 +978,8 @@ MathParser.parseInput = function (input) {
             for (var varname1 in dvars[varname]) {
                 if (mainVariables.hasOwnProperty(varname1))
                     result1[varname1] = null;
+                else if (varname1 == "val" && mainEqus.length == 1)
+                    result1[varname1] = mainEqus[0];
                 else if (dvars[varname][varname1]) {
                     good = false;
                     break;
@@ -980,6 +987,8 @@ MathParser.parseInput = function (input) {
             }
             if (good) {
                 for (var varname1 in result1) {
+                    if (result1[varname1] !== null)
+                        continue;
                     result[varname1] = dfs(variables[varname1].postfix, variables);
                 }
                 groupFound.push(varname)
@@ -997,13 +1006,23 @@ MathParser.parseInput = function (input) {
         var groups = [];
         if (groupFound.length > 0)
             hasGroup = groupFound;
+        var hasMain = false;
         for (var group in hasGroup) {
             var varnames = [];
             for (var varname in dvars[group])
                 varnames.push(varname);
-            groups.push('[' + varnames.join(', ') + ']');
+            if (varnames.length == 1 && varnames[0] == "val")
+                hasMain = true;
+            else
+                groups.push('[' + varnames.join(', ') + ']');
         }
         groups = groups.join(', ');
+        if (hasMain) {
+            var type = dvars.hasOwnProperty('val') &&
+                dvars.val.hasOwnProperty('type') ?
+                dvars.val.type : 'scalar';
+            groups += ", " + (groupFound.length>0?'and':'or') + " one " + type;
+        }
         if (groupFound.length > 0)
             throw "Conflicting dependent variable combinations: " + groups;
         throw "Possible dependent variable combinations are: " + groups;

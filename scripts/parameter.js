@@ -362,7 +362,8 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         }
         // shader function
         var expr = {};
-        if (UpdateFunctionInputConfig.enableMain)
+        if (UpdateFunctionInputConfig.enableMain ||
+            (parsed.hasOwnProperty('val') && parsed.val.length > 0))
             expr.val = parsed.val;
         for (var varname in parsed)
             if (varname != 'val' && varname != 'latex')

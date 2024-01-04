@@ -35,16 +35,23 @@ function initLangpack() {
         joiner: "\n"
     };
     CodeGenerator.langs.glsl.presets.paramsurf_compact = {
-        fun: "vec3 {%funname%}(float u, float v) {\n\
+        fun: [
+            "vec3 {%funname%}(float u, float v) {\n\
     float {%funbody%};\n\
     return vec3({%x%}, {%y%}, {%z%});\n\
 }",
+            "vec3 {%funname%}(float u, float v) {\n\
+    float {%funbody%};\n\
+    return vec3({%val[0]%},{%val[1]%},{%val[2]%});\n\
+}"
+        ],
         prefix: 'v',
         def: "{%varname%}={%expr%}",
         joiner: ", "
     };
     CodeGenerator.langs.glsl.presets.paramsurfg_compact = {
-        fun: "vec3 {%funname%}(float u, float v) {\n\
+        fun: [
+            "vec3 {%funname%}(float u, float v) {\n\
     float {%funbody%};\n\
     return vec3({%x%}, {%y%}, {%z%});\n\
 }\n\
@@ -52,12 +59,22 @@ mat3 {%funname%}G(float u, float v) {\n\
     float {%funbody%};\n\
     return mat3({%x%}, {%y%}, {%z%}, {%x;u%}, {%y;u%}, {%z;u%}, {%x;v%}, {%y;v%}, {%z;v%});\n\
 }",
+            "vec3 {%funname%}(float u, float v) {\n\
+    float {%funbody%};\n\
+    return vec3({%val[0]%},{%val[1]%},{%val[2]%});\n\
+}\n\
+mat3 {%funname%}G(float u, float v) {\n\
+    float {%funbody%};\n\
+    return mat3({%val[0]%}, {%val[1]%}, {%val[2]%}, {%val[0];u%}, {%val[1];u%}, {%val[2];u%}, {%val[0];v%}, {%val[1];v%}, {%val[2];v%});\n\
+}"
+        ],
         prefix: 'v',
         def: "{%varname%}={%expr%}",
         joiner: ", "
     };
     CodeGenerator.langs.glsl.presets.paramsurfh_compact = {
-        fun: "vec3 {%funname%}(float u, float v) {\n\
+        fun: [
+            "vec3 {%funname%}(float u, float v) {\n\
     float {%funbody%};\n\
     return vec3({%x%}, {%y%}, {%z%});\n\
 }\n\
@@ -66,6 +83,16 @@ mat3 {%funname%}H(float u, float v, out mat3 r2uv) {\n\
     r2uv = mat3({%x;u,u%}, {%y;u,u%}, {%z;u,u%}, {%x;u,v%}, {%y;u,v%}, {%z;u,v%}, {%x;v,v%}, {%y;v,v%}, {%z;v,v%});\n\
     return mat3({%x%}, {%y%}, {%z%}, {%x;u%}, {%y;u%}, {%z;u%}, {%x;v%}, {%y;v%}, {%z;v%});\n\
 }",
+            "vec3 {%funname%}(float u, float v) {\n\
+    float {%funbody%};\n\
+    return vec3({%val[0]%}, {%val[1]%}, {%val[2]%});\n\
+}\n\
+mat3 {%funname%}H(float u, float v, out mat3 r2uv) {\n\
+    float {%funbody%};\n\
+    r2uv = mat3({%val[0];u,u%}, {%val[1];u,u%}, {%val[2];u,u%}, {%val[0];u,v%}, {%val[1];u,v%}, {%val[2];u,v%}, {%val[0];v,v%}, {%val[1];v,v%}, {%val[2];v,v%});\n\
+    return mat3({%val[0]%}, {%val[1]%}, {%val[2]%}, {%val[0];u%}, {%val[1];u%}, {%val[2];u%}, {%val[0];v%}, {%val[1];v%}, {%val[2];v%});\n\
+}"
+        ],
         prefix: 'v',
         def: "{%varname%}={%expr%}",
         joiner: ", "
@@ -91,9 +118,15 @@ document.body.onload = function (event) {
         'v': "v"
     };
     MathParser.DependentVariables = {
-        'x': true,
-        'y': true,
-        'z': true
+        0: {
+            'x': true,
+            'y': true,
+            'z': true
+        },
+        1: {
+            'val': true,
+        },
+        'val': { type: 'vec3' }
     };
 
     // init code generator

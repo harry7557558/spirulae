@@ -1,4 +1,4 @@
-<h1><a style='color:inherit;text-decoration:none' href="https://harry7557558.github.io/spirulae/">Spirulae</a></h1>
+# Spirulae: Web-Based Math Visualization
 
 *by Harry Chen - updated {%date%}*
 
