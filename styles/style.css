@@ -57,7 +57,7 @@ svg:hover .axis-3d-active {
     max-height: 95%;
     overflow-x: hidden;
     overflow-y: auto;
-    background-color: rgba(14, 14, 101, 0.5);
+    background-color: hsl(240, 20%, 20%, 0.8);
     padding: 15px 20px;
     color: white;
     font-size: 0.95em;
@@ -90,10 +90,59 @@ svg:hover .axis-3d-active {
     word-break: break-all;
 }
 
+.foldable[folded="true"] {
+    margin-top: -0.1em;
+    height: 0.9em;
+    overflow: hidden;
+}
+
+.foldable-name {
+    cursor: pointer;
+}
+
+.foldable[folded="false"] .foldable-name {
+    float: right;
+    width: 0.6em;
+    overflow: hidden;
+}
+
+.foldable[folded="true"] .foldable-name {
+    display: block;
+    margin-top: -0.2em;
+    margin-bottom: 0.5em;
+    text-decoration: underline;
+}
+
 input, select, button {
     margin: 0.1em 0.2em 0.1em 0;
     display: inline-block;
     vertical-align: middle;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 1.0em;
+    background: hsl(120, 0%, 80%, 0.5);
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.0em;
+    height: 1.1em;
+    cursor: pointer;
+    border: 0.1em solid hsl(120, 80%, 100%);
+    border-radius: 0.4em;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 0.0em;
+    height: 1.0em;
+    cursor: pointer;
+    border: 0.1em solid hsl(120, 80%, 100%);
+    border-radius: 0.4em;
 }
 
 hr {
@@ -111,7 +160,7 @@ hr {
     height: 80%;
     max-width: 800px;
     max-height: 800px;
-    background-color: rgba(64, 32, 64, 0.9);
+    background-color: hsl(300, 30%, 20%, 0.9);
     padding: 20px 32px 40px 40px;
     font-family: 'Arial';
     font-size: 0.95em;

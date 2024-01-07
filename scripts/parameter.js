@@ -69,6 +69,31 @@ function GraphingParameter(name, id, callback=null) {
     });
 }
 
+// foldable parameters
+function ParameterFolder(name, id) {
+    this.name = name;
+    let div = document.getElementById(id);
+    let span = div.getElementsByClassName('foldable-name')[0];
+    let folded = (div.getAttribute('folded') == "true");
+    this.getValue = function () {
+        return folded;
+    };
+    this.setValue = function (value) {
+        folded = value;
+        div.setAttribute("folded", new String(folded));
+        var text = id.split('-').slice(1).join(' ');
+        span.innerHTML = folded ? '&gt;&nbsp;' + text : 'v';
+        span.setAttribute('title', folded ? 'unfold' : 'fold');
+        state[this.name] = value;
+    };
+    var folder = this;
+    folder.setValue(folded);
+    span.addEventListener("click", function (event) {
+        folder.setValue(!folded);
+        updateFunctionInput(false, false);
+    });
+}
+
 // a slider that controls a shader uniform
 // not saved on local storage
 function UniformSlider(name, id, vmin, vmax, v0) {
@@ -154,6 +179,7 @@ function initParameters(parameters) {
     // set event listeners
     for (var i = 0; i < RawParameters.length; i++) {
         if (/^r/.test(RawParameters[i].name));
+        else if (!RawParameters[i].hasOwnProperty('element'));
         else RawParameters[i].element.addEventListener("input", function (event) {
             updateFunctionInput(false);
         });

@@ -47,6 +47,9 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
+        <hr />
+    <div class="foldable" id='folder-basic' folded="false">
+        <span class="foldable-name"></span>
         <span><select id="select-step">
                 <option value="0.04">low</option>
                 <option value="0.01" selected>medium</option>
@@ -86,7 +89,15 @@
             <option value="unet1">UNet</option>
             <option value="resnet1">ResNet</option>
         </select>denoise</span>&ensp;
-        <hr />
+        <br />
+        <span>scale</span>
+        <span title="object size"><input type="range" id="slider-scale1" style="width:100px" /></span>
+        <span title="plane grid size"><input type="range" id="slider-scale2" style="width:100px" /></span>
+        <br />
+    </div>
+    <hr />
+    <div class="foldable" id='folder-appearance' folded="true">
+        <span class="foldable-name"></span>
         <span title="Surface color mode"><select id="select-color">
                 <option value="0">default</option>
                 <option value="1">normal</option>
@@ -97,11 +108,6 @@
         <span title="Red-highlight discontinuities with sign change for opaque surfaces"><input type="checkbox"
                 id="checkbox-discontinuity" checked />highlight discontinuity</span>
         <br />
-        <span>scale</span>
-        <span title="object size"><input type="range" id="slider-scale1" style="width:100px" /></span>
-        <span title="plane grid size"><input type="range" id="slider-scale2" style="width:100px" /></span>
-        <br />
-        <hr />
         <span title="object opacity"><span>opacity</span>&nbsp;<input type="range" id="slider-opacity" style="width:80px" /></span>
         <span title="object index of refraction"><span>ior</span>&nbsp;<input type="range" id="slider-ior" style="width:80px" /></span>
         <br />
@@ -130,9 +136,12 @@
         <span title="atmospheric absorption chroma">c&nbsp;<input type="range" id="slider-vabsorb-chr" style="width:60px" /></span>
         <span style="display:none">l&nbsp;<input type="range" id="slider-vabsorb-bri" style="width:35px" /></span>
         <br />
-        <hr />
-        <span><i>θ<sub>light</sub></i>&nbsp;<input type="range" id="slider-theta" style="width:100px" /></span>
-        <span><i>φ<sub>light</sub></i>&nbsp;<input type="range" id="slider-phi" style="width:70px" /></span>
+    </div>
+    <hr />
+    <div class="foldable" id='folder-lighting' folded="true">
+        <span class="foldable-name"></span>
+        <span>light&nbsp;<i>θ</i>&nbsp;<input type="range" id="slider-theta" style="width:100px" /></span>
+        <span><i>φ</i>&nbsp;<input type="range" id="slider-phi" style="width:70px" /></span>
         <br />
         <span title="total sky light intensity">intensity&nbsp;<input type="range" id="slider-light-intensity" style="width:70px" /></span>
         <span title="ambient sky light factor">ambient&nbsp;<input type="range" id="slider-light-ambient" style="width:60px" /></span>
@@ -140,19 +149,23 @@
         <span title="transition from point to dome light">softness&nbsp;<input type="range" id="slider-light-softness" style="width:60px" /></span>
         <span title="sun light boundary sharpness">hardness&nbsp;<input type="range" id="slider-light-hardness" style="width:60px" /></span>
         <br />
-        <hr />
+    </div>
+    <hr />
+    <div class="foldable" id='folder-camera' folded="true">
+        <span class="foldable-name"></span>
         <span title="camera field of view">fov&nbsp;<input type="range" id="slider-camera-fov" style="width:75px" /></span>
-        <span title="camera exposure">exposure&nbsp;<input type="range" id="slider-camera-exposure" style="width:75px" /></span>
+        <span title="camera exposure">exposure&nbsp;<input type="range" id="slider-camera-exposure" style="width:70px" /></span>
         <br />
         <span title="camera roll angle">roll&nbsp;<input type="range" id="slider-camera-roll" style="width:75px" /></span>
         <span title="camera lens distortion">distortion&nbsp;<input type="range" id="slider-camera-distortion" style="width:75px" /></span>
         <br />
-        <span title="camera focal length">focal&nbsp;<input type="range" id="slider-focal-length" style="width:75px" /></span>
+        <span title="camera focal length">focal&nbsp;<input type="range" id="slider-focal-length" style="width:70px" /></span>
         <span title="camera aperture size">aperture&nbsp;<input type="range" id="slider-aperture-size" style="width:75px" /></span>
         <br />
         <span title="number of aperture blades">shape&nbsp;<input type="range" id="slider-aperture-shape" style="width:75px" /></span>
         <span title="camera aperture rotation">rotate&nbsp;<input type="range" id="slider-aperture-rotate" style="width:75px" /></span>
         <br />
+    </div>
         <p id="error-message" style="display:none"></p>
     </div>
 

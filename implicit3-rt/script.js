@@ -93,6 +93,8 @@ document.body.onload = function (event) {
     initParameters([
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
+        // basic
+        new ParameterFolder("fBasic", "folder-basic"),
         new GraphingParameter("sStep", "select-step"),
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
@@ -100,14 +102,14 @@ document.body.onload = function (event) {
         new GraphingParameter("sClip", "select-clip"),
         new GraphingParameter("cClosed", "checkbox-closed"),
         new GraphingParameter("sDenoise", "select-denoise"),
-        // basic
+        new UniformSlider("rScale1", "slider-scale1", 0.01, 0.99, 0.5),
+        new UniformSlider("rScale2", "slider-scale2", 0.01, 0.99, 0.5),
+        // appearance
         new GraphingParameter("sColor", "select-color"),
         new GraphingParameter("sField", "select-field"),
         new GraphingParameter("bGrid", "checkbox-grid"),
         new GraphingParameter("bDiscontinuity", "checkbox-discontinuity"),
-        new UniformSlider("rScale1", "slider-scale1", 0.01, 0.99, 0.5),
-        new UniformSlider("rScale2", "slider-scale2", 0.01, 0.99, 0.5),
-        // appearance
+        new ParameterFolder("fAppearance", "folder-appearance"),
         new UniformSlider("rOpacity", "slider-opacity", 0, 1, 0.0),
         new UniformSlider("rIor", "slider-ior", 0, 3, 1.7),
         new UniformSlider("rRoughness1", "slider-roughness1", 0, 1, 0.2),
@@ -124,6 +126,7 @@ document.body.onload = function (event) {
         new UniformSlider("rVAbsorbChr", "slider-vabsorb-chr", 0, 1, 0.4),
         new UniformSlider("rVAbsorbBri", "slider-vabsorb-bri", 0, 1, 0.97),
         // lighting
+        new ParameterFolder("fLighting", "folder-lighting"),
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, 1.0 * Math.PI),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, 0.75 * Math.PI),
         new UniformSlider("rLightIntensity", "slider-light-intensity", 0, 1, 0.5),
@@ -131,6 +134,7 @@ document.body.onload = function (event) {
         new UniformSlider("rLightSoftness", "slider-light-softness", 0.001, 1, 0.8),
         new UniformSlider("rLightHardness", "slider-light-hardness", 0, 1, 0.0),
         // camera
+        new ParameterFolder("fCamera", "folder-camera"),
         new UniformSlider("fov", "slider-camera-fov", 0.01*Math.PI, 0.9*Math.PI, 0.25*Math.PI),
         new UniformSlider("rExposure", "slider-camera-exposure", 0.01, 0.99, 0.5),
         new UniformSlider("ry", "slider-camera-roll", -Math.PI, Math.PI, 0.0),
