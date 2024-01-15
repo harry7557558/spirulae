@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <title>Spirulae | Web-Based Math Visualization</title>
-    <meta name="description" content="GPU-accelerated math function graphers in a web browser, both 3D and 2D." />
+    <meta name="description" content="GPU-accelerated math function graphers in web browsers, both 3D and 2D." />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/" />
@@ -58,12 +58,12 @@
          <a href="https://harry7557558.github.io/spirulae/implicit3-rt/" class="a">
             <img src="home/img-implicit3-rt.jpg" style="width:100%"></img>
             <br/>
-            Implicit Surface Path Tracer (beta)
+            Implicit Surface Path Tracer<br />(powerful GPU required)
          </a>
          <a href="https://harry7557558.github.io/spirulae/meshgen3/" class="a">
             <img src="home/img-meshgen3.jpg" style="width:100%"></img>
             <br/>
-            3D Implicit Mesh Generator (dev)
+            3D Implicit Mesh Generator (dev)<br /> &nbsp;
          </a>
          <a href="https://harry7557558.github.io/spirulae/ode2/" class="a">
             <img src="home/img-ode2.jpg" style="width:100%"></img>
@@ -76,7 +76,7 @@
             2D to 3D Mesh Generator (dev)
          </a>
 
-         <p>GPU-accelerated math function graphers in a web browser, both 3D and 2D.</p>
+         <p>GPU-accelerated math function graphers in web browsers, both 3D and 2D.</p>
 <p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
 <p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
 <p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
@@ -159,9 +159,11 @@
 <hr />
 <h2>Frequently Asked Questions</h2>
 <p><strong>Q: What libraries do Spirulae use?</strong></p>
-<p>To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of <a href="https://www.mathjax.org/">MathJax</a> for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a>. The C++ part that powers mesh generation is compiled to <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a> with <a href="https://emscripten.org/">Emscripten</a>, which uses the following third-party libraries:<br />
- - <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a fast header-only 2D Delaunay triangulation library
- - <a href="https://github.com/g-truc/glm">GLM</a> and <a href="https://www.glfw.org/">GLFW</a>, popular math and GUI libraries for OpenGL</p>
+<p>To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of <a href="https://www.mathjax.org/">MathJax</a> for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a>. The C++ part that powers mesh generation is compiled to <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a> with <a href="https://emscripten.org/">Emscripten</a>, which uses the following third-party libraries:</p>
+<ul>
+<li><a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a fast header-only 2D Delaunay triangulation library</li>
+<li><a href="https://github.com/g-truc/glm">GLM</a> and <a href="https://www.glfw.org/">GLFW</a>, popular math and GUI libraries for OpenGL</li>
+</ul>
 <p><strong>Q: How to draw shapes using equations?</strong></p>
 <p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
 <p><strong>Q: How does Spirulae evaluate functions on the GPU?</strong></p>

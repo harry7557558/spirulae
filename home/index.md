@@ -1,4 +1,4 @@
-GPU-accelerated math function graphers in a web browser, both 3D and 2D.
+GPU-accelerated math function graphers in web browsers, both 3D and 2D.
 
 This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.
 
@@ -91,7 +91,8 @@ Spirulae is not available for commercial licensing due to dependency on some C++
 
 **Q: What libraries do Spirulae use?**
 
-To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of [MathJax](https://www.mathjax.org/) for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL). The C++ part that powers mesh generation is compiled to [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly) with [Emscripten](https://emscripten.org/), which uses the following third-party libraries:  
+To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of [MathJax](https://www.mathjax.org/) for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL). The C++ part that powers mesh generation is compiled to [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly) with [Emscripten](https://emscripten.org/), which uses the following third-party libraries:
+
  - [Triangle](https://www.cs.cmu.edu/~quake/triangle.html), a fast header-only 2D Delaunay triangulation library
  - [GLM](https://github.com/g-truc/glm) and [GLFW](https://www.glfw.org/), popular math and GUI libraries for OpenGL
 

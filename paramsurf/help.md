@@ -2,7 +2,7 @@
 
 <p>A tool to visualize 3D parametric surfaces.</p>
 
-<p>Basic use: $u$ and $v$ are from $0$ to $1$. Assign variables $x$, $y$, $z$.</p>
+<p>Basic use: $u$ and $v$ are from $0$ to $1$. Assign variables $x$, $y$, $z$. Alternatively, you can create vectors depending on $u$ and $v$ using the <code>vec3</code> function.</p>
 
 
 <h3>Parameters</h3>
@@ -13,11 +13,11 @@
 
 <p><b>Light theme</b>: Check <code>☼</code> to use light background instead of the default dark background.</p>
 
-<p><b>Autodiff</b>: Use exact gradient instead of numerical gradient for rendering, which can significantly improve accuracy in detailed graphs. This incrases compilation time, and in rare cases, it can produce floating point overflow error with green highlighting.</p>
+<p><b>Autodiff</b>: Use exact gradient instead of numerical gradient for rendering, which can significantly improve accuracy in detailed graphs. This incrases compilation time (especially on Windows with <a href="https://en.wikipedia.org/wiki/ANGLE_(software)" target="_blank">ANGLE</a>), and in rare cases, it can produce floating point overflow error highlighted in green.</p>
 
 <p><b>Grid</b>: Choose no grid, Cartesian grid, or <i>u-v</i> grid.</p>
 
-<p><b>X-ray</b>: Render transparent surface with a <a href="https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law">physically based X-ray formula</a>.</p>
+<p><b>X-ray</b>: Render transparent surface with a <a href="https://en.wikipedia.org/wiki/Beer%E2%80%93Lambert_law" target="_blank">physically based X-ray formula</a>.</p>
 
 
 <h3>Coloring modes</h3>
@@ -30,4 +30,4 @@
 
 <p><b>Gradient</b>: This mode colors the surface based on the magnitude of the gradient $\left|\frac{\partial \vec{r}}{\partial u}\times\frac{\partial\vec{r}}{\partial v}\right|$. The surface appears bluer when the magnitude of the gradient is closer to an integer power of $10^2$, like 0.01, 1, 100, and more orange as it departs.</p>
 
-<p><b>Curvature</b>: This mode colors the surface based on <a href="https://en.wikipedia.org/wiki/Gaussian_curvature">Gaussian curvature</a> $K$. The surface appears bluer when $|K|$ is closer to an integer power of $10^4$, like 0.001, 1, 1000, and more orange as it departs. A "stripe" indicates a line with a zero Gaussian curvature, and a green area (represents <code>NaN</code>) can indicates an area with zero Gaussian curvature.</p>
+<p><b>Curvature</b>: This mode colors the surface based on <a href="https://en.wikipedia.org/wiki/Gaussian_curvature" target="_blank">Gaussian curvature</a> $K$. The surface appears bluer when $|K|$ is closer to an integer power of $10^4$, like 0.0001, 1, and 10000, and more orange as it departs. A "stripe" indicates a line with a zero Gaussian curvature, and a green area (represents <code>NaN</code>) can indicates an area with zero Gaussian curvature.</p>

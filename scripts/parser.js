@@ -676,7 +676,8 @@ MathParser.replaceDesmosCopyPaste = function(input) {
     input = input.replaceAll(/\\(arccos|arcsin|arctan|cos|cosh|cot|coth|csc|exp|ln|log|sec|sin|sinh|tan|tanh|min|max)/g, "$1");
     input = input.replaceAll(/\\operatorname\{(\w+)\}/g, "$1");
     input = input.replaceAll(/\\([Α-Ωα-ω])/g, "$1");
-    input = input.replaceAll(/_\{([A-Za-z0-9]+)\}/g, "_$1");
+    input = input.replaceAll(/_\{([A-Za-z0-9]+)\}\(/g, "_$1\(");
+    input = input.replaceAll(/_\{([A-Za-z0-9]+)\}/g, "_$1 ");
 
     // \frac
     var sf = input.replaceAll("\\dfrac", "\\frac").split("\\frac");
