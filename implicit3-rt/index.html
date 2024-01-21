@@ -40,7 +40,8 @@
             onclick='javascript:event.preventDefault();document.getElementById("help-menu").style.visibility="visible";'>help</a>
         <br />
         <span title="Display a preview of the input equation"><input type="checkbox" id="checkbox-latex"
-                checked />equation preview</span>&ensp;
+                checked />equation preview</span>&nbsp;<span title="Light equation preview theme"><input
+                    type="checkbox" id="checkbox-light" class="checkbox-light" checked /></span>&ensp;
         <span title="Automatically update the shader on input"><input type="checkbox" id="checkbox-auto-compile"
                 checked />auto-update</span>&ensp;
         <br />
@@ -56,7 +57,6 @@
                 <option value="0.004">high</option>
                 <option value="0.001">ultra high</option>
             </select>precision</span>&ensp;
-        <span style="display:none" title="Light theme"><input type="checkbox" id="checkbox-light" />☼</span>
         <span><select id="select-spp" title="Maximum samples per pixel">
                 <option value="16">2⁴</option>
                 <option value="64">2⁶</option>
@@ -143,11 +143,12 @@
         <span>light&nbsp;<i>θ</i>&nbsp;<input type="range" id="slider-theta" style="width:100px" /></span>
         <span><i>φ</i>&nbsp;<input type="range" id="slider-phi" style="width:70px" /></span>
         <br />
-        <span title="total sky light intensity">intensity&nbsp;<input type="range" id="slider-light-intensity" style="width:70px" /></span>
-        <span title="ambient sky light factor">ambient&nbsp;<input type="range" id="slider-light-ambient" style="width:60px" /></span>
+        <span title="total background light intensity">intensity&nbsp;<input type="range" id="slider-light-intensity" style="width:70px" /></span>
+        <span title="factor of sky light">sky&nbsp;<input type="range" id="slider-light-sky" style="width:70px" /></span>
         <br />
-        <span title="transition from point to dome light">softness&nbsp;<input type="range" id="slider-light-softness" style="width:60px" /></span>
-        <span title="sun light boundary sharpness">hardness&nbsp;<input type="range" id="slider-light-hardness" style="width:60px" /></span>
+        <span title="ambient background light factor">ambient&nbsp;<input type="range" id="slider-light-ambient" style="width:35px" /></span>
+        <span title="transition from point to dome light">soft&nbsp;<input type="range" id="slider-light-softness" style="width:40px" /></span>
+        <span title="sun light boundary sharpness">hard&nbsp;<input type="range" id="slider-light-hardness" style="width:35px" /></span>
         <br />
     </div>
     <hr />

@@ -127,6 +127,10 @@ input[type="range"] {
     outline: none;
 }
 
+input[type="range"]:hover {
+    background: hsl(120, 0%, 80%, 0.7);
+}
+
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -144,6 +148,56 @@ input[type="range"]::-moz-range-thumb {
     border: 0.1em solid hsl(120, 80%, 100%);
     border-radius: 0.4em;
 }
+
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: rgba(232, 232, 232, 0.5);
+    width: 1em;
+    height: 1em;
+    border-radius: 0.2em;
+    display: inline-grid;
+    place-content: center;
+}
+
+input[type="checkbox"]:hover {
+    background-color: rgba(232, 232, 232, 1);
+}
+
+input[type="checkbox"]::before {
+    content: "";
+    width: 0.7em;
+    height: 0.7em;
+    transform: scale(0);
+    background-color: white;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+input[type="checkbox"]:checked {
+    /* background-color: hsl(30,100%,70%); */
+    background-color: rgb(0, 120, 237);
+}
+
+input[type="checkbox"]:checked:hover {
+    background-color: dodgerblue;
+}
+
+.checkbox-light[type="checkbox"]:hover {
+    background-color: yellow;
+}
+
+.checkbox-light[type="checkbox"]:checked {
+    background-color: darkorange;
+}
+
+.checkbox-light[type="checkbox"]:checked:hover {
+    background-color: orange;
+}
+
 
 hr {
     color: rgba(255, 255, 255, 0.4);

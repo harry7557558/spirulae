@@ -21,6 +21,8 @@ uniform float ZERO;  // used in loops to reduce compilation time
 #define ZETA_FAST
 #include "../shaders/complex.glsl"
 
+#include "sky_model.glsl"
+
 uniform int uOutput;
 #define OUTPUT_RADIANCE 0
 #define OUTPUT_ALBEDO 1
@@ -107,7 +109,7 @@ vec3 worldToScreen(vec3 p) {
 
 
 {%FUN%}
-#line 111
+#line 113
 
 float getScale1() {
     return rScale1/(1.0-rScale1);
@@ -145,14 +147,25 @@ float funC(vec3 p, out bool isBoundary) {
 
 vec3 funGrad(vec3 p) {
     float h = 0.001*pow(dot(p,p), 1.0/6.0);
+  #if 0
     return vec3(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
         fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
     ) / (2.0*h*getScale1());
+  #else
+    // lower shader compilation time
+    vec3 n = vec3(0.0);
+    for (float i = ZERO; i < 6.; i++) {
+        vec3 e = normalize((1.+2.*cos(2./3.*PI*vec3(i,i+1.,i+2.)))*cos(.6*i));
+        n += e * fun(p+e*h);
+    }
+    return n / (2.0*h*getScale1());
+  #endif
 }
 vec3 funGradC(vec3 p, out bool isBoundary) {
     float h = 0.001*pow(dot(p,p), 1.0/6.0);
+  #if 0
     bool b0, b1, b2, b3, b4, b5;
     vec3 r = vec3(
         funC(p+vec3(h,0,0),b0) - funC(p-vec3(h,0,0),b1),
@@ -160,17 +173,24 @@ vec3 funGradC(vec3 p, out bool isBoundary) {
         funC(p+vec3(0,0,h),b4) - funC(p-vec3(0,0,h),b5)
     ) / (2.0*h*getScale1());
     isBoundary = (int(b0)+int(b1)+int(b2)+int(b3)+int(b4)+int(b5)) > 3;
+  #else
+    // lower shader compilation time
+    vec3 r = vec3(0.0);
+    float bcount = 0.0;
+    for (float i = ZERO; i < 6.; i++) {
+        vec3 e = normalize((1.+2.*cos(2./3.*PI*vec3(i,i+1.,i+2.)))*cos(.6*i));
+        bool b;
+        r += e * funC(p+e*h, b);
+        bcount += float(b);
+    }
+    r /= (2.0*h*getScale1());
+    isBoundary = bcount > 3.0;
+  #endif
     return r;
 }
 
-// function and its gradient in screen space
-
 
 uniform vec3 LDIR;
-uniform float rLightIntensity;
-uniform float rLightAmbient;
-uniform float rLightSoftness;
-uniform float rLightHardness;
 #define OPACITY 0.6
 
 // calculate the color at one point, parameters are in screen space
@@ -248,14 +268,14 @@ void integrateField(float v0, float v1, vec3 c0, vec3 c1, out vec3 col, out floa
 }
 
 
-float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, out vec3 n, out float totalv) {
+float intersectObject(in vec3 ro, in vec3 rd, float t0, inout float t1, out vec3 col, out vec3 n, out float totalv) {
     rd = normalize(rd);
     float t0_, t1_;
     if (!clipIntersection(ro, rd, t0_, t1_))
-        return -1.0;
+        { t1 = 0.0; return -1.0; }
     t0 = max(t0, t0_), t1 = min(t1, t1_);
     if (t1 < t0)
-        return -1.0;
+        { t1 = 0.0; return -1.0; }
     // raymarching - https://www.desmos.com/calculator/mhxwoieyph
     totalv = 0.0;
     float t = t0, dt = step_size;
@@ -268,6 +288,7 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
     float totabs = 1.0;
     float prevField = 0.0; vec3 prevFieldCol;
     float tfar = t1;
+    bool isDiscontinuity = false;
     while (true) {
         if (++i >= MAX_STEP || t > tfar) {
             return -1.0;
@@ -288,8 +309,8 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
                 col = vec3(1,0,0);
                 if (bool({%GRID%}))
                     col *= grid(ro+rd*t, vec3(sqrt(0.33)));
-                n = normalize(funGrad(ro+rd*t));
-                return t;
+                isDiscontinuity = true;
+                break;
             }
             old_dvdt = dvdt;
 #endif
@@ -335,7 +356,8 @@ float intersectObject(in vec3 ro, in vec3 rd, float t0, float t1, out vec3 col, 
     #else
         vec3 grad = funGrad(ro+rd*t);
     #endif
-    col = calcAlbedo(ro+rd*t, grad, isBoundary);
+    if (!isDiscontinuity)
+        col = calcAlbedo(ro+rd*t, grad, isBoundary);
     n = normalize(grad);
     return t;
 }
@@ -465,6 +487,12 @@ uniform float rVAbsorbHue;
 uniform float rVAbsorbChr;
 uniform float rVAbsorbBri;
 
+uniform float rLightIntensity;
+uniform float rLightSky;
+uniform float rLightAmbient;
+uniform float rLightSoftness;
+uniform float rLightHardness;
+
 vec3 getAbsorbColor() {
     float h = 2.0*PI*rVAbsorbHue;
     float c = 0.2*pow(rVAbsorbChr, 2.0);
@@ -486,8 +514,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
     bool is_inside = false;
 
-    for (int iter = int(ZERO); iter < 32; iter++) {
-        if (iter != 0) ro += 1e-4*length(ro) * rd;
+    for (float iter = ZERO; iter < 32.; iter++) {
+        if (iter != 0.) ro += 1e-4*length(ro) * rd;
         vec3 n, min_n = vec3(0);
         float t, min_t = 1e6;
         vec3 min_rd = rd, min_ro = ro+1e6*rd;
@@ -507,7 +535,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
         // object
         float totalv;
-        t = intersectObject(ro, rd, 0.0, min_t, tmpcol, n, totalv);
+        float clip_t1 = min_t;
+        t = intersectObject(ro, rd, 0.0, clip_t1, tmpcol, n, totalv);
         if (t > 0.0 && t < min_t) {
             min_t = t, min_n = n;
             min_ro = ro+rd*t, min_rd = rd;
@@ -533,7 +562,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
                 material = MAT_SCATTER;
             }
             // absorption
-            float absorb = A_abs*min_t;
+            float absorb = A_abs*min(min_t,clip_t1);
             m_col *= pow(clamp(colmid, 0.0, 1.0), vec3(absorb));
         }
         else {
@@ -546,7 +575,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             //      from 1 to exp(-A/k)
             float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
             float k0_sca = pow(rVDecaySca, 1.0); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
-            float A0_abs = rAbsorb2/(1.0-rAbsorb2) / (0.1*k0_abs);
+            float A0_abs = rAbsorb2/(1.0-rAbsorb2);
             float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);
             float z0 = -uClipBox.z;
             float A_abs = A0_abs * exp(-k0_abs*(ro.z-z0));
@@ -554,6 +583,9 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             float k_abs = k0_abs * rd.z;
             float k_sca = k0_sca * rd.z;
             // scattering
+            // floating point bad here - large scattering with small decay
+            // https://www.desmos.com/calculator/wo63zpczge
+            // if this is fixed we can increase k0_sca for "thin snow" effect
             float r = randf();
             if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
                 && uOutput == OUTPUT_RADIANCE) {
@@ -583,14 +615,17 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
         // update ray
         if (material == MAT_BACKGROUND) {
+            float intensity = pow(2.0*rLightIntensity,2.0);
             float soft = pow(rLightSoftness, 4.0);
             // https://www.desmos.com/3d/750cc71ae5
             float k1 = 1.0 / soft;
             float k2 = 1.52004*sqrt(soft) - 0.379175*(soft);
-            col = pow(2.0*rLightIntensity,2.0) * mix(vec3(1)*mix(
+            col = mix(vec3(1)*mix(
                 0.5*(k1+1.0)*pow(0.5+0.5*dot(rd,LDIR),k1),
                 dot(rd,LDIR)>cos(k2) ? 1.0/(1.0-cos(k2)) : 0.0,
                 rLightHardness), vec3(0.5), rLightAmbient);
+            vec3 sky = skyColor(vec3(rd.x,rd.z,-rd.y), vec3(LDIR.x,LDIR.z,-LDIR.y));
+            col = intensity * mix(col, sky, rLightSky);
             return m_col * col + t_col;
         }
         if (isnan(dot(min_n, col))) {
@@ -625,7 +660,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             }
         }
         prev_col = col;
-        if (dot(rd, min_n) < 0.0 && false)
+        if (dot(rd, min_n) < 0.0)
             is_inside = !is_inside;
     }
     // return m_col + t_col;
@@ -683,7 +718,7 @@ void main(void) {
     focal *= 1.0 + 0.5 * (rFocalLength-0.5) / (rFocalLength*(1.0-rFocalLength));
 
     vec4 totcol = vec4(0);
-    for (float fi=0.; fi<iNFrame; fi++) {
+    for (float fi=ZERO; fi<iNFrame; fi++) {
         // random number seed
         seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
         seed = round(65537.*seed0);

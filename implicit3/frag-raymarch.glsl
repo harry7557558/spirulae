@@ -104,12 +104,22 @@ float fun(vec3 p) {  // function
 }
 
 vec3 funGrad(vec3 p) {  // numerical gradient
-    float h = 0.002*pow(dot(p,p), 1.0/6.0);
+    float h = 0.001*pow(dot(p,p), 1.0/6.0);
+  #if 0
     return vec3(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0)),
         fun(p+vec3(0,0,h)) - fun(p-vec3(0,0,h))
     ) / (2.0*h);
+  #else
+    // lower shader compilation time
+    vec3 n = vec3(0.0);
+    for (float i = ZERO; i < 6.; i++) {
+        vec3 e = normalize((1.+2.*cos(2./3.*PI*vec3(i,i+1.,i+2.)))*cos(.6*i));
+        n += e * fun(p+e*h);
+    }
+    return n / (2.0*h);
+  #endif
 }
 
 // function and its gradient in screen space

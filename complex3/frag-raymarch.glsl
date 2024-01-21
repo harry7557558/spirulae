@@ -94,11 +94,21 @@ float fun(vec3 p) {
 
 // numerical normal
 vec3 funGrad(vec3 p) {
-    float h = 0.002*length(p.xy);
+    float h = 0.002*pow(length(p.xy),1./3.);
+  #if 0
     return normalize(vec3(vec2(
         fun(p+vec3(h,0,0)) - fun(p-vec3(h,0,0)),
         fun(p+vec3(0,h,0)) - fun(p-vec3(0,h,0))
     ), 2.0*h));
+  #else
+    // lower shader compilation time
+    vec2 n = vec2(0.0);
+    for (float i = ZERO; i < 4.; i++) {
+        vec2 e = vec2(cos(0.5*PI*i),sin(0.5*PI*i));
+        n += e * fun(p+vec3(e,0)*h);
+    }
+    return normalize(vec3(n,2.0*h));
+  #endif
 }
 
 

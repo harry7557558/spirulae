@@ -1,4 +1,27 @@
-// Refactored from script.js's
+
+// console.log(JSON.stringify(getState()))
+// setState(<paste>)
+function getState() {
+    let input = document.getElementById("equation-input").value;
+    let params = parameterToDict(RawParameters);
+    let state = window.state;
+    return {
+        input: input,
+        params: params,
+        state: state,
+    };
+}
+function setState(s) {
+    document.getElementById("equation-input").value = s.input;
+    document.getElementById("builtin-functions").childNodes[0].selected = true;
+    setParameters(RawParameters, s.params);
+    if (window.hasOwnProperty("useDenoiser"))
+        useDenoiser(s.params.sDenoise);
+    window.state = { ...s.state };
+    state.renderNeeded = true;
+    updateFunctionInput(true);
+}
+
 
 function initHelpMenu() {
     let container = document.getElementById("help-menu");

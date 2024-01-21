@@ -87,7 +87,15 @@ document.body.onload = function (event) {
         'z': "z"
     };
 
-    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit3_compact;
+    CodeGenerator.langs.glsl.config = {
+        fun: "float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
 
     // init parameters
     initParameters([
@@ -130,6 +138,7 @@ document.body.onload = function (event) {
         new UniformSlider("rTheta", "slider-theta", -0.5 * Math.PI, 1.5 * Math.PI, 1.0 * Math.PI),
         new UniformSlider("rPhi", "slider-phi", 0, Math.PI, 0.75 * Math.PI),
         new UniformSlider("rLightIntensity", "slider-light-intensity", 0, 1, 0.5),
+        new UniformSlider("rLightSky", "slider-light-sky", 0, 1, 0.2),
         new UniformSlider("rLightAmbient", "slider-light-ambient", 0, 1, 0.0),
         new UniformSlider("rLightSoftness", "slider-light-softness", 0.001, 1, 0.8),
         new UniformSlider("rLightHardness", "slider-light-hardness", 0, 1, 0.0),
@@ -165,6 +174,7 @@ document.body.onload = function (event) {
     // main
     initMain([
         "frag-render.glsl",
+        "sky_model.glsl",
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
         "../shaders/dnn-conv2d311.glsl",

@@ -60,7 +60,7 @@ Features that may be implemented in the future (ordered approximately by priorit
 
 Ongoing and proposed research topics (ordered approximately by progress):
 
- - Denoising of path-traced images via deep learning
+ - Denoising path-traced images using deep learning
  - Mesh generation and simplification
  - FEA and general physical simulation
  - Visualization of 3D vector and tensor fields
@@ -69,7 +69,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
 
 ## Limitations
 
-Spirulae have the following web dependencies:
+Spirulae has the following web dependencies:
 
  - [WebGL 2](https://webglreport.com/?v=2)
     - `EXT_color_buffer_float` and `EXT_float_blend`, required for path tracing and mesh generation
@@ -77,13 +77,14 @@ Spirulae have the following web dependencies:
  - WebAssembly, required for mesh generation
  - [MathJax 3](https://www.mathjax.org/), required for equation preview
 
-Spirulae have the following known issues:
+Spirulae has the following known issues:
 
- - GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior
- - The parser has ambiguity in resolving conflicting variable names
- - Incomplete documentation for some graphers
+ - GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior.
+ - The parser has ambiguity in resolving conflicting variable names. You can avoid this issue by using unique and descriptive function and variable names.
+ - Incomplete documentation for some graphers.
 
-Spirulae is not available for commercial licensing due to dependency on some C++ packages like [Triangle](https://www.cs.cmu.edu/~quake/triangle.html) and is currently distributed under GPLv3. Spirulae is [previously](https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b) distributed under MIT license.
+Spirulae is not available for commercial licensing due to C++ dependency [Triangle](https://www.cs.cmu.edu/~quake/triangle.html) and is currently distributed under GPLv3. Spirulae is [previously](https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b) distributed under the MIT license.
+Note that shader sources adapted from [Shadertoy](https://www.shadertoy.com/), namely [this](https://www.shadertoy.com/view/flcyWn), [this](https://www.shadertoy.com/view/7ltcW8), and [this](https://www.shadertoy.com/view/wsfGWH), are separately distributed under [CC BY-SA-NC 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/deed.en) according to [Shadertoy terms of service](https://www.shadertoy.com/terms).
 
 ----
 
@@ -93,8 +94,13 @@ Spirulae is not available for commercial licensing due to dependency on some C++
 
 To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of [MathJax](https://www.mathjax.org/) for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like [WebGL](https://en.wikipedia.org/wiki/WebGL). The C++ part that powers mesh generation is compiled to [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly) with [Emscripten](https://emscripten.org/), which uses the following third-party libraries:
 
- - [Triangle](https://www.cs.cmu.edu/~quake/triangle.html), a fast header-only 2D Delaunay triangulation library
+ - [Triangle](https://www.cs.cmu.edu/~quake/triangle.html), a fast header-only 2D mesh generation library
  - [GLM](https://github.com/g-truc/glm) and [GLFW](https://www.glfw.org/), popular math and GUI libraries for OpenGL
+
+Spirulae also adapts shader sources from [Shadertoy](https://www.shadertoy.com/):
+
+ - [Zeros of Zeta](https://www.shadertoy.com/view/flcyWn) and [Zeta in a box](https://www.shadertoy.com/view/7ltcW8) by [guil](https://www.shadertoy.com/user/guil), for evaluating the [Riemann Zeta function](https://en.wikipedia.org/wiki/Riemann_zeta_function)
+ - [Rayleigh/Mie Day and Night Cycle](https://www.shadertoy.com/view/wsfGWH) by [Elyxian](https://www.shadertoy.com/user/Elyxian), for realistic sky rendering in [path tracer](https://spirulae.github.io/implicit3-rt/)
 
 
 **Q: How to draw shapes using equations?**
@@ -110,7 +116,8 @@ For readers with technical background, Spirulae recompiles shader every time the
 
 ## Gallery
 
-A gallery of unfiltered process screenshots can be found [here](https://spirulae.github.io/gallery/). Note that the page is intended to be a progress overview rather than a showcase gallery.
+**Note: This gallery has not been updated for a while.**  
+To see more recent visual results, a gallery of unfiltered process screenshots can be found [here](https://spirulae.github.io/gallery/). Note that the page is intended to be a progress overview rather than a showcase gallery.
 
 Complex domain coloring
 

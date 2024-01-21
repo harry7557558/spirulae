@@ -132,14 +132,14 @@
 </ul>
 <p>Ongoing and proposed research topics (ordered approximately by progress):</p>
 <ul>
-<li>Denoising of path-traced images via deep learning</li>
+<li>Denoising path-traced images using deep learning</li>
 <li>Mesh generation and simplification</li>
 <li>FEA and general physical simulation</li>
 <li>Visualization of 3D vector and tensor fields</li>
 </ul>
 <hr />
 <h2>Limitations</h2>
-<p>Spirulae have the following web dependencies:</p>
+<p>Spirulae has the following web dependencies:</p>
 <ul>
 <li><a href="https://webglreport.com/?v=2">WebGL 2</a><ul>
 <li><code>EXT_color_buffer_float</code> and <code>EXT_float_blend</code>, required for path tracing and mesh generation</li>
@@ -149,20 +149,26 @@
 <li>WebAssembly, required for mesh generation</li>
 <li><a href="https://www.mathjax.org/">MathJax 3</a>, required for equation preview</li>
 </ul>
-<p>Spirulae have the following known issues:</p>
+<p>Spirulae has the following known issues:</p>
 <ul>
-<li>GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior</li>
-<li>The parser has ambiguity in resolving conflicting variable names</li>
-<li>Incomplete documentation for some graphers</li>
+<li>GPU-based graphers use single precision floating point and have incompatibility across devices for overflow and NaN behavior.</li>
+<li>The parser has ambiguity in resolving conflicting variable names. You can avoid this issue by using unique and descriptive function and variable names.</li>
+<li>Incomplete documentation for some graphers.</li>
 </ul>
-<p>Spirulae is not available for commercial licensing due to dependency on some C++ packages like <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> and is currently distributed under GPLv3. Spirulae is <a href="https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b">previously</a> distributed under MIT license.</p>
+<p>Spirulae is not available for commercial licensing due to C++ dependency <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> and is currently distributed under GPLv3. Spirulae is <a href="https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b">previously</a> distributed under the MIT license.
+Note that shader sources adapted from <a href="https://www.shadertoy.com/">Shadertoy</a>, namely <a href="https://www.shadertoy.com/view/flcyWn">this</a>, <a href="https://www.shadertoy.com/view/7ltcW8">this</a>, and <a href="https://www.shadertoy.com/view/wsfGWH">this</a>, are separately distributed under <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/deed.en">CC BY-SA-NC 3.0</a> according to <a href="https://www.shadertoy.com/terms">Shadertoy terms of service</a>.</p>
 <hr />
 <h2>Frequently Asked Questions</h2>
 <p><strong>Q: What libraries do Spirulae use?</strong></p>
 <p>To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of <a href="https://www.mathjax.org/">MathJax</a> for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a>. The C++ part that powers mesh generation is compiled to <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a> with <a href="https://emscripten.org/">Emscripten</a>, which uses the following third-party libraries:</p>
 <ul>
-<li><a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a fast header-only 2D Delaunay triangulation library</li>
+<li><a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a>, a fast header-only 2D mesh generation library</li>
 <li><a href="https://github.com/g-truc/glm">GLM</a> and <a href="https://www.glfw.org/">GLFW</a>, popular math and GUI libraries for OpenGL</li>
+</ul>
+<p>Spirulae also adapts shader sources from <a href="https://www.shadertoy.com/">Shadertoy</a>:</p>
+<ul>
+<li><a href="https://www.shadertoy.com/view/flcyWn">Zeros of Zeta</a> and <a href="https://www.shadertoy.com/view/7ltcW8">Zeta in a box</a> by <a href="https://www.shadertoy.com/user/guil">guil</a>, for evaluating the <a href="https://en.wikipedia.org/wiki/Riemann_zeta_function">Riemann Zeta function</a></li>
+<li><a href="https://www.shadertoy.com/view/wsfGWH">Rayleigh/Mie Day and Night Cycle</a> by <a href="https://www.shadertoy.com/user/Elyxian">Elyxian</a>, for realistic sky rendering in <a href="https://spirulae.github.io/implicit3-rt/">path tracer</a></li>
 </ul>
 <p><strong>Q: How to draw shapes using equations?</strong></p>
 <p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
@@ -170,7 +176,8 @@
 <p>For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation">postfix notation</a> and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.</p>
 <hr />
 <h2>Gallery</h2>
-<p>A gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. Note that the page is intended to be a progress overview rather than a showcase gallery.</p>
+<p><strong>Note: This gallery has not been updated for a while.</strong><br />
+To see more recent visual results, a gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. Note that the page is intended to be a progress overview rather than a showcase gallery.</p>
 <p>Complex domain coloring</p>
 <p><a href="https://harry7557558.github.io/spirulae/complex/"><img alt="" src="./home/gallery-complex-trigs.jpg" /></a></p>
 <p>The gamma function in 3D</p>
