@@ -39,6 +39,9 @@ function setMathjaxDrag() {
 }
 
 function initMathjax() {
+    if (initMathjax.hasOwnProperty('done'))
+        return;
+    initMathjax.done = true;
     window.MathJax = {
         loader: { load: ['[tex]/color'] },
         tex: {
@@ -64,6 +67,8 @@ function initMathjax() {
 }
 
 function updateLatex(latexList, color = null) {
+    if (!window.MathJax)
+        initMathjax();
     window.MathJax.latexList = latexList;
     if (MathJax.typeset == undefined) {
         setTimeout(function () {

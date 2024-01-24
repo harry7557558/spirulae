@@ -12,8 +12,12 @@ function getState() {
     };
 }
 function setState(s) {
+    localStorage.removeItem(NAME+"state");
+    localStorage.removeItem(NAME+"params");
+    localStorage.removeItem(NAME+"input");
     document.getElementById("equation-input").value = s.input;
-    document.getElementById("builtin-functions").childNodes[0].selected = true;
+    if (document.getElementById("builtin-functions"))
+        document.getElementById("builtin-functions").childNodes[0].selected = true;
     setParameters(RawParameters, s.params);
     if (window.hasOwnProperty("useDenoiser"))
         useDenoiser(s.params.sDenoise);
@@ -60,6 +64,49 @@ function initBuiltInFunctions(builtinFunctions) {
     }
 }
 
+function hashState(object) {
+    // thanks ChatGPT
+    function stringifyUnique(jsonObj) {
+        const sortedJson = sortObject(jsonObj);
+        return JSON.stringify(sortedJson);
+    }
+    function sortObject(obj) {
+        if (typeof obj !== 'object' || obj === null) {
+            return obj;
+        }
+        if (Array.isArray(obj)) {
+            return obj.map(sortObject);
+        }
+        const sortedKeys = Object.keys(obj).sort();
+        const sortedObj = {};
+        for (const key of sortedKeys) {
+            sortedObj[key] = sortObject(obj[key]);
+        }
+        return sortedObj;
+    }
+    function rollingHash(str) {
+        const base = 31;
+        const modulus = Math.pow(2, 32);
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash * base + str.charCodeAt(i)) % modulus;
+        }
+        return hash.toString(16);
+    }
+    return rollingHash(stringifyUnique(object));
+}
+
+function initBuiltInStates(builtinStates) {
+    initBuiltInStates.builtinStates = {};
+    let funSelect = document.querySelector("#builtin-states");
+    funSelect.innerHTML += "<option value=''>Load example...</option>";
+    for (var i = 0; i < builtinStates.length; i++) {
+        let obj = builtinStates[i];
+        let hash = hashState(obj.state);
+        funSelect.innerHTML += "<option value=" + hash + ">" + obj.name + "</option>";
+        initBuiltInStates.builtinStates[hash] = obj.state;
+    }
+}
 
 // name: start with a lowercase letter
 //  - b/c: checkbox (boolean)
@@ -196,6 +243,82 @@ function setParameters(parameters, dict) {
     }
 }
 
+function initFunctionSelector() {
+    let funSelect = document.getElementById("builtin-functions");
+    let funInput = document.getElementById("equation-input");
+    var initialExpr = "";
+    try {  // check if input is a built-in function
+        initialExpr = localStorage.getItem(NAME + "input");
+        if (initialExpr == null) throw initialExpr;
+        funSelect.childNodes[0].setAttribute("value", initialExpr);
+        var selectId = 0;
+        for (var i = 1; i < funSelect.childNodes.length; i++) {
+            var value = funSelect.childNodes[i].value.replace(/\;/g, '\n');
+            if (value == initialExpr.trim())
+                selectId = i;
+        }
+        funSelect.childNodes[selectId].selected = true;
+    }
+    catch (e) {
+        console.error(e);
+        funSelect.childNodes[1].selected = true;
+    }
+    funSelect.addEventListener("input", function (event) {
+        // selecting a new function
+        resetState();
+        funInput.value = funSelect.value.replaceAll(";", "\n");
+        updateFunctionInput(true);
+    });
+    funInput.addEventListener("input", function (event) {
+        // typing
+        funSelect.value = initialExpr;
+        updateFunctionInput(false);
+    });
+    funInput.value = funSelect.value.replaceAll(";", "\n");
+}
+
+function initStateSelector() {
+    let stateSelect = document.getElementById("builtin-states");
+    let funInput = document.getElementById("equation-input");
+    let presetStates = initBuiltInStates.builtinStates;
+    var stateSet = false;
+    if (document.location.hash != "") {
+        var hash = document.location.hash;
+        if (hash[0] == '#')
+            hash = hash.slice(1);
+        if (presetStates.hasOwnProperty(hash)) {
+            stateSelect.value = hash;
+            setState(presetStates[hash]);
+            document.location.hash = "";
+            stateSet = true;
+        }
+    }
+    if (!stateSet) {
+        var initialExpr = "";
+        try {  // check if input is a built-in function
+            initialExpr = localStorage.getItem(NAME + "input");
+            if (initialExpr == null) throw initialExpr;
+            stateSelect.childNodes[0].selected = true;
+            funInput.value = initialExpr.replaceAll(";", "\n");
+            updateFunctionInput(true);
+        }
+        catch (e) {
+            console.error(e);
+            stateSelect.childNodes[1].selected = true;
+            setState(presetStates[stateSelect.value]);
+        }
+    }
+    stateSelect.addEventListener("input", function (event) {
+        console.log(stateSelect.value);
+        setState(presetStates[stateSelect.value]);
+    });
+    funInput.addEventListener("input", function (event) {
+        // typing
+        stateSelect.childNodes[0].selected = true;
+        updateFunctionInput(false);
+    });
+}
+
 // init input and parameters, returns parameters
 function initParameters(parameters) {
     RawParameters = parameters;
@@ -213,24 +336,11 @@ function initParameters(parameters) {
         if (params != null) setParameters(RawParameters, params);
     }
     catch (e) { console.error(e); }
-    let funSelect = document.getElementById("builtin-functions");
     let funInput = document.getElementById("equation-input");
-    var initialExpr = "";
-    try {  // check if input is a built-in function
-        initialExpr = localStorage.getItem(NAME + "input");
-        if (initialExpr == null) throw initialExpr;
-        funSelect.childNodes[0].setAttribute("value", initialExpr);
-        var selectId = 0;
-        for (var i = 1; i < funSelect.childNodes.length; i++) {
-            var value = funSelect.childNodes[i].value.replace(/\;/g, '\n');
-            if (value == initialExpr.trim())
-                selectId = i;
-        }
-        funSelect.childNodes[selectId].selected = true;
-    }
-    catch (e) {
-        funSelect.childNodes[1].selected = true;
-    }
+    if (document.getElementById("builtin-functions"))
+        initFunctionSelector();
+    if (document.getElementById("builtin-states"))
+        initStateSelector();
     // event listeners
     let domObject = document.getElementById("canvas");
     if (domObject) domObject.addEventListener("webglcontextlost", function (event) {
@@ -248,17 +358,6 @@ function initParameters(parameters) {
     domObject = document.getElementById("button-update");
     if (domObject) domObject.addEventListener("click",
         function (event) { updateFunctionInput(true); });
-    funSelect.addEventListener("input", function (event) {
-        // selecting a new function
-        resetState();
-        funInput.value = funSelect.value.replaceAll(";", "\n");
-        updateFunctionInput(true);
-    });
-    funInput.addEventListener("input", function (event) {
-        // typing
-        funSelect.value = initialExpr;
-        updateFunctionInput(false);
-    });
     window.addEventListener("keydown", function (event) {
         // Ctrl/Alt + Enter update function
         if (event.key == "Enter" && (event.altKey || event.ctrlKey)) {
@@ -274,7 +373,6 @@ function initParameters(parameters) {
             else fps.style.display = control.style.display = "none";
         }
     });
-    funInput.value = funSelect.value.replaceAll(";", "\n");
 }
 
 
