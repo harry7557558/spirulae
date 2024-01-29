@@ -58,6 +58,8 @@
                 <option value="0.001">ultra high</option>
             </select>precision</span>&ensp;
         <span><select id="select-spp" title="Maximum samples per pixel">
+                <option value="1">2⁰</option>
+                <option value="4">2²</option>
                 <option value="16">2⁴</option>
                 <option value="64">2⁶</option>
                 <option value="256" selected>2⁸</option>
@@ -82,9 +84,11 @@
         <br />
         <span><select id="select-denoise">
             <option value="null" selected>no</option>
+            <!-- <option value="temp">Test</option> -->
+            <!-- <option value="runet2gan2">ResUNet 2 (GAN) 2</option> -->
             <option value="runet2gan">ResUNet 2 (GAN)</option>
             <option value="runet2">ResUNet 2</option>
-            <option value="runet1an">ResUNet [an]</option>
+            <!-- <option value="runet1an">ResUNet [an]</option> -->
             <option value="runet1">ResUNet</option>
             <option value="unet1">UNet</option>
             <option value="resnet1">ResNet</option>
