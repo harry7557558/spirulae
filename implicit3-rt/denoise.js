@@ -64,8 +64,7 @@ function initDenoiserModel_resnet1(params) {
         void main() {
             ivec2 coord = ivec2(gl_FragCoord.xy);
             vec3 c = texelFetch(uSrc, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            c = pow(max(exp(c)-1.0, 0.0), vec3(2.2));
             fragColor = vec4(c.xyz, 1.0);
         }`);
 
@@ -223,8 +222,7 @@ function initDenoiserModel_unet1(params) {
         void main() {
             ivec2 coord = ivec2(gl_FragCoord.xy);
             vec3 c = texelFetch(uSrc, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            c = pow(max(exp(c)-1.0, 0.0), vec3(2.2));
             fragColor = vec4(c.xyz, 1.0);
         }`);
 
@@ -263,8 +261,7 @@ function applyResidualDenoiser(model) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
             vec3 c = texelFetch(uSrc, coord, 0).xyz +
                 texelFetch(uSrcRes, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            c = pow(max(exp(c)-1.0, 0.0), vec3(2.2));
             fragColor = vec4(c.xyz, 1.0);
         }`);
 
@@ -332,8 +329,7 @@ function initDenoiserModel_runet1an(params) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
             vec3 c = texelFetch(uSrc, coord, 0).xyz +
                 texelFetch(uSrcRes, coord, 0).xyz;
-            c = exp(c) - 1.0;
-            if (isnan(c.x+c.y+c.z)) c = vec3(1,0,0);
+            c = pow(max(exp(c)-1.0, 0.0), vec3(2.2));
             fragColor = vec4(c.xyz, 1.0);
         }`);
 

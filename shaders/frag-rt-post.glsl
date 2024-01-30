@@ -11,8 +11,8 @@ void main(void) {
     vec4 pixel0 = texelFetch(iChannel0, ivec2(gl_FragCoord.xy), 0);
     vec4 pixel1 = texelFetch(iChannel1, ivec2(gl_FragCoord.xy), 0);
     vec4 pixel = pixel0 + pixel1;
-    vec3 col = pow(max(pixel.xyz/pixel.w, 0.0), vec3(1.0/2.2));
+    vec3 col = max(pixel.xyz/pixel.w, 0.0);
     fragColor = denoise ?
-        vec4(log(col+1.0), 0.0) :
+        vec4(log(pow(col, vec3(1.0/2.2))+1.0), 0.0) :
         vec4(col, 1.0);
 }

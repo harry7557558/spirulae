@@ -82,7 +82,7 @@
         <span title="Use y-up coordinate system convension"><input type="checkbox"
                 id="checkbox-yup" /><i>y</i>-up</span>&ensp;
         <br />
-        <span><select id="select-denoise">
+        <span><select id="select-denoise" style="width:5.8em;">
             <option value="null" selected>no</option>
             <!-- <option value="temp">Test</option> -->
             <!-- <option value="runet2gan2">ResUNet 2 (GAN) 2</option> -->
@@ -92,7 +92,14 @@
             <option value="runet1">ResUNet</option>
             <option value="unet1">UNet</option>
             <option value="resnet1">ResNet</option>
-        </select>denoise</span>&ensp;
+        </select>denoise</span>
+        <span><select id="select-tonemap" style="width:4.2em;">
+            <option value="None" selected>no</option>
+            <option value="Aces">ACES</option>
+            <option value="Filmic">Filmic</option>
+            <option value="Reinhard">Reinhard</option>
+            <option value="Uncharted2">Uncharted 2</option>
+        </select>tonemap</span>&ensp;
         <br />
         <span>scale</span>
         <span title="object size"><input type="range" id="slider-scale1" style="width:100px" /></span>

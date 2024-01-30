@@ -6,6 +6,7 @@ var renderer = {
     renderSource: "",
     copySource: "",
     postSource: "",
+    tonemapSource: "",
     positionBuffer: null,
     renderProgram: null,
     copyProgram: null,
@@ -13,6 +14,8 @@ var renderer = {
     renderTarget: null,
     renderTargetAccum: null,
     denoiseTarget: null,
+    tonemapProgram: null,
+    tonemapTarget: null,
     iNFrame: 1,
     timerExt: null,
     uOutput: 0,
@@ -138,8 +141,9 @@ async function drawScene(state, transformMatrix, lightDir) {
 
     // post processing
     gl.useProgram(renderer.postProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER,
-        renderer.denoiser ? renderer.denoiseTarget.framebuffer : null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.denoiser ?
+        renderer.denoiseTarget.framebuffer :
+        renderer.tonemapTarget.framebuffer);
     setPositionBuffer(gl, renderer.postProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, renderer.renderTargetAccum.texture);
@@ -151,6 +155,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         renderer.denoiser !== null);
     renderPass();
 
+    // denoising
     if (renderer.denoiser) {
         gl.bindTexture(gl.TEXTURE_2D, renderer.denoiseTarget.sampler);
         gl.copyTexImage2D(gl.TEXTURE_2D,
@@ -160,10 +165,18 @@ async function drawScene(state, transformMatrix, lightDir) {
             'pixel': 'framebuffer',
             'albedo': null,
             'normal': null },
-            //renderer.denoiseTarget.framebuffer
-            null
+            renderer.tonemapTarget.framebuffer
         );
     }
+
+    // tone mapping
+    gl.useProgram(renderer.tonemapProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    setPositionBuffer(gl, renderer.tonemapProgram);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.tonemapTarget.texture);
+    gl.uniform1i(gl.getUniformLocation(renderer.tonemapProgram, "iChannel0"), 0);
+    renderPass();
 
     if (!countIndividualTime && timer != null)
         gl.endQuery(timer.TIME_ELAPSED_EXT);
@@ -278,6 +291,7 @@ function initWebGL() {
     renderer.renderSource = getShaderSource("frag-render.glsl");
     renderer.copySource = getShaderSource("../shaders/frag-copy.glsl");
     renderer.postSource = getShaderSource("../shaders/frag-rt-post.glsl");
+    renderer.tonemapSource = getShaderSource("../shaders/frag-tonemap.glsl");
     console.timeEnd("load glsl code");
 
     // position buffer
@@ -340,6 +354,10 @@ function updateBuffers() {
     var oldDenoiseTarget = renderer.denoiseTarget;
     renderer.denoiseTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
     if (oldDenoiseTarget) destroyRenderTarget(gl, oldDenoiseTarget);
+
+    var oldTonemapTarget = renderer.tonemapTarget;
+    renderer.tonemapTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldTonemapTarget) destroyRenderTarget(gl, oldTonemapTarget);
 
     state.renderNeeded = true;
 }
@@ -518,6 +536,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%DISCONTINUITY%}", Number(params.bDiscontinuity));
         shaderSource = shaderSource.replaceAll("{%CONTOUR_LINEAR%}", Number(params.bContourLinear));
         shaderSource = shaderSource.replaceAll("{%CONTOUR_LOG%}", Number(params.bContourLog));
+        shaderSource = shaderSource.replaceAll("{%TONEMAP%}", params.sTonemap);
         return shaderSource;
     }
 
@@ -527,10 +546,6 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.renderProgram);
             renderer.renderProgram = null;
         }
-        if (renderer.postProgram != null) {
-            gl.deleteProgram(renderer.postProgram);
-            renderer.postProgram = null;
-        }
         return;
     }
 
@@ -538,11 +553,12 @@ function updateShaderFunction(funCode, funGradCode, params) {
     if (updateShaderFunction.prevCode == undefined)
         updateShaderFunction.prevCode = {
             renderSource: "",
-            postSource: ""
+            postSource: "",
+            tonemapSource: "",
         };
     var prevCode = updateShaderFunction.prevCode;
     var renderSource = sub(renderer.renderSource);
-    var postSource = sub(renderer.postSource);
+    var tonemapSource = sub(renderer.tonemapSource);
 
     console.time("compile shader");
 
@@ -552,18 +568,23 @@ function updateShaderFunction(funCode, funGradCode, params) {
             gl.deleteProgram(renderer.renderProgram);
             renderer.renderProgram = null;
         }
-        if (renderer.postProgram != null) {
-            gl.deleteProgram(renderer.postProgram);
-            renderer.postProgram = null;
-        }
         renderer.renderProgram = createShaderProgram(gl, null, renderSource);
-        renderer.postProgram = createShaderProgram(gl, null, postSource);
         prevCode.renderSource = renderSource;
+    }
+    if (prevCode.tonemapSource != tonemapSource || renderer.tonemapProgram == null) {
+        if (renderer.tonemapProgram != null) {
+            gl.deleteProgram(renderer.tonemapProgram);
+            renderer.tonemapProgram = null;
+        }
+        renderer.tonemapProgram = createShaderProgram(gl, null, tonemapSource);
+        prevCode.tonemapSource = tonemapSource;
     }
 
     if (!renderer.copyProgram) {
         renderer.copyProgram = createShaderProgram(gl, null, renderer.copySource);
     }
+    if (!renderer.postProgram)
+        renderer.postProgram = createShaderProgram(gl, null, renderer.postSource);
 
     console.timeEnd("compile shader");
     state.renderNeeded = true;

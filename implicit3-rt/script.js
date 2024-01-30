@@ -188,6 +188,7 @@ document.body.onload = function (event) {
         new GraphingParameter("sClip", "select-clip"),
         new GraphingParameter("cClosed", "checkbox-closed"),
         new GraphingParameter("sDenoise", "select-denoise"),
+        new GraphingParameter("sTonemap", "select-tonemap"),
         new UniformSlider("rScale1", "slider-scale1", 0.01, 0.99, 0.5),
         new UniformSlider("rScale2", "slider-scale2", 0.01, 0.99, 0.5),
         // appearance
@@ -255,6 +256,7 @@ document.body.onload = function (event) {
         "sky_model.glsl",
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
+        "../shaders/frag-tonemap.glsl",
         "../shaders/dnn-conv2d311.glsl",
         "../shaders/dnn-conv2d110.glsl",
         "../shaders/dnn-convtranspose2d421.glsl",
