@@ -106,31 +106,51 @@ void resamplePolygon(
             maxc = c, i0 = i;
     }
 
-    // linear interpolation
-    std::vector<mat2> weights;
+    // cubic interpolation
+    const float tau = 0.5f;
+    mat4 catmull_rom(
+        0.0f, -tau, 2.0f*tau, -tau,
+        1.0f, 0.0f, tau-3.0f, 2.0f-tau,
+        0.0f, tau, 3.0f-2.0f*tau, tau-2.0f,
+        0.0f, 0.0f, -tau, tau
+    );
+    const float quad_samples[4] = { .06943184420297371238,.33000947820757186759,.66999052179242813240,.93056815579702628761 };
+    const float quad_weights[4] = { .17392742256872692868,.32607257743127307131,.32607257743127307131,.17392742256872692868 };
+    std::vector<mat2x4> weights;
+    weights.reserve(bn0);
     std::vector<float> length_psa;
     length_psa.reserve(bn0+1);
     length_psa.push_back(0.0f);
     for (int i = 0; i < bn0; i++) {
         // weights
-        vec2 v0 = boundary[(i0+i)%bn0];
-        vec2 v1 = boundary[(i0+i+1)%bn0];
-        weights.push_back(mat2(v0, v1-v0));
+        vec2 v0 = boundary[(i0+i+bn0-1)%bn0];
+        vec2 v1 = boundary[(i0+i)%bn0];
+        vec2 v2 = boundary[(i0+i+1)%bn0];
+        vec2 v3 = boundary[(i0+i+2)%bn0];
+        mat4x2 v(v0, v1, v2, v3);
+        mat2x4 w = catmull_rom * transpose(v);
+        weights.push_back(w);
         // length
-        float l = length(v1-v0);
+        float l = 0.0f;
+        for (int _ = 0; _ < 4; _++) {
+            float t = quad_samples[_];
+            vec4 u(0.0f, 1.0f, 2.0f*t, 3.0f*t*t);
+            float dl = length(u*w);
+            l += quad_weights[_] * dl;
+        }
         length_psa.push_back(length_psa.back()+l);
     }
     for (int i = 0; i < bn0; i++)
         assert(length_psa[i] < length_psa[i+1]);
     float clength = length_psa.back();
-    // printf("%f / %d = %f\n", clength, bn0, clength/bn0);
+    // printf("%f / %d = %f\n", length, bn0, length/bn0);
     auto curve = [&](float s) -> vec2 {
         s = clamp(s, 0.0f, 0.999999f*clength);
         int i = std::upper_bound(length_psa.begin(), length_psa.end()-1, s) - length_psa.begin() - 1;
         float t = (s-length_psa[i])/(length_psa[i+1]-length_psa[i]);
         assert(t >= 0.0 && t <= 1.0);
         t = clamp(t, 0.0f, 1.0f);
-        return weights[i][0] + weights[i][1]*t;
+        return vec4(1.0f, t, t*t, t*t*t) * weights[i];
     };
 
     // resample
@@ -175,7 +195,7 @@ void resamplePolygon(
             output.push_back(curve(mix(s.x, s.y, 1.0f/3.0f)));
             output.push_back(curve(mix(s.x, s.y, 2.0f/3.0f)));
         }
-        else if (err > tol) {
+        else if (err > tol || l > ltol) {
             output.push_back(curve(0.5f*(s.x+s.y)));
         }
         while (!stack.empty() && s.y == stack.back().y)
@@ -194,17 +214,59 @@ float polygonArea(const std::vector<vec2>& polygon) {
     return 0.5f * area2;
 }
 
+// return bottom and top pieces
+std::pair<std::vector<vec2>, std::vector<vec2>> convexHull(std::vector<vec2> p) {
+	std::sort(p.begin(), p.end(),
+        [](vec2 p, vec2 q) { return p.x == q.x ? p.y < q.y : p.x < q.x; });
+    int pn = (int)p.size();
+    std::vector<vec2> c0;
+	c0.push_back(p[0]);
+	for (int i = 1; i < pn;) {
+        int cn = (int)c0.size();
+		if (cn == 1)
+            c0.push_back(p[i]), cn++;
+		else {
+			if (determinant(mat2(c0[cn-1]-c0[cn-2], p[i]-c0[cn-2])) <= 0.0f) {
+				c0[cn-1] = p[i];
+				while (cn > 2 && determinant(mat2(c0[cn-2]-c0[cn-3], c0[cn-1]-c0[cn-3])) <= 0.0f)
+                    c0.pop_back(), cn--, c0.back() = p[i];
+			}
+			else c0.push_back(p[i]), cn++;
+		}
+		do { i++; } while (i < pn && p[i].x == p[i-1].x);
+	}
+    std::vector<vec2> c1;
+	c1.push_back(p.back());
+	for (int i = pn-2; i >= 0;) {
+        int cn = (int)c1.size();
+		if (i == pn-2)
+            c1.push_back(p[i]), cn++;
+		else {
+			if (determinant(mat2(c1[cn-1]-c1[cn-2], p[i]-c1[cn-2])) < 0.0f) {
+				c1[cn-1] = p[i];
+				while (cn > 2 && determinant(mat2(c1[cn-2]-c1[cn-3], c1[cn-1]-c1[cn-3])) < 0.0f)
+                    c1.pop_back(), cn--, c1.back() = p[i];
+			}
+			else c1.push_back(p[i]), cn++;
+		}
+		do { i--; } while (i >= 0 && p[i].x == p[i+1].x);
+	}
+    std::reverse(c1.begin(), c1.end());
+    assert(c0[0].x == c1[0].x);
+    assert(c0.back().x == c1.back().x);
+    return { c0, c1 };
+}
 
 std::vector<vec2> holeLocations(
     std::vector<std::vector<vec2>> boundary
 ) {
     int num_segments = 0;
-    std::vector<std::vector<vec2>*> hole_polygons;
-    for (auto polygon = boundary.begin(); polygon < boundary.end(); polygon++) {
-        if (polygonArea(*polygon) < 0.0f)
-            hole_polygons.push_back(&(*polygon));
+    for (auto polygon = boundary.begin(); polygon < boundary.end(); polygon++)
         num_segments += (int)polygon->size();
-    }
+    bool use_acceleration =
+        1e-3f * (float)boundary.size() * (float)num_segments >
+        ((float)boundary.size()+0.01f*(float)num_segments) * log((float)num_segments+1.0f);
+    use_acceleration = true;
 
     // get a list of all segments
     std::vector<vec4> segments;
@@ -243,20 +305,54 @@ std::vector<vec2> holeLocations(
         }
     }
 
+    // convex hull inside test
+    std::vector<vec2> points;
+    for (auto polygon = boundary.begin(); polygon < boundary.end(); polygon++)
+        for (auto p = polygon->begin(); p < polygon->end(); p++)
+            points.push_back(*p);
+    std::pair<std::vector<vec2>, std::vector<vec2>> ch = convexHull(points);
+    auto isInsideHull = [&](vec2 p) -> bool {
+        if (p.x <= ch.first[0].x || p.x >=  ch.first.back().x)
+            return false;
+        int i = std::upper_bound(ch.first.begin(), ch.first.end(),
+            p, [](vec2 a, vec2 b) { return a.x < b.x; }) - ch.first.begin() - 1;
+        assert(i >= 0 && i+1 < (int)ch.first.size());
+        if (determinant(mat2(p-ch.first[i], ch.first[i+1]-ch.first[i])) >= 0.0)
+            return false;
+        i = std::upper_bound(ch.second.begin(), ch.second.end(),
+            p, [](vec2 a, vec2 b) { return a.x < b.x; }) - ch.second.begin() - 1;
+        assert(i >= 0 && i+1 < (int)ch.second.size());
+        if (determinant(mat2(p-ch.second[i], ch.second[i+1]-ch.second[i])) <= 0.0)
+            return false;
+        return true;
+    };
+
     // random points + test if outside boundary
     std::vector<vec2> holes;
-    for (const std::vector<vec2>* polygon : hole_polygons) {
+    for (auto polygon = boundary.begin(); polygon < boundary.end(); polygon++) {
         int pn = (int)polygon->size();
-        srand(1);
-        for (int guess = 0; guess < 20; guess++) {
+        srand(0);
+        const int MIN_TRIAL = 10;
+        const int MAX_TRIAL = 1000;
+        const int TARGET_HOLES = (int)(pn/64+3);
+        int i = 0;
+        int step = pn / TARGET_HOLES;
+        while (std::gcd(step, pn) != 1)
+            step++;
+        int num_holes = 0;
+        for (int trial = 0; trial < MAX_TRIAL; trial++) {
             // generate random point
-            int i = (int)((float)rand()/(float)RAND_MAX * (float)pn);
+            i = (i + step) % pn;
             int j = (i+1)%pn;
             vec2 dp = polygon->at(j)-polygon->at(i);
             vec2 dn = vec2(-dp.y, dp.x);
             float u = (float)rand()/(float)RAND_MAX;
             float v = (float)rand()/(float)RAND_MAX;
-            vec2 p = polygon->at(i)+(0.3f+0.4f*u)*dp - (0.0f+0.4f*v*v)*dn;
+            vec2 p = polygon->at(i) + (0.3f+0.4f*u)*dp - (0.1f+0.4f*v)*dn;
+
+            // to make Triangle happy
+            if (!isInsideHull(p))
+                continue;
 
             // add hole if the point is outside the boundary
             int crossings = 0;
@@ -274,8 +370,12 @@ std::vector<vec2> holeLocations(
             }
             if (crossings % 2 == 0) {
                 holes.push_back(p);
-                break;
+                num_holes++;
             }
+
+            // termination
+            if (trial >= MIN_TRIAL && num_holes >= TARGET_HOLES)
+                break;
         }
     }
     return holes;
@@ -291,6 +391,8 @@ void generateMesh(
     outputVerts.clear();
     outputTrigs.clear();
     if (boundary.empty()) return;
+
+    float t0 = getTimePast();
 
     std::vector<vec2> points;
     std::vector<ivec2> segments;
@@ -310,9 +412,17 @@ void generateMesh(
         }
     }
 
+    float t1 = getTimePast();
+
     std::vector<vec2> holes = holeLocations(boundary_r);
 
+    float t2 = getTimePast();
+
     triangleWrapper(maxArea, points, segments, holes, outputVerts, outputTrigs);
+
+    float t3 = getTimePast();
+    printf("generateMesh: %.2g + %.2g + %.2g = %.2g secs\n",
+        t1-t0, t2-t1, t3-t2, t3-t0);
 }
 
 

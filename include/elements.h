@@ -23,7 +23,9 @@ using glm::clamp; using glm::mix; using glm::sign;
 using glm::vec2; using glm::vec3; using glm::vec4;
 using glm::dot; using glm::cross; using glm::outerProduct;
 using glm::mat2; using glm::mat3; using glm::mat4;
-using glm::mat2x3; using glm::mat3x2; using glm::mat4x3;
+using glm::mat2x3; using glm::mat3x2;
+using glm::mat4x3; using glm::mat3x4;
+using glm::mat4x2; using glm::mat2x4;
 using glm::inverse; using glm::transpose; using glm::determinant;
 
 using glm::ivec2;

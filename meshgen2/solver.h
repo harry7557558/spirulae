@@ -131,22 +131,21 @@ void DiscretizedModel<float, float>::solveLaplacian() {
     printf("Linear system constructed in %.2g secs. (%dx%d, %d nonzeros)\n",
         time1 - time0, Ns, Ns, csr.getNonzeros());
     // tolerance
-    float tol = 0.0;
-    for (int i = 0; i < Ns; i++)
-        tol += dot(f[i], f[i]);
-    tol = 1e-10 * sqrt(tol);
-    if (tol == 0.0) tol = 1.0;
+    float tol = 1e-4f;
+    int miniter = 10, maxiter = 1000;
 #define PRECOND 1  // 1: diag; 2: cholesky; 3: ssor
 #if !PRECOND
     float time2 = time1;
     int niters = conjugateGradient(
-        Ns, linopr, (float*)f, (float*)u, 10000, tol);
+        Ns, linopr, (float*)f, (float*)u, miniter, maxiter, tol);
 #else  // !PRECOND
 #if PRECOND == 1
     // block diagonal preconditioning
     std::vector<float> invDiag(Ns, 0.0);
-    for (int i = 0; i < Ns; i++)
-        invDiag[i] = 1.0 / lil.at(i, i, 1.0);
+    for (int i = 0; i < Ns; i++) {
+        float x = lil.at(i, i, 1.0);
+        invDiag[i] = x == 0.0f ? 1.0f : 1.0f / x;
+    }
     auto precond = [&](const float* src, float* res) {
         for (int i = 0; i < Ns; i++)
             res[i] = invDiag[i] * src[i];
@@ -177,7 +176,7 @@ void DiscretizedModel<float, float>::solveLaplacian() {
     float time2 = getTimePast();
     printf("Linear system preconditioned in %.2g secs.\n", time2 - time1);
     int niters = conjugateGradientPreconditioned(
-        Ns, linopr, precond, (float*)f, (float*)u, 10000, tol);
+        Ns, linopr, precond, (float*)f, (float*)u, miniter, maxiter, tol);
 #endif  // !PRECOND
     printf("%d iterations.\n", niters);
     float time3 = getTimePast();
