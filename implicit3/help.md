@@ -18,7 +18,7 @@
 
 <p><b>Defining functions</b>: The name of a function (and its arguments) are similar to variable names. A function may be defined as <code>f(t)=t*sin(t)</code> and called like <code>z=f(x)*f(y)</code>, or defined as <code>g(a,b)=sin(a)*cos(b)</code> and called like <code>z=g(x+y,x-y)</code>.</p>
 
-<p><b>Comments</b>: A comment can be a single line or after a line of expression, starting with the character <code>#</code>. (Check the "Atan2 Spiral" example)</p>
+<p><b>Comments</b>: A comment can be a single line or after a line of expression, starting with the character <code>#</code>. (Check the "Atan2 Spirula" example)</p>
 
 <h3>Graphing parameters</h3>
 
@@ -32,7 +32,7 @@
 
 <p><b>Fixed clip</b>: By default domain clipping changes while zooming to adapt to viewport. Check this if you want to keep the function domain consistent.</p>
 
-<p><b>Field</b>: Visualize scalar field using volume contour lines. Use this selector to choose linear contour, logarithmic contour, or no contour. Warn that volume rendering can be slow when the function domain isn't restricted, and therefore it's recommended to set a clip when using this feature.</p>
+<p><b>Field</b>: Visualize scalar field using volume contour lines. Use this selector to choose linear contour, logarithmic contour, or no contour. You can also visualize the color field if you have defined one (see Color modes). Warn that volume rendering can be slow when the function domain isn't restricted, and therefore it's recommended to set a clip when using this feature.</p>
 
 <p><b>Grid</b>: When checked, this tool will display an adaptive grid on the surface, making it easier to see the size of the object and read the coordinates of a point.</p>
 
@@ -49,6 +49,8 @@
 <p><b>Normal</b>: This mode calculates the albedo of the surface based on the surface normal (normalized gradient). Red corresponds the <i>x</i>-direction, green corresponds the <i>y</i>-direction, blue corresponds the <i>z</i>-direction. When the component of the normal is more positive along a direction, the corresponding color component is stronger. Visually, the green part has the most positive <i>y</i> normal.</p>
 
 <p><b>Gradient</b>: This mode colors the surface based on the magnitude of the gradient. The surface appears bluer when the magnitude of the gradient is closer to an integer power of 100, like 0.01, 1, 100, and more orange as it departs. For a perfect SDF, you should see a clean dark blue color. For where the gradient approaches zero or infinity, there may be alternating blue and orange "stripes." (check the "A6 heart" example)</p>
+
+<p><b>Custom color</b>: You can define custom colors for surfaces and volumes by assigning a 3-component vector (<code>vec3</code>) to <code>c_rgb</code>, <code>c_hsv</code>, <code>c_hsl</code> variables. This overrides the default albedo of the surface, as well as allowing visualizing color volume under the "Field" checkbox. <code>c_rgb</code> takes three scalars with characteristic range $[0,1]$ and calculates ACES-tonemapped color. <code>c_hsl</code> and <code>c_hsv</code> takes hue with characteristic range $[0,2\pi)$ and two other values with range $[0,1]$. (Check the "Color Space" example)
 
 <h3>Technical details</h3>
 

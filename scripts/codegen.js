@@ -1226,6 +1226,8 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 break;
             }
         }
+        if (result.code == "")
+            throw new Error("Empty code; did you assign too many value or color variables?");
     }
     result.code = result.code
         .replaceAll("{%funname%}", funname)

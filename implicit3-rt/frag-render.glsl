@@ -190,6 +190,69 @@ vec3 funGradC(vec3 p, out bool isBoundary) {
 }
 
 
+#ifdef CUSTOM_COLOR
+
+vec3 aces(vec3 x) {
+    x = max(x, 0.0);
+    x = x*(2.51*x+0.03)/(x*(2.43*x+0.59)+0.14);
+    return clamp(x, 0.0, 1.0);
+}
+vec3 rgb2rgb(vec3 rgb) {
+    // return max(rgb, 0.0);
+    return aces(rgb);
+    return clamp(rgb, 0.0, 1.0);
+}
+vec3 hsv2rgb(vec3 hsv) {
+    hsv.yz = clamp(hsv.yz, 0.0, 0.9999);
+    float c = hsv.y * hsv.z;
+    float h = mod(hsv.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsv.z - c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + m;
+}
+vec3 hsl2rgb(vec3 hsl) {
+    hsl.yz = clamp(hsl.yz, 0.0, 0.9999);
+    float c = (1.0 - abs(2.0 * hsl.z - 1.0)) * hsl.y;
+    float h = mod(hsl.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsl.z - 0.5 * c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + vec3(m, m, m);
+}
+
+vec3 funColor(vec3 p) {
+#if {%Y_UP%}
+    float x=p.x, y=p.z, z=-p.y;
+#else
+    float x=p.x, y=p.y, z=p.z;
+#endif
+    float s = getScale1();
+    vec3 c = funRawColor(s*x, s*y, s*z);
+    return CUSTOM_COLOR(c);
+}
+
+#else  // CUSTOM_COLOR
+
+vec3 funColor(vec3 p) {
+    return vec3(0);
+}
+
+#endif  // CUSTOM_COLOR
+
+
 uniform vec3 LDIR;
 #define OPACITY 0.6
 
@@ -223,6 +286,9 @@ vec3 calcAlbedo(vec3 p, vec3 n0, bool isBoundary) {
     float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.1;
     if (isBoundary)
         return vec3(0.9*g);
+#ifdef CUSTOM_COLOR
+    return funColor(p) * pow(g, 1.5);
+#endif
 #if {%COLOR%} == 0
     // return g * vec3(1, 0.5, 0.2);
     return vec3(clamp(0.8*g, 0.0, 1.0));

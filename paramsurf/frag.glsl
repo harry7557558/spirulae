@@ -17,7 +17,7 @@ uniform float ZERO;  // used in loops to reduce compilation time
 
 
 {%FUN%}
-#line 20
+#line 21
 
 
 // no autodiff
@@ -117,6 +117,57 @@ void dF(float u, float v,
 
 
 #endif
+
+
+#ifdef CUSTOM_COLOR
+
+vec3 aces(vec3 x) {
+    x = max(x, 0.0);
+    x = x*(2.51*x+0.03)/(x*(2.43*x+0.59)+0.14);
+    return clamp(x, 0.0, 1.0);
+}
+vec3 rgb2rgb(vec3 rgb) {
+    // return max(rgb, 0.0);
+    return aces(rgb);
+    return clamp(rgb, 0.0, 1.0);
+}
+vec3 hsv2rgb(vec3 hsv) {
+    hsv.yz = clamp(hsv.yz, 0.0, 0.9999);
+    float c = hsv.y * hsv.z;
+    float h = mod(hsv.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsv.z - c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + m;
+}
+vec3 hsl2rgb(vec3 hsl) {
+    hsl.yz = clamp(hsl.yz, 0.0, 0.9999);
+    float c = (1.0 - abs(2.0 * hsl.z - 1.0)) * hsl.y;
+    float h = mod(hsl.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsl.z - 0.5 * c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + vec3(m, m, m);
+}
+
+vec3 funColor(float u, float v) {
+    vec3 c = funRawColor(u, v);
+    return CUSTOM_COLOR(c);
+}
+
+#endif  // CUSTOM_COLOR
 
 
 
@@ -220,7 +271,11 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
 #if {%COLOR%} == 0
 
     // default color
+#ifdef CUSTOM_COLOR
+    vec3 albedo = g * pow(funColor(u,v), vec3(2.2));
+#else  // CUSTOM_COLOR
     vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+#endif  // CUSTOM_COLOR
 #if {%XRAY%}
     vec3 col = albedo;
 #else // {%XRAY%}
@@ -235,6 +290,9 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
 #else // {%COLOR%} == 0
 
     // colors
+#ifdef CUSTOM_COLOR
+    vec3 albedo = funColor(u,v);
+#else  // CUSTOM_COLOR
 #if {%COLOR%} == 1
     vec3 albedo = vec3(u, v, 0.5);
     const vec3 ak = vec3(0.7);
@@ -253,6 +311,7 @@ vec4 calcColor(vec3 p, vec3 rd, float t, vec3 n0,
     float k = determinant(I2)/determinant(I1);
     vec3 albedo = k>0. ? colormap(sqrt(k)) : colormap(sqrt(-k));
 #endif // {%COLOR%} == 1
+#endif  // CUSTOM_COLOR
     albedo *= g;
 #if {%XRAY%}
     vec3 col = albedo;

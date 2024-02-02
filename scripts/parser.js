@@ -969,22 +969,25 @@ MathParser.parseInput = function (input) {
         val: mainEqus,
     };
     let dvars = MathParser.DependentVariables;
-    var groupFound = [];
+    var groupFound = [], groupPriority = 0;
     var hasGroup = [];
     for (var varname in dvars) {
         if (/^\d/.test(varname)) {
             hasGroup.push(varname);
             var result1 = {};
             var good = true;
+            var numVars = 0;
             for (var varname1 in dvars[varname]) {
                 if (mainVariables.hasOwnProperty(varname1))
                     result1[varname1] = null;
-                else if (varname1 == "val" && mainEqus.length == 1)
+                else if (varname1 == "val" &&
+                    (mainEqus.length == 1 || UpdateFunctionInputConfig.implicitMode))
                     result1[varname1] = mainEqus[0];
                 else if (dvars[varname][varname1]) {
                     good = false;
                     break;
                 }
+                numVars += 1;
             }
             if (good) {
                 for (var varname1 in result1) {
@@ -992,7 +995,12 @@ MathParser.parseInput = function (input) {
                         continue;
                     result[varname1] = dfs(variables[varname1].postfix, variables);
                 }
-                groupFound.push(varname)
+                if (numVars > groupPriority)
+                    groupFound = [];
+                if (numVars >= groupPriority) {
+                    groupFound.push(varname);
+                    groupPriority = varname;
+                }
             }
         }
         else {

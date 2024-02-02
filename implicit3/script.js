@@ -37,6 +37,7 @@ const builtinFunctions = [
     ["Log2 Spheres", "m=max(|x|,|y|,|z|);k=3/2-m;n=ceil(log(2,k))-2;(3*2^n-k)^2+(x^2+y^2+z^2-m^2)=4^n"],
     ["nCr", "#&#32;suffers&#32;from&#32;numerical&#32;inaccuracy;e^z=nCr(round(x),round(y))"],
     ["Complex Sine", "|sin(x+yi)+sin(y+xi)+sin(y+zi)+sin(z+yi)+sin(z+xi)+sin(x+zi)|=1"],
+    ["Color Space", "max(hypot(x,y),|z|,y+z)-1;#c_rgb=0.5vec3(1+x,1+y,1+z);c_hsv=vec3(atan2(y,x),hypot(x,y),0.5+0.5z);#c_hsl=vec3(atan2(y,x),hypot(x,y),0.5+0.5z)"],
     ["Bouquet", "r=hypot(x,y,z);theta=atan2(y,x);phi=atan2(hypot(x,y),z)^1.5;r(1-0.5cos(phi))=(1-sin(min(5phi,pi/2))sin(2.5theta-20e^-5phi)^2)cos(5phi)"],
     ["Eyes 1", "n=3ln((x^2+z^2)/(|x|+0.01));sqrt(x^2+z^2)sin(n)^2=10y^2+x^2+0.5z^2-0.3z"],
     ["Eyes 2", "a=3(z+x+1);b=3(z-x+1);sin(min(a*sin(b),b*sin(a)))-cos(max(a*cos(b),b*cos(a)))=(3-2z)/9+((2x^2+z^2)/6)^3+100y^2"],
@@ -88,8 +89,65 @@ document.body.onload = function (event) {
         'y': "y",
         'z': "z"
     };
+    MathParser.DependentVariables = {
+        0: {
+            'val': true,
+        },
+        1: {
+            'val': true,
+            'c_rgb': true,
+        },
+        2: {
+            'val': true,
+            'c_hsv': true,
+        },
+        3: {
+            'val': true,
+            'c_hsl': true,
+        },
+        'c_rgb': { type: 'vec3' },
+        'c_hsv': { type: 'vec3' },
+        'c_hsl': { type: 'vec3' },
+    };
 
-    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit3_compact;
+    CodeGenerator.langs.glsl.config = {
+        fun: [
+            "float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+            "#define CUSTOM_COLOR rgb2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_rgb[0]%},{%c_rgb[1]%},{%c_rgb[2]%},{%val%});\n\
+}",
+            "#define CUSTOM_COLOR hsv2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_hsv[0]%},{%c_hsv[1]%},{%c_hsv[2]%},{%val%});\n\
+}",
+            "#define CUSTOM_COLOR hsl2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_hsl[0]%},{%c_hsl[1]%},{%c_hsl[2]%},{%val%});\n\
+}",
+        ],
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
 
     // init parameters
     initParameters([

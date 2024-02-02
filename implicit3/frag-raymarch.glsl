@@ -89,7 +89,7 @@ vec3 worldToScreen(vec3 p) {
 // function and its gradient in world space
 
 {%FUN%}
-#line 62
+#line 93
 
 int callCount = 0;
 float fun(vec3 p) {  // function
@@ -122,11 +122,67 @@ vec3 funGrad(vec3 p) {  // numerical gradient
   #endif
 }
 
-// function and its gradient in screen space
+#ifdef CUSTOM_COLOR
 
-float funS(vec3 p) {
-    return fun(screenToWorld(p));
+vec3 aces(vec3 x) {
+    x = max(x, 0.0);
+    x = x*(2.51*x+0.03)/(x*(2.43*x+0.59)+0.14);
+    return clamp(x, 0.0, 1.0);
 }
+vec3 rgb2rgb(vec3 rgb) {
+    // return max(rgb, 0.0);
+    return aces(rgb);
+    return clamp(rgb, 0.0, 1.0);
+}
+vec3 hsv2rgb(vec3 hsv) {
+    hsv.yz = clamp(hsv.yz, 0.0, 1.0);
+    float c = hsv.y * hsv.z;
+    float h = mod(hsv.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsv.z - c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + m;
+}
+vec3 hsl2rgb(vec3 hsl) {
+    hsl.yz = clamp(hsl.yz, 0.0, 1.0);
+    float c = (1.0 - abs(2.0 * hsl.z - 1.0)) * hsl.y;
+    float h = mod(hsl.x/(2.0*PI)*6.0, 6.0);
+    float x = c * (1.0 - abs(mod(h, 2.0) - 1.0));
+    float m = hsl.z - 0.5 * c;
+    vec3 rgb;
+    if (h < 1.0) rgb = vec3(c, x, 0.0);
+    else if (h < 2.0) rgb = vec3(x, c, 0.0);
+    else if (h < 3.0) rgb = vec3(0.0, c, x);
+    else if (h < 4.0) rgb = vec3(0.0, x, c);
+    else if (h < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    return rgb + vec3(m, m, m);
+}
+
+vec4 funC(vec3 p) {  // function
+    callCount += 1;
+#if {%Y_UP%}
+    float x=p.x, y=p.z, z=-p.y;
+#else
+    float x=p.x, y=p.y, z=p.z;
+#endif
+    vec4 cw = funRawC(x, y, z);
+    return vec4(CUSTOM_COLOR(cw.xyz), cw.w);
+}
+
+#else  // CUSTOM_COLOR
+
+vec4 funC(vec3 p) {
+    return vec4(0, 0, 0, fun(p));
+}
+
+#endif  // CUSTOM_COLOR
 
 
 #define STEP_SIZE (({%STEP_SIZE%})*(0.5))
@@ -182,7 +238,11 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     float g = bool({%GRID%}) ? 1.1*grid(p, n) : 1.0;
 #if {%COLOR%} == 0
     // porcelain-like shading
-    vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+    #ifdef CUSTOM_COLOR
+        vec3 albedo = g * funC(p).xyz;
+    #else
+        vec3 albedo = g * mix(vec3(0.7), normalize(n0), 0.1);
+    #endif
     // albedo = vec3(1) * ndiff;
     vec3 amb = (0.1+0.2*BACKGROUND_COLOR) * albedo;
     vec3 dif = 0.6*max(dot(n,LDIR),0.0) * albedo;
@@ -191,6 +251,10 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     // spc *= albedo, rfl *= albedo;
     vec3 col = mix(amb+dif, rfl+spc, mix(.01,.2,pow(clamp(1.+dot(rd,n),.0,.8),5.)));
 #else // {%COLOR%} == 0
+#ifdef CUSTOM_COLOR
+    vec3 albedo = funC(p).xyz;
+    albedo += 0.1 * (0.5+0.5*dot(n,LDIR));
+#else  // CUSTOM_COLOR
 #if {%COLOR%} == 1
     // color based on normal
     vec3 albedo = mix(vec3(1.0), normalize(n0), 0.45);
@@ -201,6 +265,7 @@ vec4 calcColor(vec3 ro, vec3 rd, float t) {
     vec3 albedo = vec3(.372,.888,1.182) + vec3(.707,-2.123,-.943)*grad
         + vec3(.265,1.556,.195)*cos(vec3(5.2,2.48,8.03)*grad-vec3(2.52,1.96,-2.88));
 #endif // {%COLOR%} == 1
+#endif  // CUSTOM_COLOR
     albedo *= g;
     albedo = pow(albedo, vec3(2.2));
     // phong shading
@@ -262,7 +327,12 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
         if (++i >= MAX_STEP || t > t1) {
             return vec4(BACKGROUND_COLOR*totabs + totemi, 1.0);
         }
-        v = funS(ro+rd*t);
+        #if {%FIELD%} == 3
+            vec4 cv = funC(screenToWorld(ro+rd*t));
+            v = cv.w;
+        #else
+            v = fun(screenToWorld(ro+rd*t));
+        #endif
         if (isBisecting) {  // bisection search
             // if (t1-t0 <= STEP_SIZE/64.) break;
             if (t1-t0 <= 1e-4) break;
@@ -293,8 +363,16 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
                     v00*dt0/(dt00*(dt0+dt00))-v0*(dt0+dt00)/(dt0*dt00)+v*(2.*dt0+dt00)/(dt0*(dt0+dt00))
                     : (v-v0)/dt0  // finite difference
             ) : 0.;
-#if {%FIELD%}
             // field
+#if {%FIELD%} == 3
+            vec3 fieldCol = cv.xyz;
+            if (i > 1) {
+                float absorb = FIELD_EMISSION;
+                totabs *= exp(-absorb*dt);
+                totemi += fieldCol*absorb*totabs*dt;
+            }
+            prevFieldCol = fieldCol;
+#elif {%FIELD%}
             float field = {%FIELD%}==1 ? 2.0*v*uScale : log(abs(v))/log(10.);
             vec3 fieldCol = colorField(field);
             if (i > 1) {
@@ -333,7 +411,12 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
     float totabs = 1.0;
     float prevField; vec3 prevFieldCol;
     for (; i < MAX_STEP && t < t1; t += dt, i++) {
-        v = funS(ro+rd*t);
+        #if {%FIELD%} == 3
+            vec4 cv = funC(screenToWorld(ro+rd*t));
+            v = cv.w;
+        #else
+            v = fun(screenToWorld(ro+rd*t));
+        #endif
         if (v*v0 < 0.0 && mcol > 0.01) {  // intersection
             if (isnan(g) || g <= 0.0) g = 1.0;
             if (isnan(g0) || g0 <= 0.0) g0 = g;
@@ -355,8 +438,16 @@ vec4 render(in vec3 ro, in vec3 rd, float t0, float t1) {
             clamp(min(ddt-STEP_SIZE, t1-t0-0.01*STEP_SIZE), 0.05*STEP_SIZE, STEP_SIZE);
         dt *= 0.9+0.2*randf();
         dt00 = dt0, dt0 = dt, v00 = v0, v0 = v, g0 = g;
-#if {%FIELD%}
         // field
+#if {%FIELD%} == 3
+            vec3 fieldCol = cv.xyz;
+            if (i > 1) {
+                float absorb = FIELD_EMISSION;
+                totabs *= exp(-absorb*dt);
+                totemi += fieldCol*absorb*totabs*dt;
+            }
+            prevFieldCol = fieldCol;
+#elif {%FIELD%}
         float field = {%FIELD%}==1 ? 2.0*v*uScale : log(abs(v))/log(10.);
         vec3 fieldCol = colorField(field);
         if (i > 0) {

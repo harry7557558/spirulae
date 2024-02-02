@@ -15,6 +15,7 @@ const builtinFunctions = [
     ["Conch 2", "t=1-|ln(u)|^3;n=0.005ucos(100piv)+0.015exp(1.5sin(8pit));c1=cos(2piv)+.2sin(2piv)*sin(2piv);c2=-1.3*sin(2piv)+cos(2piv)*cos(2piv);b=.37;r=(1+n)(.5+.8*c1+.3*c2)/(.7+.7e^-.4z);x=exp(bt)rsin(pi*t);y=exp(bt)rcos(pi*t);z=exp(bt)(2.5*(exp(-bt)-1)+.8c2-.2*c1)"],
     ["Conch 3", "n=1+0.015exp(sin(40piln(v)+10piu));x=v^2.2sin(4piln(v))(0.95+cos(2piu))n&#32;0.9e^(0.5z);y=v^2.2cos(4piln(v))(0.95+cos(2piu))n&#32;0.9e^(0.5z);z=v^2.2(1.5sin(2piu)n-2)+1"],
     ["Conch 4", "n=1+cos(piu)^2(exp(8cos(20piln(v))-9.6)+0.01exp(sin(105piln(v));k=0.7;s=0.5;x=sv^ksin(4piln(v))(0.95+cos(2piu))n;y=sv^kcos(4piln(v))(0.95+cos(2piu))n;z=sv^k(sin(2piu)n-6)+3.5s"],
+    ["Conch 5", "c1(t)=0.5+cos(t);c2(t)=1.2sin(t)-0.2(1/2-1/2sin(t+0.1))^60cos(10(t+0.1));k=0.618;o=2.85;x=v^ksin(2pilnv)c1(2piu);y=v^kcos(2pilnv)c1(2piu);z=v^k(c2(2piu)-o)+0.65o"],
     ["Sea Urchin", "t=0.5+0.5cos(20piu);r=sin(pi(0.1+0.8v))+0.02sin(3piu);s_w=0.1t^2exp(sin(30piu)^10);%T(x)=ln(e^(2x)+1)/2;T(x)=(x+sqrt(x^2+1))/2;s_s=0.05(1-t)^2T(5(cos(60piu)+sin(30piv)-0.5))^0.5;s=(sqrt(v(1-v))+0.1)(s_w+s_s);x=cos(2piu)(r+s);y=sin(2piu)(r+s);z=0.8cos(0.9piv)(1+s)"],
     ["Arc Clam", "c1=1.4u^1.5(1+0.01sin(60piv))sin(piv);c2=2u^1.5(1+0.01sin(60piv))(1-.2exp(-10sin(piv)))u^1.5(-cos(piv)+0.2cos(3piv)-0.1sin(2piv)+0.2sin(piv));x=(1+0.05u^2-exp(-5u))^2cos(2piu)c1-0.5;z=-sin(2piu)c1;y=(2u-1.4u^2)c2"],
     ["Jellyfish", "r=(v(1-v)+sin(piv))(1+0.05(1-v^2)exp(2sin(48piu))+0.1sin(7piu));x=cos(2piu)r;z=sin(2piu)r;y=1-cos(piv)-4v(1-v)sin(iTime(0))^2-0.5/(1-v)^0.5"],
@@ -25,24 +26,11 @@ const builtinFunctions = [
 
 
 function initLangpack() {
-    CodeGenerator.langs.glsl.presets.paramsurf = {
-        fun: "vec3 {%funname%}(float u, float v) {\n\
-{%funbody%}\n\
-    return vec3({%x%}, {%y%}, {%z%});\n\
-}",
-        prefix: 'v',
-        def: "    float {%varname%} = {%expr%};",
-        joiner: "\n"
-    };
     CodeGenerator.langs.glsl.presets.paramsurf_compact = {
         fun: [
             "vec3 {%funname%}(float u, float v) {\n\
     float {%funbody%};\n\
     return vec3({%x%}, {%y%}, {%z%});\n\
-}",
-            "vec3 {%funname%}(float u, float v) {\n\
-    float {%funbody%};\n\
-    return vec3({%val[0]%},{%val[1]%},{%val[2]%});\n\
 }"
         ],
         prefix: 'v',
@@ -58,14 +46,6 @@ function initLangpack() {
 mat3 {%funname%}G(float u, float v) {\n\
     float {%funbody%};\n\
     return mat3({%x%}, {%y%}, {%z%}, {%x;u%}, {%y;u%}, {%z;u%}, {%x;v%}, {%y;v%}, {%z;v%});\n\
-}",
-            "vec3 {%funname%}(float u, float v) {\n\
-    float {%funbody%};\n\
-    return vec3({%val[0]%},{%val[1]%},{%val[2]%});\n\
-}\n\
-mat3 {%funname%}G(float u, float v) {\n\
-    float {%funbody%};\n\
-    return mat3({%val[0]%}, {%val[1]%}, {%val[2]%}, {%val[0];u%}, {%val[1];u%}, {%val[2];u%}, {%val[0];v%}, {%val[1];v%}, {%val[2];v%});\n\
 }"
         ],
         prefix: 'v',
@@ -82,21 +62,41 @@ mat3 {%funname%}H(float u, float v, out mat3 r2uv) {\n\
     float {%funbody%};\n\
     r2uv = mat3({%x;u,u%}, {%y;u,u%}, {%z;u,u%}, {%x;u,v%}, {%y;u,v%}, {%z;u,v%}, {%x;v,v%}, {%y;v,v%}, {%z;v,v%});\n\
     return mat3({%x%}, {%y%}, {%z%}, {%x;u%}, {%y;u%}, {%z;u%}, {%x;v%}, {%y;v%}, {%z;v%});\n\
-}",
-            "vec3 {%funname%}(float u, float v) {\n\
-    float {%funbody%};\n\
-    return vec3({%val[0]%}, {%val[1]%}, {%val[2]%});\n\
-}\n\
-mat3 {%funname%}H(float u, float v, out mat3 r2uv) {\n\
-    float {%funbody%};\n\
-    r2uv = mat3({%val[0];u,u%}, {%val[1];u,u%}, {%val[2];u,u%}, {%val[0];u,v%}, {%val[1];u,v%}, {%val[2];u,v%}, {%val[0];v,v%}, {%val[1];v,v%}, {%val[2];v,v%});\n\
-    return mat3({%val[0]%}, {%val[1]%}, {%val[2]%}, {%val[0];u%}, {%val[1];u%}, {%val[2];u%}, {%val[0];v%}, {%val[1];v%}, {%val[2];v%});\n\
 }"
         ],
         prefix: 'v',
         def: "{%varname%}={%expr%}",
         joiner: ", "
     };
+
+    let funs = [
+        CodeGenerator.langs.glsl.presets.paramsurf_compact.fun,
+        CodeGenerator.langs.glsl.presets.paramsurfg_compact.fun,
+        CodeGenerator.langs.glsl.presets.paramsurfh_compact.fun,
+    ];
+    for (var fi = 0; fi < 3; fi++) {
+        let fun = funs[fi];
+        for (var ci = 0; ci < 4; ci++) {
+            for (var vi = 0; vi < 2; vi++) {
+                if (ci == 0 && vi == 0)
+                    continue;
+                let src = fun[0];
+                if (vi == 1) src = src
+                    .replaceAll('{%x', "{%val[0]")
+                    .replaceAll('{%y', "{%val[1]")
+                    .replaceAll('{%z', "{%val[2]");
+                if (ci > 0) {
+                    let cs = ['rgb', 'hsv', 'hsl'][ci-1];
+                    src = "#define CUSTOM_COLOR "+cs+"2rgb\n\
+vec3 {%funname%}Color(float u, float v) {\n\
+    float {%funbody%};\n\
+    return vec3({%c[0]%},{%c[1]%},{%c[2]%});\n\
+}\n".replaceAll("{%c[", "{%c_"+cs+"[") + src;
+                }
+                fun.push(src);
+            }
+        }
+    }
 }
 
 
@@ -118,16 +118,20 @@ document.body.onload = function (event) {
         'v': "v"
     };
     MathParser.DependentVariables = {
-        0: {
-            'x': true,
-            'y': true,
-            'z': true
-        },
-        1: {
-            'val': true,
-        },
-        'val': { type: 'vec3' }
+        'val': { type: 'vec3' },
+        'c_rgb': { type: 'vec3' },
+        'c_hsv': { type: 'vec3' },
+        'c_hsl': { type: 'vec3' },
     };
+    for (var ci = 0; ci < 4; ci++) {
+        for (var vi = 0; vi < 2; vi++) {
+            let vars = vi == 1 ? { 'val': true } :
+                { x: true, y : true, z : true };
+            if (ci > 0)
+                vars[['c_rgb', 'c_hsv', 'c_hsl'][ci-1]] = true;
+            MathParser.DependentVariables[2*ci+vi] = vars;
+        }
+    }
 
     // init code generator
     initLangpack();

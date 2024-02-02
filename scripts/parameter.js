@@ -516,10 +516,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             if (varname != 'val' && varname != 'latex')
                 expr[varname] = parsed[varname];
         if (UpdateFunctionInputConfig.useGL) {
-            result = CodeGenerator.postfixToSource(
-                [expr], ["funRaw"],
-                UpdateFunctionInputConfig.complexMode ? 'glslc' : 'glsl'
-            );
+            result = CodeGenerator.postfixToSource([expr], ["funRaw"], 'glsl');
             var code = result.source;
             console.log(code);
             code = "uniform float iTime;\n\n" + code;
