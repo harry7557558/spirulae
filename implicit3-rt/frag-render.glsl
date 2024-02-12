@@ -540,18 +540,25 @@ vec3 sampleHenyeyGreenstein(vec3 wi, float g) {
 uniform float rOpacity;
 uniform float rIor;
 uniform float rRoughness1;
-uniform float rRoughness2;
 uniform float rEmission1;
-uniform float rEmission2;
 uniform float rAbsorb1;
-uniform float rAbsorb2;
+uniform float rVEmission1;
 uniform float rScatter1;
-uniform float rScatter2;
-uniform float rVDecayAbs;
-uniform float rVDecaySca;
+uniform float rScatterAniso1;
+
+uniform float rRoughness2;
+uniform float rEmission2;
+uniform float rAbsorb2;
 uniform float rVAbsorbHue;
 uniform float rVAbsorbChr;
-uniform float rVAbsorbBri;
+uniform float rVDecayAbs;
+uniform float rVEmission2;
+// uniform float rVEmissionTint2;
+#define rVEmissionTint2 1.0
+uniform float rScatter2;
+uniform float rScatterAniso2;
+uniform float rVDecaySca;
+uniform float rVSharpSca;
 
 uniform float rLightIntensity;
 uniform float rLightSky;
@@ -580,7 +587,8 @@ vec3 mainRender(vec3 ro, vec3 rd) {
 
     bool is_inside = false;
 
-    for (float iter = ZERO; iter < 32.; iter++) {
+    float maxLightPathDepth = float({%LIGHT_PATH_DEPTH%});
+    for (float iter = ZERO; iter < maxLightPathDepth; iter++) {
         if (iter != 0.) ro += 1e-4*length(ro) * rd;
         vec3 n, min_n = vec3(0);
         float t, min_t = 1e6;
@@ -616,6 +624,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         if (is_inside) {
             float A_abs = rAbsorb1/(1.0-rAbsorb1);
             float A_sca = pow(rScatter1, 0.5); A_sca = 0.5*A_sca/(1.0-A_sca);
+            float A_emi = 4.0 * pow(rVEmission1, 2.2);
             // scattering
             float r = randf();
             float tsc = -log(r) / A_sca;
@@ -627,45 +636,82 @@ vec3 mainRender(vec3 ro, vec3 rd) {
                 col = prev_col;
                 material = MAT_SCATTER;
             }
-            // absorption
-            float absorb = A_abs*min(min_t,clip_t1);
-            m_col *= pow(clamp(colmid, 0.0, 1.0), vec3(absorb));
+            // absorption, emission
+            float t = min(min_t,clip_t1);
+            vec3 emit = vec3(A_emi) * colmid;
+            vec3 a = pow(clamp(colmid, 0.00001, 0.99999), vec3(A_abs));
+            vec3 w = pow(a, vec3(t));
+            t_col += m_col * emit * (A_abs==0.0 ? vec3(t) : (w-1.0)/log(a));
+            m_col *= w;
         }
         else {
+            float z0 = -uClipBox.z;
+            // scattering
+            float k0_sca = pow(rVDecaySca, 1.0);
+            k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));  // reciprocal layer thickness
+            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); 
+            A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);  // scattering intensity
+            if (randf() < rVSharpSca) {
+                // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
+                //      from 1 to exp(-A/k)
+                // https://www.desmos.com/calculator/vjguq3x7wm
+                vec2 tb = vec2((z0-ro.z)/rd.z, (z0+1.0/k0_sca-ro.z)/rd.z);
+                tb = max(rd.z<0.0 ? tb.yx : tb, 0.0);
+                if (tb.y > 0.0) {
+                    float A_sca = A0_sca;
+                    float k_sca = k0_sca / (tb.y-tb.x);
+                    float r = randf();
+                    float rth = exp(-A_sca/k_sca);
+                    if ((r > rth || k_sca < 0.0) && uOutput == OUTPUT_RADIANCE) {
+                        float tsc = tb.x - log(mix(rth, 1.0, r)) / A_sca;
+                        if (tsc < min_t) {
+                            min_t = tsc, min_n = vec3(0);
+                            min_ro = ro+rd*tsc, min_rd = rd;
+                            col = prev_col;
+                            material = MAT_SCATTER;
+                        }
+                    }
+                }
+            }
+            else {
+                // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
+                //      from 1 to exp(-A/k)
+                // floating point bad here - large scattering with small decay
+                // https://www.desmos.com/calculator/wo63zpczge
+                // if this is fixed we can increase k0_sca for "thin snow" effect
+                float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
+                float k_sca = k0_sca * rd.z;
+                float r = randf();
+                if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
+                    && uOutput == OUTPUT_RADIANCE) {
+                    float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
+                    if (tsc < min_t) {
+                        min_t = tsc, min_n = vec3(0);
+                        min_ro = ro+rd*tsc, min_rd = rd;
+                        col = prev_col;
+                        material = MAT_SCATTER;
+                    }
+                }
+            }
+            // absorption
             // density A0 exp(-k0 z)
             //      = A0 exp(-k0 (ro.z + rd.z t))
             //      = (A0 exp(-k0 ro.z)) exp(-k0 rd.z t)
             //      = A exp(-k t)
             // total absorption density A/k (1-exp(-kt))
-            // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
-            //      from 1 to exp(-A/k)
-            float k0_abs = pow(rVDecayAbs, 0.8); k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
-            float k0_sca = pow(rVDecaySca, 1.0); k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));
+            float k0_abs = pow(rVDecayAbs, 0.8);
+            k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
             float A0_abs = rAbsorb2/(1.0-rAbsorb2);
-            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);
-            float z0 = -uClipBox.z;
+            vec3 c_abs = getAbsorbColor();
+            vec3 c_emi = 0.5 * pow(rVEmission2, 2.2) * mix(vec3(1), c_abs, rVEmissionTint2);
             float A_abs = A0_abs * exp(-k0_abs*(ro.z-z0));
-            float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
             float k_abs = k0_abs * rd.z;
-            float k_sca = k0_sca * rd.z;
-            // scattering
-            // floating point bad here - large scattering with small decay
-            // https://www.desmos.com/calculator/wo63zpczge
-            // if this is fixed we can increase k0_sca for "thin snow" effect
-            float r = randf();
-            if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
-                && uOutput == OUTPUT_RADIANCE) {
-                float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
-                if (tsc < min_t) {
-                    min_t = tsc, min_n = vec3(0);
-                    min_ro = ro+rd*tsc, min_rd = rd;
-                    col = prev_col;
-                    material = MAT_SCATTER;
-                }
-            }
-            // absorption
-            float absorb = A_abs / k_abs * (1.0-exp(-k_abs*min_t));
-            m_col *= pow(getAbsorbColor(), vec3(absorb));
+            vec3 c = pow(clamp(c_abs, 0.00001, 0.99999), vec3(A_abs));
+            vec3 A = -log(c);
+            vec3 w = exp(k_abs == 0.0 ? -vec3(min_t) : A/k_abs*(exp(-k_abs*min_t)-1.0));
+            if (A0_abs != 0.0)
+                t_col += m_col * c_emi * (1.0-w) / A;
+            m_col *= w;
         }
 
         // buffer
@@ -700,12 +746,14 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         ro = min_ro, rd = min_rd;
         min_n = dot(rd,min_n) < 0. ? min_n : -min_n;
         if (material == MAT_SCATTER) {
-            // isotropic scattering
-            rd = sampleUniformSphere();
+            // rd = sampleUniformSphere();
+            float aniso = is_inside ? rScatterAniso1 : rScatterAniso2;
+            aniso = 1.5*aniso - 0.5*pow(aniso,3.0);
+            rd = sampleHenyeyGreenstein(rd, aniso);
         }
         else if (material == MAT_PLANE) {
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
-            t_col += rEmission2 * m_col * col;
+            t_col += 2.0*rEmission2 * m_col * col;
             rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
         }
         else if (material == MAT_OBJECT) {

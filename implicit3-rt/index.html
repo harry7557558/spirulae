@@ -57,6 +57,7 @@
                 <option value="0.004">high</option>
                 <option value="0.001">ultra high</option>
             </select>precision</span>&ensp;
+        <br />
         <span><select id="select-spp" title="Maximum samples per pixel">
                 <option value="1">2⁰</option>
                 <option value="4">2²</option>
@@ -66,7 +67,17 @@
                 <option value="1024">2¹⁰</option>
                 <option value="4096">2¹²</option>
                 <option value="16384">2¹⁴</option>
-            </select>spp</span>
+            </select>spp</span>&ensp;
+        <span><select id="select-light-path-depth" title="Maximum light path depth">
+                <option value="8">8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
+                <option value="64" selected>64</option>
+                <option value="128">128</option>
+                <option value="256">256</option>
+                <option value="512">512</option>
+                <option value="1024">1024</option>
+            </select>path depth</span>
         <br />
         <span title="Shape clipping boundary"><select id="select-clip">
             <option value="1" selected>box</option>
@@ -107,7 +118,7 @@
         <br />
     </div>
     <hr />
-    <div class="foldable" id='folder-appearance' folded="true">
+    <div class="foldable" id='folder-object' folded="true">
         <span class="foldable-name"></span>
         <span title="Surface color mode"><select id="select-color">
                 <option value="0">default</option>
@@ -123,29 +134,49 @@
         <span title="object index of refraction"><span>ior</span>&nbsp;<input type="range" id="slider-ior" style="width:80px" /></span>
         <br />
         <span>roughness</span>
-        <span title="object roughness"><input type="range" id="slider-roughness1" style="width:80px" /></span>
-        <span title="plane roughness"><input type="range" id="slider-roughness2" style="width:80px" /></span>
+        <span title="object roughness"><input type="range" id="slider-roughness1" style="width:70px" /></span>
+        <span>emit</span>
+        <span title="object surface emission intensity"><input type="range" id="slider-emission1" style="width:60px" /></span>
         <br />
-        <span>emission</span>
-        <span title="object surface emission"><input type="range" id="slider-emission1" style="width:80px" /></span>
-        <span title="plane emission"><input type="range" id="slider-emission2" style="width:80px" /></span>
+        <span>absorb</span>
+        <span title="object volume absorption intensity"><input type="range" id="slider-absorb1" style="width:60px" /></span>
+        <span>emit[v]</span>
+        <span title="object volume emission intensity"><input type="range" id="slider-vemission1" style="width:60px" /></span>
         <br />
-        <span>absorption</span>
-        <span title="object volume absorption"><input type="range" id="slider-absorb1" style="width:80px" /></span>
-        <span title="atmospheric absorption"><input type="range" id="slider-absorb2" style="width:80px" /></span>
+        <span>scatter</span>
+        <span title="object volume scattering intensity"><input type="range" id="slider-scatter1" style="width:80px" /></span>
+        <span>aniso</span>
+        <span title="object volume scattering anisotropy"><input type="range" id="slider-scatter-aniso1" style="width:60px" /></span>
         <br />
-        <span>scattering</span>
-        <span title="object volume scattering"><input type="range" id="slider-scatter1" style="width:80px" /></span>
-        <span title="atmospheric scattering"><input type="range" id="slider-scatter2" style="width:80px" /></span>
+    </div>
+    <hr />
+    <div class="foldable" id='folder-background' folded="true">
+        <span class="foldable-name"></span>
+        <span>roughness</span>
+        <span title="plane roughness"><input type="range" id="slider-roughness2" style="width:70px" /></span>
+        <span>emit</span>
+        <span title="plane emission intensity"><input type="range" id="slider-emission2" style="width:60px" /></span>
         <br />
-        <span>decay:</span>
-        <span title="near-ground absorption layer thickness">a&nbsp;<input type="range" id="slider-vdecay-abs" style="width:80px" /></span>
-        <span title="near-ground scattering layer thickness">s&nbsp;<input type="range" id="slider-vdecay-sca" style="width:80px" /></span>
+        <span>absorb</span>
+        <span title="atmospheric absorption intensity"><input type="range" id="slider-absorb2" style="width:80px" /></span>
+        <span title="near-ground absorption layer thickness">depth&nbsp;<input type="range" id="slider-vdecay-abs" style="width:60px" /></span>
         <br />
-        <span>absorb:</span>
-        <span title="atmospheric absorption hue">h&nbsp;<input type="range" id="slider-vabsorb-hue" style="width:100px" /></span>
-        <span title="atmospheric absorption chroma">c&nbsp;<input type="range" id="slider-vabsorb-chr" style="width:60px" /></span>
-        <span style="display:none">l&nbsp;<input type="range" id="slider-vabsorb-bri" style="width:35px" /></span>
+        &emsp;
+        <span title="atmospheric absorption hue">hue&nbsp;<input type="range" id="slider-vabsorb-hue" style="width:90px" /></span>
+        <span title="atmospheric absorption chroma">chroma&nbsp;<input type="range" id="slider-vabsorb-chr" style="width:50px" /></span>
+        <br />
+        &emsp;
+        <span title="atmospheric emission intensity">emit[v]&nbsp;<input type="range" id="slider-vemit" style="width:80px" /></span>
+        <!-- <span title="atmospheric emission color tint">tint&nbsp;<input type="range" id="slider-vemit-tint" style="width:60px" /></span> -->
+        <br />
+        <span>scatter</span>
+        <span title="atmospheric scattering intensity"><input type="range" id="slider-scatter2" style="width:80px" /></span>
+        <span>aniso</span>
+        <span title="atmospheric scattering anisotropy"><input type="range" id="slider-scatter-aniso2" style="width:60px" /></span>
+        <br />
+        &emsp;
+        <span title="near-ground scattering layer thickness">depth&nbsp;<input type="range" id="slider-vdecay-sca" style="width:70px" /></span>
+        <span title="near-ground scattering layer boundary sharpness">sharp&nbsp;<input type="range" id="slider-vsharp-sca" style="width:70px" /></span>
         <br />
     </div>
     <hr />
