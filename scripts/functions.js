@@ -532,6 +532,9 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['if'], 3, {
         D: "if(f1,g2,g3)",
+        vec2: 'vec2(if(a1,b1,c1),if(a2,b2,c2))',
+        vec3: 'vec3(if(a1,b1,c1),if(a2,b2,c2),if(a3,b3,c3))',
+        vec4: 'vec4(if(a1,b1,c1),if(a2,b2,c2),if(a3,b3,c3),if(a4,b4,c4))',
         latex: '\\operatorname{if}\\left\\{%1>0:%2,%3\\right\\}',
         glsl: '%1>0.?%2:%3',
         cppf: '%1>0.0f?%2:%3',
@@ -625,6 +628,9 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['lerp', 'mix'], 3, {
         D: "mix(g1,g2,f3)+(f2-f1)g3",
+        vec2: 'vec2(mix(a1,b1,c1),mix(a2,b2,c2))',
+        vec3: 'vec3(mix(a1,b1,c1),mix(a2,b2,c2),mix(a3,b3,c3))',
+        vec4: 'vec4(mix(a1,b1,c1),mix(a2,b2,c2),mix(a3,b3,c3),mix(a4,b4,c4))',
         latex: '\\operatorname{lerp}\\left(%1,%2,%3\\right)',
         glsl: 'mix(%1,%2,%3)',
         cppf: '%1+(%2-%1)*%3',
@@ -820,6 +826,15 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['vec4'], 4, {
         latex: '\\left(%1,%2,%3,%4\\right)'
+    }),
+    new MathFunction(['vec2'], 1, {
+        latex: '\\left(%1,%1\\right)'
+    }),
+    new MathFunction(['vec3'], 1, {
+        latex: '\\left(%1,%1,%1\\right)'
+    }),
+    new MathFunction(['vec4'], 1, {
+        latex: '\\left(%1,%1,%1,%1\\right)'
     }),
     new MathFunction(['VecCompX'], 1, {
         latex: '{%1}_x',

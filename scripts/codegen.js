@@ -967,11 +967,11 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 if (!isRealScalar)
                     throw new Error("Vector components must be real scalars.");
                 var n = Number(token.str.slice(3));
-                if (n != numArgs)
+                if (n != numArgs && numArgs != 1)
                     throw new Error("Incorrect number of components for "
                         + token.str + " (" + numArgs + ")");
                 for (var i = 0; i < n; i++) {
-                    stack.push(funArgs[i]);
+                    stack.push(funArgs[numArgs==1 ? 0 : i]);
                     if (i > 0)
                         addToken(stack, new Token('unit', ''+i));
                 }
