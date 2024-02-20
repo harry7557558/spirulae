@@ -441,78 +441,231 @@ const int MAT_OBJECT = 3;
 
 // Faked multi-scattering BRDF
 
-vec3 sampleBrdf(
-    vec3 wi, vec3 n,
-    float alpha,  // roughness
-    float f0,  // ratio of reflection along the normal
-    vec3 albedo,
-    inout vec3 m_col
-    ) {
+float chi(float x) {
+    return (x > 0.) ? 1. : 0.;
+}
 
-    vec3 u = normalize(cross(n, vec3(1.23, 2.34, -3.45)));
-    vec3 v = cross(u, n);
-    wi = vec3(dot(wi, u), dot(wi, v), dot(wi, n));
-    vec3 wi0 = wi, wo, m;  // in, out and half vector
 
-    // generate output ray
-    for (int i = 0; i < 4; i++) {
-        // generate a random GGX normal
-        float su = 2.*PI*randf();
-        float sv = randf();
-        sv = atan(alpha*sqrt(sv/(1.-sv)));
-        vec3 h = vec3(sin(sv)*vec2(cos(su),sin(su)), cos(sv));
-        // reflect it about the GGX normal
-        wo = -(wi-2.*dot(wi,h)*h);
-        // if below surface, set it as the new in vector,
-        // keep bouncing until it gives a good one
-        if (wo.z < 0.) wi = -wo;
-        else break;
+// GGX and Fresnel
+float ggxDistribution(float alpha, vec3 m) {
+    if (m.z<0.0) return 0.0;
+    float denom = (alpha*alpha-1.)*m.z*m.z+1.;
+    return alpha*alpha / (PI * denom*denom);
+}
+float ggxLambda(float alpha, vec3 w) {
+    float tan2_theta = (1.0-w.z*w.z)/(w.z*w.z);
+    return 0.5*(sqrt(1.0+alpha*alpha*tan2_theta)-1.0);
+}
+float ggxG1dist(float alpha, vec3 w) {
+    return 1.0/(1.0+ggxLambda(alpha,w));
+}
+float ggxGeometry(float alpha, vec3 wi, vec3 wo, vec3 m) {
+    if (wi.z*dot(wi,m) < 0.0) return 0.0;
+    if (wo.z*dot(wo,m) < 0.0) return 0.0;
+    //return 1.0/(1.0+ggxLambda(alpha,wi)) * 1.0/(1.0+ggxLambda(alpha,wo));
+    return 1.0 / (1.0+ggxLambda(alpha,wi)+ggxLambda(alpha,wo));
+}
+float ggxFresnel(float eta, float k, float c) {
+    c = clamp(c, -1.0, 1.0);
+#if 1
+    return (pow(eta-1.0,2.0)+4.0*eta*pow(1.0-abs(c),5.0)+k*k) / (pow(eta+1.0,2.0)+k*k);
+#else
+    // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/#more-1921
+    float c2 = c*c, s2 = 1.0-c2;
+    float eta2 = eta*eta, k2 = k*k;
+    float t0 = eta2-k2-s2;
+    float a2b2 = sqrt(t0*t0+4.0*eta2*k2);
+    float t1 = a2b2+c2;
+    float a = sqrt(0.5*(a2b2+t0));
+    float t2 = 2.0*a*c;
+    float Rs = (t1-t2)/(t1+t2);
+    float t3 = c2*a2b2+s2*s2;
+    float t4 = t2*s2;
+    float Rp = Rs*(t3-t4)/(t3+t4);
+    return 0.5*(Rp+Rs);
+#endif
+}
+
+struct Material {
+    vec3 albedo;  // albedo color
+    float roughness;  // roughness, 0-1
+    float opacity;  // linear blending between opaque and refractive, 0-1
+    float eta;  // index of reflection ratio
+    float k;  // extinction coefficient
+};
+
+Material createMaterial(
+    vec3 albedo, float roughness,
+    float opacity, float eta, float k
+) {
+    Material m;
+    m.albedo = albedo;
+    m.roughness = roughness;
+    m.opacity = opacity;
+    m.eta = eta;
+    m.k = k;
+    return m;
+}
+
+#define STDEV 0.01
+float sampleHeight(float h, vec3 w) {
+    if (w.z > 0.0) return 10.0*STDEV;
+    return 0.0;
+}
+
+vec3 ggxSampleNormal(float alpha) {
+    float r1 = randf(), r2 = randf();
+    float su = 2.0*PI*r2;
+    float sv = atan(alpha*sqrt(r1/(1.0-r1)));
+    return vec3(sin(sv)*vec2(cos(su),sin(su)),cos(sv));
+}
+
+float pConductor(Material m, vec3 wi, vec3 wo) {
+    if (wi.z*wo.z < 0.0)
+        return 0.0;
+    vec3 hr = normalize(wi+wo);
+    float G = ggxDistribution(m.roughness,hr);
+    // float F = ggxFresnel(m.eta, m.k, dot(wi,hr));
+    // return F * G / (4.0*abs(dot(wi,hr)));
+    return G / (4.0*abs(dot(wi,hr)));
+}
+float pConductorWithFresnel(Material m, vec3 wi, vec3 wo) {
+    if (wi.z*wo.z < 0.0)
+        return 0.0;
+    vec3 hr = normalize(wi+wo);
+    float G = ggxDistribution(m.roughness,hr);
+    float F = ggxFresnel(m.eta, m.k, dot(wi,hr));
+    return F * G / (4.0*abs(dot(wi,hr)));
+}
+
+vec4 sampleBsdfConductor(Material m, vec3 wi) {
+    float h = 5.*STDEV;
+    float e = 1.;
+    vec3 w0, w = -wi;
+    for (int r = 0; r < 16; r++) {
+        h = sampleHeight(h, w);
+        if(abs(h) > 5.*STDEV)
+            break;
+        vec3 hr = ggxSampleNormal(m.roughness);
+        // e *= ggxFresnel(m.eta, m.k, dot(w,hr));
+        w = reflect(w,hr);
     }
-    wo.z = abs(wo.z);  // prevent below surface
-    wi = wi0;
-    m = normalize(wi+wo);
-
-    // fresnel
-    float F = mix(pow(1.-dot(wi, m), 5.), 1., f0);
-    m_col *= F * albedo;
-    return wo.x * u + wo.y * v + wo.z * n;
+    return vec4(w, e);
 }
 
-vec3 sampleGlassBsdf(vec3 rd, vec3 n, float eta) {
-    float ci = -dot(n, rd);
-    if (ci < 0.0) ci = -ci, n = -n;
-    float ct = 1.0 - eta * eta * (1.0 - ci * ci);
-    if (ct < 0.0) return rd + 2.0*ci*n;
-    ct = sqrt(ct);
-    float Rs = (eta * ci - ct) / (eta * ci + ct);
-    float Rp = (eta * ct - ci) / (eta * ct + ci);
-    float R = 0.5 * (Rs * Rs + Rp * Rp);
-    return randf() > R ?
-        rd * eta + n * (eta * ci - ct)  // refraction
-        : rd + 2.0*ci*n;  // reflection
+float evalBsdfConductor(Material m, vec3 wi, vec3 wo) {
+    float alpha = m.roughness;
+    float h = 5.*STDEV;
+    float e = 1.;
+    vec3 w = -wi;
+    float total = 0.0;
+    for (int r = 0; r < 16; r++) {
+        h = sampleHeight(h, w);
+        if(abs(h) > 5.*STDEV)
+            break;
+        vec3 hr = ggxSampleNormal(m.roughness);
+        vec3 w1 = reflect(w,hr);
+        total += e * pConductor(m,-w,wo) * ggxG1dist(alpha,wo);
+        // e *= ggxFresnel(m.eta, m.k, dot(w,hr));
+        w = w1;
+    }
+    return total * (4.0*PI);
 }
 
-vec3 sampleRoughGlassBsdf(
-    vec3 wi, vec3 n,
-    float alpha,  // roughness
-    float eta
-    ) {
 
-    vec3 u = normalize(cross(n, vec3(1.23, 2.34, -3.45)));
+float pDielectric(Material m, vec3 wi, vec3 wo) {
+    float refl = pConductorWithFresnel(m,wi,wo);
+    if (wo.z*wi.z>0.0) return refl;
+    vec3 ht = normalize(wi+m.eta*wo)*sign(1.0-m.eta);
+    if (dot(wo,ht)>0.0) return refl;
+    float D = ggxDistribution(m.roughness,ht);
+    float F = ggxFresnel(m.eta,m.k,dot(wi,ht));
+    float refr = m.eta*m.eta * (1.0-F) * D / (pow(dot(wi,ht)+m.eta*dot(wo,ht),2.0)+1e-4);
+    return refl + refr;
+}
+
+vec4 sampleBsdfDielectric(Material m, vec3 wi) {
+    float h = 5.*STDEV;
+    vec3 w = -wi;
+    float transmit = 1.0;
+    for (int r = 0; r < 16; r++) {
+        h = sampleHeight(h, w*transmit);
+        if(abs(h) > 5.*STDEV)
+            break;
+        vec3 wm = ggxSampleNormal(m.roughness);
+        float F = ggxFresnel(m.eta, m.k, dot(w,wm));
+        vec3 w1 = refract(w,wm,1.0/m.eta);
+        if (w1==vec3(0) || randf()<F)
+            w1 = reflect(w,wm);
+        else transmit *= -1.0;
+        w = w1;
+    }
+    return vec4(w, 1.0);
+}
+
+float evalBsdfDielectric(Material m, vec3 wi, vec3 wo) {
+    float alpha = m.roughness;
+    float h = 5.*STDEV;
+    vec3 w = -wi;
+    float transmit = 1.0;
+    float total = 0.0;
+    for (int r = 0; r < 16; r++) {
+        h = sampleHeight(h, w*transmit);
+        if(abs(h) > 5.*STDEV)
+            break;
+        vec3 wm = ggxSampleNormal(m.roughness);
+        float F = ggxFresnel(m.eta, m.k, dot(w,wm));
+        vec3 w1 = refract(w,wm,1.0/m.eta);
+        if (w1==vec3(0) || randf()<F)
+            w1 = reflect(w,wm);
+        else transmit *= -1.0;
+        total += pDielectric(m,-w,wo) * ggxG1dist(alpha,wo);
+        w = w1;
+    }
+    return total * (4.0*PI);
+}
+
+vec4 sampleBsdf(Material m, vec3 wi) {
+    if (randf() < m.opacity)
+        return sampleBsdfConductor(m, wi);
+    return sampleBsdfDielectric(m, wi);
+}
+float evalBsdf(Material m, vec3 wi, vec3 wo) {
+    float r = evalBsdfConductor(m, wi, wo);
+    float t = evalBsdfDielectric(m, wi, wo);
+    return mix(t, r, m.opacity);
+}
+
+vec3 sampleUniformSphere();
+vec3 sampleMaterialBsdf(
+    Material m, vec3 wi, vec3 n, inout vec3 m_col
+) {
+    // m.albedo = pow(m.albedo, vec3(2.2));
+
+    if (dot(wi, n) < 0.0) n = -n;
+    vec3 u = normalize(cross(n, vec3(1.2345, 2.3456, -3.4561)));
     vec3 v = cross(u, n);
     wi = vec3(dot(wi, u), dot(wi, v), dot(wi, n));
 
-    // generate a random GGX normal
-    float su = 2.*PI*randf();
-    float sv = randf();
-    sv = atan(alpha*sqrt(sv/(1.-sv)));
-    vec3 h = vec3(sin(sv)*vec2(cos(su),sin(su)), cos(sv));
-    // prevent below surface
-    if (dot(wi, h) * wi.z < 0.0) h = -h;
+    bool ImportanceSampling = true;
 
-    vec3 wo = sampleGlassBsdf(-wi, h, eta);
+    vec3 wo;
+    float r;
+    if (ImportanceSampling) {
+        vec4 wod = sampleBsdf(m,wi);
+        wo = wod.xyz;
+        r = wod.w;
+    }
+    else {
+        wo = sampleUniformSphere();
+        r = evalBsdf(m,wi,wo);
+    }
+
+    //m_col *= min(r, min(40.0/wi.z,200.0)) * m.albedo;
+    m_col *= r * m.albedo;
     return wo.x * u + wo.y * v + wo.z * n;
 }
+
 
 // volume
 
@@ -536,6 +689,8 @@ vec3 sampleHenyeyGreenstein(vec3 wi, float g) {
     return wo;
 }
 
+
+// parameters
 
 uniform float rOpacity;
 uniform float rIor;
@@ -566,6 +721,111 @@ uniform float rLightAmbient;
 uniform float rLightSoftness;
 uniform float rLightHardness;
 
+
+// intersection
+
+void intersectScene(
+    vec3 ro, vec3 rd, out float min_t, out vec3 min_n,
+    vec3 prev_col, out vec3 col, out float abst, out vec3 abscol,
+    out int material, inout bool is_inside
+) {
+    vec3 n; float t;
+    vec3 tmpcol;
+    min_n = vec3(0); min_t = 1e6;
+    material = MAT_BACKGROUND;
+    abscol = vec3(1);
+
+    // plane
+    t = -(ro.z+uClipBox.z) / rd.z;
+    if (t > 0.0) {
+        min_t = t, min_n = vec3(0,0,1);
+        vec3 p = ro+rd*t;
+        float s = getScale2();
+        col = sin(s*PI*p.x)*sin(s*PI*p.y) < 0. ?
+            vec3(0.9) : vec3(0.7);
+        col = pow(col, vec3(2.2));
+        material = MAT_PLANE;
+    }
+
+    // object
+    float totalv;
+    float clip_t1 = min_t;
+    t = intersectObject(ro, rd, 0.0, clip_t1, tmpcol, n, totalv);
+    if (t > 0.0 && t < min_t) {
+        min_t = t, min_n = n;
+        col = tmpcol;
+        material = MAT_OBJECT;
+    }
+    if (bool({%CLOSED%}))
+        is_inside = (totalv < 0.0);
+
+    // scattering
+    if (is_inside) {
+        float A_sca = pow(rScatter1, 0.5); A_sca = 0.5*A_sca/(1.0-A_sca);
+        float r = randf();
+        float tsc = -log(r) / A_sca;
+        abscol = 0.5*(prev_col+col);
+        if (tsc < min_t && uOutput == OUTPUT_RADIANCE) {
+            min_t = tsc, min_n = vec3(0);
+            abscol = mix(prev_col, col, tsc/min_t);
+            col = prev_col;
+            material = MAT_SCATTER;
+        }
+        abst = min(min_t, clip_t1);
+    }
+    else {
+        float z0 = -uClipBox.z;
+        float k0_sca = pow(rVDecaySca, 1.0);
+        k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));  // reciprocal layer thickness
+        float A0_sca = 1.0-pow(1.0-rScatter2,2.0); 
+        A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);  // scattering intensity
+        if (randf() < rVSharpSca) {
+            // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
+            //      from 1 to exp(-A/k)
+            // https://www.desmos.com/calculator/vjguq3x7wm
+            vec2 tb = vec2((z0-ro.z)/rd.z, (z0+1.0/k0_sca-ro.z)/rd.z);
+            tb = max(rd.z<0.0 ? tb.yx : tb, 0.0);
+            if (tb.y > 0.0) {
+                float A_sca = A0_sca;
+                float k_sca = k0_sca / (tb.y-tb.x);
+                float r = randf();
+                float rth = exp(-A_sca/k_sca);
+                if ((r > rth || k_sca < 0.0) && uOutput == OUTPUT_RADIANCE) {
+                    float tsc = tb.x - log(mix(rth, 1.0, r)) / A_sca;
+                    if (tsc < min_t) {
+                        min_t = tsc, min_n = vec3(0);
+                        col = prev_col;
+                        material = MAT_SCATTER;
+                    }
+                }
+            }
+        }
+        else {
+            // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
+            //      from 1 to exp(-A/k)
+            // floating point bad here - large scattering with small decay
+            // https://www.desmos.com/calculator/wo63zpczge
+            // if this is fixed we can increase k0_sca for "thin snow" effect
+            float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
+            float k_sca = k0_sca * rd.z;
+            float r = randf();
+            if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
+                && uOutput == OUTPUT_RADIANCE) {
+                float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
+                if (tsc < min_t) {
+                    min_t = tsc, min_n = vec3(0);
+                    col = prev_col;
+                    material = MAT_SCATTER;
+                }
+            }
+        }
+        abst = min_t;
+    }
+}
+
+
+// rendering
+
 vec3 getAbsorbColor() {
     float h = 2.0*PI*rVAbsorbHue;
     float c = 0.2*pow(rVAbsorbChr, 2.0);
@@ -590,115 +850,36 @@ vec3 mainRender(vec3 ro, vec3 rd) {
     float maxLightPathDepth = float({%LIGHT_PATH_DEPTH%});
     for (float iter = ZERO; iter < maxLightPathDepth; iter++) {
         if (iter != 0.) ro += 1e-4*length(ro) * rd;
-        vec3 n, min_n = vec3(0);
-        float t, min_t = 1e6;
-        vec3 min_rd = rd, min_ro = ro+1e6*rd;
-        int material = MAT_BACKGROUND;
 
-        // plane
-        t = -(ro.z+uClipBox.z) / rd.z;
-        if (t > 0.0) {
-            min_t = t, min_n = vec3(0,0,1);
-            min_ro = ro+rd*t, min_rd = rd;
-            float s = getScale2();
-            col = sin(s*PI*min_ro.x)*sin(s*PI*min_ro.y) < 0. ?
-                vec3(0.9) : vec3(0.7);
-            col = pow(col, vec3(2.2));
-            material = MAT_PLANE;
-        }
+        float min_t; vec3 min_n;
+        int material;
+        float abst; vec3 abscol;
 
-        // object
-        float totalv;
-        float clip_t1 = min_t;
-        t = intersectObject(ro, rd, 0.0, clip_t1, tmpcol, n, totalv);
-        if (t > 0.0 && t < min_t) {
-            min_t = t, min_n = n;
-            min_ro = ro+rd*t, min_rd = rd;
-            col = tmpcol;
-            material = MAT_OBJECT;
-        }
-        if (bool({%CLOSED%}))
-            is_inside = (totalv < 0.0);
+        intersectScene(
+            ro, rd, min_t, min_n,
+            prev_col, col, abst, abscol,
+            material, is_inside
+        );
+        vec3 min_ro = ro + rd * min_t;
+        vec3 min_rd = rd;
 
-        // absorption and scattering
+        // volume absorption / emission
         if (is_inside) {
             float A_abs = rAbsorb1/(1.0-rAbsorb1);
-            float A_sca = pow(rScatter1, 0.5); A_sca = 0.5*A_sca/(1.0-A_sca);
             float A_emi = 4.0 * pow(rVEmission1, 2.2);
-            // scattering
-            float r = randf();
-            float tsc = -log(r) / A_sca;
-            vec3 colmid = 0.5*(prev_col+col);
-            if (tsc < min_t && uOutput == OUTPUT_RADIANCE) {
-                min_t = tsc, min_n = vec3(0);
-                min_ro = ro+rd*tsc, min_rd = rd;
-                colmid = mix(prev_col, col, tsc/min_t);
-                col = prev_col;
-                material = MAT_SCATTER;
-            }
-            // absorption, emission
-            float t = min(min_t,clip_t1);
-            vec3 emit = vec3(A_emi) * colmid;
-            vec3 a = pow(clamp(colmid, 0.00001, 0.99999), vec3(A_abs));
-            vec3 w = pow(a, vec3(t));
-            t_col += m_col * emit * (A_abs==0.0 ? vec3(t) : (w-1.0)/log(a));
+            vec3 emit = vec3(A_emi) * abscol;
+            vec3 a = pow(clamp(abscol, 0.00001, 0.99999), vec3(A_abs));
+            vec3 w = pow(a, vec3(abst));
+            t_col += m_col * emit * (A_abs==0.0 ? vec3(abst) : (w-1.0)/log(a));
             m_col *= w;
         }
         else {
-            float z0 = -uClipBox.z;
-            // scattering
-            float k0_sca = pow(rVDecaySca, 1.0);
-            k0_sca = 1.0 / (k0_sca/(1.0-k0_sca));  // reciprocal layer thickness
-            float A0_sca = 1.0-pow(1.0-rScatter2,2.0); 
-            A0_sca = 0.01*A0_sca/(1.0-A0_sca) / (0.1*k0_sca);  // scattering intensity
-            if (randf() < rVSharpSca) {
-                // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
-                //      from 1 to exp(-A/k)
-                // https://www.desmos.com/calculator/vjguq3x7wm
-                vec2 tb = vec2((z0-ro.z)/rd.z, (z0+1.0/k0_sca-ro.z)/rd.z);
-                tb = max(rd.z<0.0 ? tb.yx : tb, 0.0);
-                if (tb.y > 0.0) {
-                    float A_sca = A0_sca;
-                    float k_sca = k0_sca / (tb.y-tb.x);
-                    float r = randf();
-                    float rth = exp(-A_sca/k_sca);
-                    if ((r > rth || k_sca < 0.0) && uOutput == OUTPUT_RADIANCE) {
-                        float tsc = tb.x - log(mix(rth, 1.0, r)) / A_sca;
-                        if (tsc < min_t) {
-                            min_t = tsc, min_n = vec3(0);
-                            min_ro = ro+rd*tsc, min_rd = rd;
-                            col = prev_col;
-                            material = MAT_SCATTER;
-                        }
-                    }
-                }
-            }
-            else {
-                // scattering p(t) = exp( -A/k (1-exp(-kt)) ),
-                //      from 1 to exp(-A/k)
-                // floating point bad here - large scattering with small decay
-                // https://www.desmos.com/calculator/wo63zpczge
-                // if this is fixed we can increase k0_sca for "thin snow" effect
-                float A_sca = A0_sca * exp(-k0_sca*(ro.z-z0));
-                float k_sca = k0_sca * rd.z;
-                float r = randf();
-                if ((r > exp(-A_sca/k_sca) || k_sca < 0.0)
-                    && uOutput == OUTPUT_RADIANCE) {
-                    float tsc = -log(1.0+k_sca/A_sca*log(r))/k_sca;
-                    if (tsc < min_t) {
-                        min_t = tsc, min_n = vec3(0);
-                        min_ro = ro+rd*tsc, min_rd = rd;
-                        col = prev_col;
-                        material = MAT_SCATTER;
-                    }
-                }
-            }
-            // absorption
             // density A0 exp(-k0 z)
             //      = A0 exp(-k0 (ro.z + rd.z t))
             //      = (A0 exp(-k0 ro.z)) exp(-k0 rd.z t)
             //      = A exp(-k t)
             // total absorption density A/k (1-exp(-kt))
+            float z0 = -uClipBox.z;
             float k0_abs = pow(rVDecayAbs, 0.8);
             k0_abs = 0.2 / (k0_abs/(1.0-k0_abs));
             float A0_abs = rAbsorb2/(1.0-rAbsorb2);
@@ -708,7 +889,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             float k_abs = k0_abs * rd.z;
             vec3 c = pow(clamp(c_abs, 0.00001, 0.99999), vec3(A_abs));
             vec3 A = -log(c);
-            vec3 w = exp(k_abs == 0.0 ? -vec3(min_t) : A/k_abs*(exp(-k_abs*min_t)-1.0));
+            vec3 w = exp(k_abs == 0.0 ? -vec3(abst) : A/k_abs*(exp(-k_abs*abst)-1.0));
             if (A0_abs != 0.0)
                 t_col += m_col * c_emi * (1.0-w) / A;
             m_col *= w;
@@ -754,23 +935,27 @@ vec3 mainRender(vec3 ro, vec3 rd) {
         else if (material == MAT_PLANE) {
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
             t_col += 2.0*rEmission2 * m_col * col;
-            rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
+            // rd = sampleBrdf(-rd, min_n, pow(rRoughness2,2.0), 1.0, col, m_col);
+            Material m = createMaterial(col, pow(rRoughness2,2.0), 1.0, 1.5, 0.0);
+            rd = sampleMaterialBsdf(m, -rd, min_n, m_col);
         }
         else if (material == MAT_OBJECT) {
             col = pow(clamp(col,0.0,1.0), vec3(rAbsorb1/(1.0-rAbsorb1)));
             t_col += rEmission1 * m_col * col;
             float alpha = pow(rRoughness1,2.0);
             // rd -= 2.0*dot(rd, min_n) * min_n, m_col *= col;
+            float eta = is_inside ? 1.0/rIor : rIor;
             if (randf() > rOpacity) {
-                float eta = is_inside?rIor:1.0/rIor;
-                // rd = sampleGlassBsdf(rd, min_n, eta);
-                rd = sampleRoughGlassBsdf(-rd, min_n, alpha, eta);
+                Material m = createMaterial(vec3(1), alpha, 0.0, eta, 0.0);
+                rd = sampleMaterialBsdf(m, -rd, min_n, m_col);
                 if (is_inside) {
                     vec3 col = clamp(0.5*(prev_col+col), vec3(0), vec3(1));
                     // m_col *= pow(col, vec3(1.0*min_t));
                 }
             } else {
-                rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
+                // rd = sampleBrdf(-rd, min_n, alpha, 1.0, col, m_col);
+                Material m = createMaterial(col, alpha, 1.0, eta, 0.0);
+                rd = sampleMaterialBsdf(m, -rd, min_n, m_col);
             }
         }
         prev_col = col;
