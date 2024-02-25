@@ -230,6 +230,7 @@ vec3 {%funname%}Color(float x, float y, float z) {\n\
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("sSpp", "select-spp"),
         new GraphingParameter("sLightPathDepth", "select-light-path-depth"),
+        new GraphingParameter("cMis", "checkbox-mis"),
         new GraphingParameter("sClip", "select-clip"),
         new GraphingParameter("cClosed", "checkbox-closed"),
         new GraphingParameter("sDenoise", "select-denoise"),

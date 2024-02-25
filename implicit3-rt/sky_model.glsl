@@ -147,6 +147,11 @@ vec3 getSkyColor(vec3 pa, vec3 pb, vec3 sunDir) {
     rayleighColor = SUNINTENSITY * phaseR * rayleighColor;
     mieColor = SUNINTENSITY * phaseM * mieColor;
     
+    if (isnan(dot(rayleighColor,vec3(1))))
+        rayleighColor = vec3(0);
+    if (isnan(dot(mieColor,vec3(1))))
+        mieColor = vec3(0);
+    
     return rayleighColor + mieColor;
     
 }
@@ -161,6 +166,8 @@ vec3 skyColor(vec3 p, vec3 sunDir) {
 	// Get the position where the ray 'leaves' the atmopshere (see the scratchapixel link for details)
     // Note that this implementation only works when the origin is inside the atmosphere to begin with
     float distanceToAtmosphere = raySphereIntersect(origin, dir, vec3(0.0, 0.0, 0.0), ATMOSPHERERADIUS);
+    if (distanceToAtmosphere < 0.0)
+        return vec3(0);
     vec3 atmosphereIntersect = origin + dir * distanceToAtmosphere;
     
     // Get the color of the light from the origin to the atmosphere intersect

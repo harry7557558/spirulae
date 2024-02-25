@@ -526,6 +526,7 @@ function updateShaderFunction(funCode, funGradCode, params) {
         shaderSource = shaderSource.replaceAll("{%HZ%}", params.sHz);
         shaderSource = shaderSource.replaceAll("{%CLIP%}", Number(params.sClip));
         shaderSource = shaderSource.replaceAll("{%LIGHT_PATH_DEPTH%}", Number(params.sLightPathDepth));
+        shaderSource = shaderSource.replaceAll("{%MIS%}", params.cMis);
         shaderSource = shaderSource.replaceAll("{%CLOSED%}", Number(params.cClosed));
         shaderSource = shaderSource.replaceAll("{%FIELD%}", params.sField);
         shaderSource = shaderSource.replaceAll("{%STEP_SIZE%}", params.sStep);
