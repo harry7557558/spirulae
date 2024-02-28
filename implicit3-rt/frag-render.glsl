@@ -493,24 +493,15 @@ struct Material {
     vec3 albedo;  // albedo color
     vec3 emission;  // emission color and strength
     float roughness;  // roughness, 0-1
+    float metallic;  // metal factor, 0-1
+    float diffuse;  // diffuse factor, 0-1
+    float tint;  // opaque specular reflection tint
     float opacity;  // linear blending between opaque and refractive, 0-1
     float eta;  // index of reflection ratio
-    float k;  // extinction coefficient
+    float eta_k;  // extinction coefficient
     float anisotropy;  // for scattering only
 };
 
-Material createMaterial(
-    vec3 albedo, float roughness,
-    float opacity, float eta, float k
-) {
-    Material m;
-    m.albedo = albedo;
-    m.roughness = roughness;
-    m.opacity = opacity;
-    m.eta = eta;
-    m.k = k;
-    return m;
-}
 
 // generate orthonormal basis
 // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
@@ -521,6 +512,9 @@ void onb(vec3 n, out vec3 b1, out vec3 b2){
 	b1 = vec3(1.0+s*n.x*n.x*a, s*b, -s*n.x);
 	b2 = vec3(b, s+n.y*n.y*a, -n.y);
 }
+
+vec3 sampleUniformSphere();
+vec3 sampleUniformSolidAngle(float alpha);
 
 #define STDEV 0.01
 float sampleHeight(float h, vec3 w) {
@@ -540,8 +534,8 @@ float pConductor(Material m, vec3 wi, vec3 wo) {
         return 0.0;
     vec3 hr = normalize(wi+wo);
     float G = ggxDistribution(m.roughness,hr);
-    // float F = ggxFresnel(m.eta, m.k, dot(wi,hr));
-    // return F * G / (4.0*abs(dot(wi,hr)));
+    float F = ggxFresnel(m.eta, m.eta_k, dot(wi,hr));
+    return F * G / (4.0*abs(dot(wi,hr)));
     return G / (4.0*abs(dot(wi,hr)));
 }
 float pConductorWithFresnel(Material m, vec3 wi, vec3 wo) {
@@ -549,11 +543,11 @@ float pConductorWithFresnel(Material m, vec3 wi, vec3 wo) {
         return 0.0;
     vec3 hr = normalize(wi+wo);
     float G = ggxDistribution(m.roughness,hr);
-    float F = ggxFresnel(m.eta, m.k, dot(wi,hr));
+    float F = ggxFresnel(m.eta, m.eta_k, dot(wi,hr));
     return F * G / (4.0*abs(dot(wi,hr)));
 }
 
-vec3 sampleBsdfConductor(Material m, vec3 wi) {
+vec4 sampleBsdfConductor(Material m, vec3 wi) {
     float h = 5.*STDEV;
     float e = 1.;
     vec3 w0, w = -wi;
@@ -562,10 +556,10 @@ vec3 sampleBsdfConductor(Material m, vec3 wi) {
         if(abs(h) > 5.*STDEV)
             break;
         vec3 hr = ggxSampleNormal(m.roughness);
-        // e *= ggxFresnel(m.eta, m.k, dot(w,hr));
+        e *= ggxFresnel(m.eta, m.eta_k, dot(w,hr));
         w = reflect(w,hr);
     }
-    return w;
+    return vec4(w, e);
 }
 
 float evalBsdfConductor(Material m, vec3 wi, vec3 wo) {
@@ -581,7 +575,7 @@ float evalBsdfConductor(Material m, vec3 wi, vec3 wo) {
         vec3 hr = ggxSampleNormal(m.roughness);
         vec3 w1 = reflect(w,hr);
         total += e * pConductor(m,-w,wo) * ggxG1dist(alpha,w1);
-        // e *= ggxFresnel(m.eta, m.k, dot(w,hr));
+        e *= ggxFresnel(m.eta, m.eta_k, dot(w,hr));
         w = w1;
     }
     return total * (4.0*PI);
@@ -594,12 +588,12 @@ float pDielectric(Material m, vec3 wi, vec3 wo) {
     vec3 ht = normalize(wi+m.eta*wo)*sign(1.0-m.eta);
     if (dot(wo,ht)>0.0) return refl;
     float D = ggxDistribution(m.roughness,ht);
-    float F = ggxFresnel(m.eta,m.k,dot(wi,ht));
+    float F = ggxFresnel(m.eta,m.eta_k,dot(wi,ht));
     float refr = m.eta*m.eta * (1.0-F) * D / (pow(dot(wi,ht)+m.eta*dot(wo,ht),2.0)+1e-4);
     return refl + refr;
 }
 
-vec3 sampleBsdfDielectric(Material m, vec3 wi) {
+vec4 sampleBsdfDielectric(Material m, vec3 wi) {
     float h = 5.*STDEV;
     vec3 w = -wi;
     float transmit = 1.0;
@@ -608,14 +602,14 @@ vec3 sampleBsdfDielectric(Material m, vec3 wi) {
         if(abs(h) > 5.*STDEV)
             break;
         vec3 wm = ggxSampleNormal(m.roughness);
-        float F = ggxFresnel(m.eta, m.k, dot(w,wm));
+        float F = ggxFresnel(m.eta, 0.0, dot(w,wm));
         vec3 w1 = refract(w,wm,1.0/m.eta);
         if (w1==vec3(0) || randf()<F)
             w1 = reflect(w,wm);
         else transmit *= -1.0;
         w = w1;
     }
-    return w;
+    return vec4(w, 1.0);
 }
 
 float evalBsdfDielectric(Material m, vec3 wi, vec3 wo) {
@@ -629,7 +623,7 @@ float evalBsdfDielectric(Material m, vec3 wi, vec3 wo) {
         if(abs(h) > 5.*STDEV)
             break;
         vec3 wm = ggxSampleNormal(m.roughness);
-        float F = ggxFresnel(m.eta, m.k, dot(w,wm));
+        float F = ggxFresnel(m.eta, 0.0, dot(w,wm));
         vec3 w1 = refract(w,wm,1.0/m.eta);
         if (w1==vec3(0) || randf()<F)
             w1 = reflect(w,wm);
@@ -641,22 +635,39 @@ float evalBsdfDielectric(Material m, vec3 wi, vec3 wo) {
 }
 
 vec3 sampleBsdf0(Material m, vec3 wi, out vec3 w) {
+    vec4 wod;
     if (randf() < m.opacity) {
         w = m.albedo;
-        return sampleBsdfConductor(m, wi);
+        wod = sampleBsdfConductor(m, wi);
+        float F = ggxFresnel(m.eta, m.eta_k, wod.z);
+        float diffuse_amount = 1.0-F;
+        float p = clamp(diffuse_amount,0.001,0.999);
+        if (randf() < p) {
+            wod.xyz = sampleUniformSolidAngle(0.5*PI);
+            wod.w = 0.5*PI * wod.z * diffuse_amount / p;
+        }
+        else {
+            wod.w /= 1.0-p;
+            w = mix(vec3(1), w, m.tint);
+        }
     }
     else {
         w = vec3(1);
-        return sampleBsdfDielectric(m, wi);
+        wod = sampleBsdfDielectric(m, wi);
     }
+    w *= wod.w;
+    return wod.xyz;
 }
 vec3 evalBsdf0(Material m, vec3 wi, vec3 wo) {
-    vec3 r = evalBsdfConductor(m, wi, wo) * m.albedo;
+    vec3 r = evalBsdfConductor(m, wi, wo) * mix(vec3(1), m.albedo, m.tint);
+    if (wi.z*wo.z > 0.0) {
+        float F = ggxFresnel(m.eta, m.eta_k, wo.z);
+        r += PI * (1.0-F) * abs(wo.z) * m.albedo;
+    }
     vec3 t = evalBsdfDielectric(m, wi, wo) * vec3(1);
     return mix(t, r, m.opacity);
 }
 
-vec3 sampleUniformSphere();
 vec3 sampleBsdf(
     Material m, vec3 wi, vec3 n, inout vec3 m_col
 ) {
@@ -736,13 +747,21 @@ vec3 sampleHenyeyGreenstein(float g, vec3 wi) {
 uniform float rOpacity;
 uniform float rIor;
 uniform float rRoughness1;
+uniform float rMetallic1;
+uniform float rDiffuse1;
+uniform float rTint1;
 uniform float rEmission1;
 uniform float rAbsorb1;
 uniform float rVEmission1;
 uniform float rScatter1;
 uniform float rScatterAniso1;
 
+uniform float rBrightness2;
+uniform float rContrast2;
 uniform float rRoughness2;
+uniform float rMetallic2;
+uniform float rIor2;
+uniform float rTint2;
 uniform float rEmission2;
 uniform float rAbsorb2;
 uniform float rVAbsorbHue;
@@ -783,7 +802,8 @@ void intersectScene(
         vec3 p = ro+rd*t;
         float s = getScale2();
         col = sin(s*PI*p.x)*sin(s*PI*p.y) < 0. ?
-            vec3(0.9) : vec3(0.7);
+            vec3(mix(rBrightness2,1.0,rContrast2)) :
+            vec3(mix(rBrightness2,0.0,rContrast2));
         col = pow(col, vec3(2.2));
         material = MAT_PLANE;
     }
@@ -971,22 +991,27 @@ float sampleSkyLight(out vec3 rd) {
     float soft = pow(rLightSoftness, 4.0);
     float k1 = 1.0 / soft;
     float k2 = 1.52004*sqrt(soft)-0.379175*(soft); k2 = min(sqrt(2.)*k2, PI);
-    float pdf = 1.0;  // normalized by 1/(4*PI)
+    // sample light
     if (randf() < rLightAmbient || randf() < rLightSky) {
         rd = sampleUniformSphere();
-        pdf = 1.0;
     }
     else if (randf() < rLightHardness) {
         rd = sampleUniformSolidAngle(k2);
-        pdf = 1.0/(0.5*(1.0-cos(k2)));
     }
     else {
         // https://www.desmos.com/calculator/tstxuwl5or
         float u = 2.0*PI*randf();
         float theta = 2.0*acos(pow(randf(),1.0/(2.0*(k1+1.0))));
         rd = vec3(vec2(cos(u),sin(u))*sin(theta),cos(theta));
-        pdf = (k1+1.0)*pow(0.5+0.5*rd.z,k1);
     }
+    // calculate pdf (normalized by 1/(4*PI))
+    float pdf_amb = 1.0;
+    float pdf_hard = rd.z>cos(k2) ? 1.0/(0.5*(1.0-cos(k2))) : 0.0;
+    float pdf_soft = (k1+1.0)*pow(0.5+0.5*rd.z,k1);
+    float pdf = mix(pdf_amb,
+        mix(pdf_soft, pdf_hard, rLightHardness),
+        (1.0-rLightAmbient)*(1.0-rLightSky));
+    // rotate rd
     vec3 u, v; onb(LDIR, u, v);
     rd = rd.x*u + rd.y*v + rd.z*LDIR;
     return pdf;
@@ -1051,6 +1076,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
     for (float iter = ZERO; iter < maxLightPathDepth; iter++) {
         if (dot(m_col,vec3(1)) <= 0.0 || isnan(length(m_col)))
             break;
+        // if (iter >= 1.0) return m_col;
         if (iter != 0.)
             ro += 1e-4*length(ro) * rd;
 
@@ -1084,7 +1110,7 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             uOutput == OUTPUT_DENOISE_NORMAL)
             return isnan(dot(min_n,vec3(1))) ? vec3(0) : min_n;
         if (uOutput == OUTPUT_WORLD_POSITION)
-            return min_ro;
+            return min_ro;1
         if (uOutput == OUTPUT_ALBEDO ||
             uOutput == OUTPUT_DENOISE_ALBEDO)
             return material == MAT_BACKGROUND ?
@@ -1116,9 +1142,12 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             m.albedo = col;
             m.emission = 2.0*rEmission2 * col;
             m.roughness = pow(rRoughness2, 2.0);
+            m.metallic = rMetallic2;
+            m.diffuse = 1.0-rMetallic2;
+            m.tint = rTint2;
             m.opacity = 1.0;
-            m.eta = 1.0;
-            m.k = 0.0;
+            m.eta = rIor2;
+            m.eta_k = 2.0*rMetallic2/(1.0001-rMetallic2);
         }
         else if (material == MAT_OBJECT) {
             m.bsdf = MAT_BSDF;
@@ -1126,9 +1155,12 @@ vec3 mainRender(vec3 ro, vec3 rd) {
             m.albedo = col;
             m.emission = rEmission1 * col;
             m.roughness = pow(rRoughness1,2.0);
+            m.metallic = rMetallic1;
+            m.diffuse = 1.0-rMetallic1;
+            m.tint = rTint1;
             m.opacity = rOpacity;
             m.eta = is_inside<0.0 ? 1.0/rIor : rIor;
-            m.k = 0.0;
+            m.eta_k = 2.0*rMetallic1/(1.0001-rMetallic1);
         }
 
         // update ray

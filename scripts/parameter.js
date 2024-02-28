@@ -18,10 +18,10 @@ function setState(s) {
     document.getElementById("equation-input").value = s.input;
     if (document.getElementById("builtin-functions"))
         document.getElementById("builtin-functions").childNodes[0].selected = true;
+    window.state = { ...s.state };
     setParameters(RawParameters, s.params);
     if (window.hasOwnProperty("useDenoiser"))
         useDenoiser(s.params.sDenoise);
-    window.state = { ...s.state };
     state.renderNeeded = true;
     updateFunctionInput(true);
 }
@@ -122,7 +122,10 @@ function GraphingParameter(name, id, callback=null) {
         if (this.name[0] == "r")
             return this.element.value;
     };
+    this.defaultValue = this.getValue();
     this.setValue = function (value) {
+        if (value === null)
+            value = this.defaultValue;
         if (this.name[0] == "b" || this.name[0] == 'c')
             this.element.checked = value;
         if (this.name[0] == "s")
@@ -144,22 +147,24 @@ function ParameterFolder(name, id) {
     this.name = name;
     let div = document.getElementById(id);
     let span = div.getElementsByClassName('foldable-name')[0];
-    let folded = (div.getAttribute('folded') == "true");
+    this.defaultFolded = (div.getAttribute('folded') == "true");
+    this.folded = this.defaultFolded;
     this.getValue = function () {
-        return folded;
+        return this.folded;
     };
     this.setValue = function (value) {
-        folded = value;
-        div.setAttribute("folded", new String(folded));
+        folder.folded = (value === null) ?
+            this.defaultFolded : value;
+        div.setAttribute("folded", new String(folder.folded));
         var text = id.split('-').slice(1).join(' ');
-        span.innerHTML = folded ? '&gt;&nbsp;' + text : 'v';
-        span.setAttribute('title', folded ? 'unfold' : 'fold');
+        span.innerHTML = folder.folded ? '&gt;&nbsp;' + text : 'v';
+        span.setAttribute('title', folder.folded ? 'unfold' : 'fold');
         state[this.name] = value;
     };
     var folder = this;
-    folder.setValue(folded);
+    folder.setValue(folder.folded);
     span.addEventListener("click", function (event) {
-        folder.setValue(!folded);
+        folder.setValue(!folder.folded);
         updateFunctionInput(false, false);
     });
 }
@@ -177,6 +182,8 @@ function UniformSlider(name, id, vmin, vmax, v0) {
         return this.vmin + (this.vmax - this.vmin) * t;
     };
     this.setValue = function (value) {
+        if (value === null) value = this.v0;
+        console.log(this.name, value);
         var t = (value - this.vmin) / (this.vmax - this.vmin);
         this.element.value = Math.round(1000 * t);
         state[slider.name] = value;
@@ -209,6 +216,7 @@ function ClickableObject(name, id, period) {
         return clicker.count % period;
     };
     this.setValue = function(value) {
+        if (value === null) value = 0;
         if (isFinite(value))
             clicker.count = value % period;
         state[clicker.name] = clicker.count;
@@ -240,6 +248,8 @@ function setParameters(parameters, dict) {
         var name = parameters[i].name;
         if (dict.hasOwnProperty(name) && dict[name] !== "")
             parameters[i].setValue(dict[name]);
+        else
+            parameters[i].setValue(null);
     }
 }
 
