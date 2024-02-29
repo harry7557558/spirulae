@@ -102,7 +102,8 @@ function initBuiltInStates(builtinStates) {
     funSelect.innerHTML += "<option value=''>Load example...</option>";
     for (var i = 0; i < builtinStates.length; i++) {
         let obj = builtinStates[i];
-        let hash = hashState(obj.state);
+        // let hash = hashState(obj.state);
+        let hash = obj.id;
         funSelect.innerHTML += "<option value=" + hash + ">" + obj.name + "</option>";
         initBuiltInStates.builtinStates[hash] = obj.state;
     }
