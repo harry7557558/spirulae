@@ -36,7 +36,7 @@ Dnn.CNNLayer = function(gl, n, w, h) {
     this.imgs = [];
     for (var i = 0; i < n; i += 4)
         // this.imgs.push(createRenderTarget(gl, w, h, false, true, false));
-        this.imgs.push(createRenderTarget(gl, w, h, false, 'half', false));
+        this.imgs.push(createRenderTarget(gl, w, h, false, 'half', true));
     this.setData = function(gl, data) {
         var layers = [];
         for (var i = 0; i < this.n; i++)
@@ -138,14 +138,20 @@ Dnn.Conv2d311 = function(
             Dnn.programConv2d311wt : Dnn.programConv2d311;
         gl.useProgram(program);
         gl.viewport(0, 0, buffer_in.w, buffer_in.h);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.disable(gl.BLEND);
         for (var i = 0; i < this.n_out; i += 4) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
             gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
             // weight texture
             if (useWeightTexture) for (var j = 0; j < this.n_in; j += 32) {
+                // setup accumulation buffer
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+                gl.activeTexture(gl.TEXTURE10);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 10);
+                // draw
                 gl.activeTexture(gl.TEXTURE9);
                 gl.bindTexture(gl.TEXTURE_2D, this.weightTexture);
                 gl.uniform1i(gl.getUniformLocation(program, "uWeight"), 9);
@@ -165,6 +171,13 @@ Dnn.Conv2d311 = function(
             }
             // uniform
             else for (var j = 0; j < this.n_in; j += 4*maxChannel) {
+                // setup accumulation buffer
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+                gl.activeTexture(gl.TEXTURE10);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 10);
+                // draw
                 gl.uniform1i(gl.getUniformLocation(program, "nChannel"),
                     Math.min(maxChannel, this.m_in-(j/4)));
                 for (var dj = 0; dj < 4*maxChannel; dj += 4) {
@@ -258,14 +271,20 @@ Dnn.Conv2d110 = function(
             Dnn.programConv2d110wt : Dnn.programConv2d110;
         gl.useProgram(program);
         gl.viewport(0, 0, buffer_in.w, buffer_in.h);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.disable(gl.BLEND);
         for (var i = 0; i < this.n_out; i += 4) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
             gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
             // weight texture
             if (useWeightTexture) for (var j = 0; j < this.n_in; j += 32) {
+                // setup accumulation buffer
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+                gl.activeTexture(gl.TEXTURE10);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 10);
+                // draw
                 gl.activeTexture(gl.TEXTURE9);
                 gl.bindTexture(gl.TEXTURE_2D, this.weightTexture);
                 gl.uniform1i(gl.getUniformLocation(program, "uWeight"), 9);
@@ -285,6 +304,13 @@ Dnn.Conv2d110 = function(
             }
             // uniform
             else for (var j = 0; j < this.n_in; j += 4*maxChannel) {
+                // setup accumulation buffer
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+                gl.activeTexture(gl.TEXTURE10);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 10);
+                // draw
                 gl.uniform1i(gl.getUniformLocation(program, "nChannel"),
                     Math.min(maxChannel, this.m_in-(j/4)));
                 for (var dj = 0; dj < 4*maxChannel; dj += 4) {
@@ -355,26 +381,31 @@ Dnn.ConvTranspose2D421 = function(
         let program = Dnn.programConvTranspose2d421;
         gl.useProgram(program);
         gl.viewport(0, 0, buffer_out.w, buffer_out.h);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.disable(gl.BLEND);
         for (var i = 0; i < this.n_out; i += 4) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
             gl.clearColor(this.biases[i], this.biases[i+1], this.biases[i+2], this.biases[i+3]);
             gl.clear(gl.COLOR_BUFFER_BIT);
             for (var j = 0; j < this.n_in; j += 4) {
+                // setup accumulation buffer
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[i/4].sampler);
+                gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 0);
+                // draw
                 for (var li = 0; li < 16; li++) {
                     let uniformLocation = gl.getUniformLocation(program, 'w['+li+']');
                     var mat = this.mats[i/4][j/4][li];
                     gl.uniformMatrix4fv(uniformLocation, false, mat);
                 }
                 setPositionBuffer(gl, program);
-                gl.activeTexture(gl.TEXTURE0);
+                gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor(j/4)].texture);
-                gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
+                gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 1);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
         }
-        gl.disable(gl.BLEND);
     }
 }
 

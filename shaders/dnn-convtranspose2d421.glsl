@@ -2,6 +2,8 @@
 precision mediump float;
 precision mediump int;
 
+uniform sampler2D accumBuffer;
+
 // 4x4 deconvolution, stride 2, zero padding 1
 
 uniform mat4 w[16];
@@ -13,7 +15,7 @@ void main() {
     ivec2 iRes = textureSize(uSrc, 0);
     ivec2 xy0 = ivec2(gl_FragCoord.xy);
 
-    vec4 r = vec4(0);
+    vec4 r = texelFetch(accumBuffer, xy0, 0);
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             ivec2 xy = xy0-2+ivec2(i,j);

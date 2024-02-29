@@ -183,7 +183,6 @@ function UniformSlider(name, id, vmin, vmax, v0) {
     };
     this.setValue = function (value) {
         if (value === null) value = this.v0;
-        console.log(this.name, value);
         var t = (value - this.vmin) / (this.vmax - this.vmin);
         this.element.value = Math.round(1000 * t);
         state[slider.name] = value;

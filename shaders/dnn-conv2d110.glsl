@@ -2,6 +2,8 @@
 precision mediump float;
 precision mediump int;
 
+uniform sampler2D accumBuffer;
+
 // 1x1 convolution, stride 1, padding 0
 
 
@@ -24,7 +26,7 @@ void main() {
 
     ivec2 xy = ivec2(gl_FragCoord.xy);
 
-    fragColor = vec4(0);
+    fragColor = texelFetch(accumBuffer, xy, 0);
 
     mat4 R;
     int k = uWeightRow.x;
@@ -66,7 +68,7 @@ void main() {
 
     ivec2 xy = ivec2(gl_FragCoord.xy);
 
-    fragColor = vec4(0);
+    fragColor = texelFetch(accumBuffer, xy, 0);
 
     mat4 R;
     int k = 0;

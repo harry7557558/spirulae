@@ -68,14 +68,23 @@ async function drawScene(state, transformMatrix, lightDir) {
 
     // accumulation buffer
     gl.viewport(0, 0, state.width, state.height);
-    if (state.iFrame != 0) {
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.ONE, gl.ONE);
+    if (state.iFrame == 0) {  // clear
+        gl.clearColor(0, 0, 0, 0);
+        // clear texture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        // clear accumulation texture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAccum.framebuffer);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindTexture(gl.TEXTURE_2D, renderer.renderTargetAccum.sampler);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
     }
     const batch = 64;
     if (state.iFrame % batch == 0) {
-        if (state.iFrame == 0)
-            gl.disable(gl.BLEND);
         gl.useProgram(renderer.copyProgram);
         gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTargetAccum.framebuffer);
         setPositionBuffer(gl, renderer.copyProgram);
@@ -85,13 +94,15 @@ async function drawScene(state, transformMatrix, lightDir) {
         gl.uniform1f(gl.getUniformLocation(renderer.copyProgram, "sc"),
             state.iFrame == 0 ? 0.0 : 1.0);
         renderPass();
-        gl.disable(gl.BLEND);
     }
 
     // render image
     gl.useProgram(renderer.renderProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
     setPositionBuffer(gl, renderer.renderProgram);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "accumBuffer"), 0);
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "ZERO"), 0.0);
     // gl.activeTexture(gl.TEXTURE0);
     // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
@@ -118,10 +129,9 @@ async function drawScene(state, transformMatrix, lightDir) {
         gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, r), state[r]);
     }
     renderPass();
-    gl.disable(gl.BLEND);
-    // gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
-    // gl.copyTexImage2D(gl.TEXTURE_2D,
-    //     0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+    gl.bindTexture(gl.TEXTURE_2D, renderer.renderTarget.sampler);
+    gl.copyTexImage2D(gl.TEXTURE_2D,
+        0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
 
     // auxiliary buffers
     if (state.iFrame == 0) {
@@ -306,8 +316,8 @@ function initWebGL() {
         document.getElementById("fps").textContent = "Timer loaded.";
     if (!renderer.gl.getExtension("EXT_color_buffer_float"))
         throw ("Error: your device does not support float framebuffer.");
-    if (!renderer.gl.getExtension("EXT_float_blend"))
-        throw ("Error: your device does not support float framebuffer blending.");
+    // if (!renderer.gl.getExtension("EXT_float_blend"))
+    //     throw ("Error: your device does not support float framebuffer blending.");
 
     // state
     try {

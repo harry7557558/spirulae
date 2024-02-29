@@ -2,6 +2,7 @@
 precision highp float;
 
 in vec2 vXy;
+uniform sampler2D accumBuffer;
 out vec4 fragColor;
 
 uniform float iSeed;
@@ -1262,6 +1263,7 @@ void main(void) {
     focal *= 1.0 + 0.5 * (rFocalLength-0.5) / (rFocalLength*(1.0-rFocalLength));
 
     vec4 totcol = vec4(0);
+    totcol = texelFetch(accumBuffer, ivec2(gl_FragCoord.xy), 0);
     for (float fi=ZERO; fi<iNFrame; fi++) {
         // random number seed
         seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
