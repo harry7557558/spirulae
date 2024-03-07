@@ -93,6 +93,7 @@ document.body.onload = function (event) {
 
     // init parameters
     initParameters([
+        new GraphingParameter("sBoxRadius", "select-br"),
         new GraphingParameter("bGrid", "checkbox-edge",
             function(value) {
                 Module.ccall('setMeshShowEdges', null, ['number'], [value]);
@@ -112,9 +113,40 @@ document.body.onload = function (event) {
     // main
     initMain([]);
 
-    // init model export
+    // init
+    Module.onRuntimeInitialized = function() {
+        setTimeout(initMeshgenParameters, 0);
+    };
     ModelExporter.init();
 };
+
+
+function initMeshgenParameters() {
+    let selectBr = document.getElementById("select-br");
+    let selectBn = document.getElementById("select-bn");
+    let selectDn = document.getElementById("select-dn");
+    function updateParameters() {
+        var br = Number(selectBr.value);
+        var bn = Number(selectBn.value);
+        var dn = Number(selectDn.value);
+        var nd = Math.max(Math.ceil(Math.log2(dn/bn)), 0);
+        bn = Math.round(dn / Math.pow(2, nd));
+        console.log("Resolution:", bn, nd);
+        Module.ccall('setMeshgenParams', null,
+            ['number', 'number', 'number'],
+            [br, bn, nd]);
+        Module.ccall('regenerateMesh', null, [], []);
+    }
+    selectBr.addEventListener("input", updateParameters);
+    selectBn.addEventListener("input", updateParameters);
+    selectDn.addEventListener("input", updateParameters);
+    updateParameters();
+    let selectFun = document.getElementById("builtin-functions");
+    selectFun.addEventListener("input", function() {
+        selectBr.value = 2;
+        updateParameters();
+    });
+}
 
 
 function decimateMesh(shapeCost, angleCost) {

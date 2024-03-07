@@ -423,10 +423,11 @@ void mainGUI(void (*callback)(void)) {
                 renderModel.vertices, renderModel.normals, renderModel.indicesE,
                 std::vector<glm::vec4>(renderModel.vertices.size(), colorsE));
             // axes
+            vec3 br = MeshgenParams::br;
             viewport->drawLinesVBO(
-                { vec3(0), vec3(3, 0, 0),
-                  vec3(0), vec3(0, 3, 0),
-                  vec3(0), vec3(0, 0, 3) },
+                { vec3(0), vec3(1.5f*br.x, 0, 0),
+                  vec3(0), vec3(0, 1.5f*br.y, 0),
+                  vec3(0), vec3(0, 0, 1.5f*br.z) },
                 std::vector<vec3>(6, vec3(0, 0, 1)),
                 { ivec2(0, 1), ivec2(2, 3), ivec2(4, 5) },
                 { vec4(1, 0, 0, 1), vec4(1, 0, 0, 1),
@@ -435,10 +436,9 @@ void mainGUI(void (*callback)(void)) {
                 1.0f, 1.0f, -1.0f
             );
             // cube
-            float s = 2.0;
             if (1) viewport->drawLinesVBO(
-                { vec3(-s, -s, -s), vec3(s, -s, -s), vec3(s, s, -s), vec3(-s, s, -s),
-                  vec3(-s, -s, s), vec3(s, -s, s), vec3(s, s, s), vec3(-s, s, s) },
+                { br*vec3(-1,-1,-1), br*vec3(1,-1,-1), br*vec3(1,1,-1), br*vec3(-1,1,-1),
+                  br*vec3(-1,-1,1), br*vec3(1,-1,1), br*vec3(1,1,1), br*vec3(-1,1,1) },
                 std::vector<vec3>(8, vec3(0, 0, 1)),
                 { ivec2(0, 1), ivec2(1, 2), ivec2(2, 3), ivec2(3, 0),
                   ivec2(4, 5), ivec2(5, 6), ivec2(6, 7), ivec2(7, 4),

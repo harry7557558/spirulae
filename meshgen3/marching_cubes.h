@@ -72,7 +72,7 @@ void marchingCubes(
     auto getI = [&](int i, int j, int k) {
         return (k*bnd.y+j)*bnd.x+i;
     };
-    vec3 noise = 1e-2f/vec3(bn-1)*exp2f(-nd);
+    vec3 noise = vec3(1e-2f);
     auto idxToPoint = [&](int idx) {
         int k = idx / (bnd.x*bnd.y);
         int j = (idx / bnd.x) % bnd.y;
@@ -268,7 +268,7 @@ void marchingCubes(
 
             // construct triangles
             for (int t = 0; MC_TRIG_TABLE[cubeIndex][t] != -1; t += 3) {
-                trigs.push_back(vec3(
+                trigs.push_back(ivec3(
                     eidx[MC_TRIG_TABLE[cubeIndex][t]],
                     eidx[MC_TRIG_TABLE[cubeIndex][t+1]],
                     eidx[MC_TRIG_TABLE[cubeIndex][t+2]]
@@ -304,12 +304,12 @@ void marchingCubes(
     vertices.resize(edges.size());
 #if 0
     // linear interpolation
-    for (std::pair<ivec2, int> ei : edges) {
-        int i1 = ei.first.x, i2 = ei.first.y;
-        float v1 = vals[i1];
-        float v2 = vals[i2];
+    for (int i = 0; i < (int)edges.size(); i++) {
+        int i1 = (int)(edges[i] >> 32), i2 = (int)edges[i];
+        float v1 = samples[i1];
+        float v2 = samples[i2];
         float t = v1 / (v1 - v2);
-        vertices[ei.second] = idxToPoint(i1) * (1 - t) + idxToPoint(i2) * t;
+        vertices[i] = idxToPoint(i1) * (1.0f-t) + idxToPoint(i2) * t;
     }
 #else
     // quadratic interpolation
@@ -318,7 +318,7 @@ void marchingCubes(
     std::vector<float> edgevc(edges.size());
     for (int i = 0; i < (int)edges.size(); i++) {
         int i1 = (int)(edges[i] >> 32), i2 = (int)edges[i];
-        edgei[i] = vec2(i1, i2);
+        edgei[i] = ivec2(i1, i2);
         edgep[i] = 0.5f*(idxToPoint(i1)+idxToPoint(i2));
     }
     Fs(edgep.size(), &edgep[0], &edgevc[0]);

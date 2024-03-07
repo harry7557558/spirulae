@@ -230,6 +230,38 @@
         <span title="smooth shading"><input type="checkbox" id="checkbox-normal" />normal</span>&ensp;
         <span title="Light theme" style="display:none;"><input type="checkbox" id="checkbox-light" checked disabled />☼</span>
         <br />
+        <span>domain&nbsp;radius&nbsp;<select id="select-br">
+                <option value="0.1">0.1</option>
+                <option value="0.2">0.2</option>
+                <option value="0.5">0.5</option>
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select></span>
+        <br/>
+        <span>initial&nbsp;res&nbsp;<select id="select-bn">
+                <option value="32">32</option>
+                <option value="48" selected>48</option>
+                <option value="64">64</option>
+                <option value="96">96</option>
+                <option value="128">128</option>
+                <option value="192">192</option>
+                <option value="256">256</option>
+            </select>&nbsp;target&nbsp;res&nbsp;<select id="select-dn">
+                <option value="64">64</option>
+                <option value="96">96</option>
+                <option value="128">128</option>
+                <option value="192" selected>192</option>
+                <option value="256">256</option>
+                <option value="384">384</option>
+                <option value="512">512</option>
+                <!-- <option value="768">768</option>
+                <option value="1024">1024</option> -->
+            </select></span>
+        <br/>
         <button onclick="decimateMesh(false, false)">optimize mesh</button>
         <button onclick="decimateMesh(true, false)">+shape</button>
         <!-- <button onclick="decimateMesh(true, true)">+angle</button> -->

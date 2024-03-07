@@ -5,8 +5,6 @@
 #include <cstdio>
 #include <random>
 
-#include "render.h"
-
 #include "meshgen_tet_implicit.h"
 
 #include "../include/write_model.h"
@@ -31,6 +29,23 @@ struct DecimationParameters {
 };
 
 
+namespace MeshgenParams {
+    vec3 bc;
+    vec3 br;
+    ivec3 bn;
+    int nd;
+};
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setMeshgenParams(float br, int bn, int nd) {
+    MeshgenParams::bc = vec3(0);
+    MeshgenParams::br = vec3(br);
+    MeshgenParams::bn = ivec3(bn);
+    MeshgenParams::nd = nd;
+}
+
+#include "render.h"
+
 void generateMesh(
     std::string funDeclaration,
     std::vector<vec3> &verts,
@@ -40,7 +55,8 @@ void generateMesh(
 
     GlBatchEvaluator3 evaluator(funDeclaration);
     int batchEvalCount = 0;
-    vec3 bc = vec3(0), br = vec3(2);
+    vec3 bc = MeshgenParams::bc;
+    vec3 br = MeshgenParams::br;
     MeshgenTetImplicit::ScalarFieldFBatch Fs = [&](size_t n, const vec3 *p, float *v) {
         // printf("Batch eval %d %d\n", ++batchEvalCount, (int)n);
         evaluator.evaluateFunction(n, p, v);
@@ -88,8 +104,8 @@ void generateMesh(
         verts, tets, faces, edges, 5, Fs,
         constraint, isConstrained);
 #else
-    const ivec3 bn = ivec3(36);
-    const int nd = 2;
+    const ivec3 bn = MeshgenParams::bn;
+    const int nd = MeshgenParams::nd;
     vec3 expd = 1.0f + 0.02f/vec3(bn-1)*exp2f(-nd);
     MeshgenTetImplicit::marchingCubes(
         Fs, bc-expd*br, bc+expd*br,
@@ -99,7 +115,8 @@ void generateMesh(
     if (decimate.decimate) {
         MeshgenTetImplicit::restoreEdges(faces, edges);
         MeshgenTetImplicit::MeshDecimatorEC(verts, faces, edges,
-            0.3f/length(vec3(bn-1))*exp2f(-nd),
+            // 0.3f/length(vec3(bn-1))*exp2f(-nd),
+            0.02f/sqrt(length(vec3(bn-1))*exp2f(nd)),
             decimate.shapeCost, decimate.angleCost).decimateMesh();
     }
     else {
@@ -223,6 +240,17 @@ namespace Prepared {
     std::vector<ivec4> edges;
 }
 
+EXTERN EMSCRIPTEN_KEEPALIVE
+void regenerateMesh() {
+    float t0 = getTimePast();
+    generateMesh(glslFun,
+        Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
+        { false, 0.0f, 0.0f });
+    float t1 = getTimePast();
+    printf("Total %.2g secs.\n \n", t1 - t0);
+    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+}
+
 void mainGUICallback() {
     if (newGlslFun.empty())
         return;
@@ -236,13 +264,7 @@ void mainGUICallback() {
         return;
     #endif
 
-    float t0 = getTimePast();
-    generateMesh(glslFun,
-        Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges,
-        { false, 0.0f, 0.0f });
-    float t1 = getTimePast();
-    printf("Total %.2g secs.\n \n", t1 - t0);
-    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    regenerateMesh();
 }
 
 EXTERN EMSCRIPTEN_KEEPALIVE
