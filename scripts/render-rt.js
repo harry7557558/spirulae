@@ -16,7 +16,6 @@ var renderer = {
     denoiseTarget: null,
     tonemapProgram: null,
     tonemapTarget: null,
-    iNFrame: 1,
     timerExt: null,
     uOutput: 0,
     requireAlbedo: false,
@@ -32,7 +31,7 @@ var trainingData = {
     width: 256,
     height: 256,
     spp: 0,
-    iNFrame: 64,
+    sSamples: 64,
     frames: [],
 };
 
@@ -110,7 +109,8 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.uniform2f(gl.getUniformLocation(renderer.renderProgram, "iResolution"),
         state.width, state.height);
     gl.uniform1i(gl.getUniformLocation(renderer.renderProgram, "uOutput"), renderer.uOutput);
-    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iNFrame"), renderer.iNFrame);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iSpp"), state.iSpp);
+    gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "sSamples"), Number(state.sSamples));
     gl.uniform1f(gl.getUniformLocation(renderer.renderProgram, "iSeed"), Math.random());
     gl.uniformMatrix4fv(
         gl.getUniformLocation(renderer.renderProgram, "transformMatrix"),
@@ -163,6 +163,8 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "iChannel1"), 1);
     gl.uniform1i(gl.getUniformLocation(renderer.postProgram, "denoise"),
         renderer.denoiser !== null);
+    gl.uniform1f(gl.getUniformLocation(renderer.postProgram, "iSpp"),
+        state.iSpp+state.sSamples);
     renderPass();
 
     // denoising
@@ -198,7 +200,7 @@ async function drawScene(state, transformMatrix, lightDir) {
             for (var i = 0; i < timerQueries.length; i++)
                 gl.deleteQuery(timerQueries[i]);
             fpsDisplay.innerHTML = state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s" :
-                state.iFrame + " spp";
+                (Math.round(state.iSpp*100)/100) + " spp";
             return;
         }
         if (timerQueries.length == 0) return;
@@ -220,7 +222,7 @@ async function drawScene(state, transformMatrix, lightDir) {
         if (countIndividualTime) console.log(indivTime.join(' '));
         fpsDisplay.innerHTML = (
             state.iTime >= 0.0 ? state.iTime.toFixed(2) + " s - " :
-            (state.iFrame*renderer.iNFrame) + " spp - ") +
+            (Math.round(state.iSpp*100)/100) + " spp - ") +
             (1000.0 / totTime).toFixed(1) + " fps";
     }
     setTimeout(checkTime, 100);
@@ -232,6 +234,8 @@ async function drawScene(state, transformMatrix, lightDir) {
 var state = {
     name: "",
     iFrame: 0,
+    sSamples: 1,
+    iSpp: 0.0,
     width: window.innerWidth,
     height: window.innerHeight,
     screenCenter: { x: 0.5, y: 0.5 },
@@ -395,8 +399,8 @@ function initRenderer() {
             state.renderNeeded = true;
         // if (state.renderNeeded)
         if (state.renderNeeded && !trainingData.recording)
-            state.iFrame = 0;
-        if (state.iFrame < Number(state.sSpp)) {
+            state.iFrame = 0, state.iSpp = 0.0;
+        if (state.iSpp < Number(state.sSpp)) {
             if (trainingData.recording) {
                 state.width = canvas.width = trainingData.width;
                 state.height = canvas.height = canvas.style.height = trainingData.height;
@@ -428,6 +432,7 @@ function initRenderer() {
                 state.iTime = -1.0;
             }
             state.iFrame += 1;
+            state.iSpp += Number(state.sSamples);
         }
         oldScreenCenter = screenCenter;
         requestAnimationFrame(render);
@@ -611,15 +616,15 @@ function recordTrainingData(spp) {
         trainingData.frames = [];
         trainingData.spp = spp;
         state.sSpp = trainingData.spp;
-        renderer.iNFrame = Math.min(state.sSpp, trainingData.iNFrame);
-        state.sSpp /= renderer.iNFrame;
-        state.iFrame = 0;
+        state.sSamples = Math.min(state.sSpp, trainingData.sSamples);
+        state.sSpp /= state.sSamples;
+        state.iFrame = 0, state.iSpp = 0.0;
         trainingData.state = "wait";
         setTimeout(recordTrainingData, 100);
     }
 
     else if (trainingData.state == "wait") {
-        if (state.iFrame * renderer.iNFrame < trainingData.spp) {
+        if (state.iSpp < trainingData.spp) {
             setTimeout(recordTrainingData, 100);
             return;
         }
@@ -657,24 +662,24 @@ function recordTrainingData(spp) {
         }
         if (renderer.uOutput != 0) {
             renderer.uOutput += 1;
-            state.iFrame = 0;
+            state.iFrame = 0, state.iSpp = 0.0;
             setTimeout(recordTrainingData, 1);
             return;
         }
         if (renderer.uOutput == 0 && trainingData.spp == 1) {
             trainingData.spp = 1;
             state.sSpp = 1;
-            renderer.iNFrame = 1;
+            state.sSamples = 1;
             renderer.uOutput = 1;
-            state.iFrame = 0;
+            state.iFrame = 0, state.iSpp = 0.0;
             setTimeout(recordTrainingData, 1);
             return;
         }
         trainingData.spp /= 2;
         state.sSpp = trainingData.spp;
-        renderer.iNFrame = Math.min(state.sSpp, trainingData.iNFrame);
-        state.sSpp /= renderer.iNFrame;
-        state.iFrame = 0;
+        state.sSamples = Math.min(state.sSpp, trainingData.sSamples);
+        state.sSpp /= state.sSamples;
+        state.iFrame = 0, state.iSpp = 0.0;
         setTimeout(recordTrainingData, 1);
     }
 
@@ -682,7 +687,7 @@ function recordTrainingData(spp) {
         trainingData.recording = false;
         trainingData.state = "unstarted";
         updateBuffers();
-        renderer.iNFrame = 1;
+        state.sSamples = 1;
         state.renderNeeded = true;
 
         let n = trainingData.frames.length;

@@ -186,6 +186,8 @@ document.body.onload = function (event) {
         params.sDenoise = "null";
         // params.sDenoise = "runet2gan";
         params.sSpp = state.sSpp = 256;
+        state.iSpp = 0.0;
+        params.sSamples = state.sSamples = "0.0625";
         // state.defaultScreenCenter = true;
     }
     initBuiltInStates(builtinStates);
@@ -265,6 +267,7 @@ vec3 {%funname%}Color(float x, float y, float z) {\n\
         new GraphingParameter("bLight", "checkbox-light"),
         new GraphingParameter("bYup", "checkbox-yup"),
         new GraphingParameter("sSpp", "select-spp"),
+        new GraphingParameter("sSamples", "select-samples"),
         new GraphingParameter("sLightPathDepth", "select-light-path-depth"),
         new GraphingParameter("cMis", "checkbox-mis"),
         new GraphingParameter("sClip", "select-clip"),

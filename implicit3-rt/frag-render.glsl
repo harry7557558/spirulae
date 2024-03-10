@@ -7,7 +7,8 @@ out vec4 fragColor;
 
 uniform float iSeed;
 uniform vec2 iResolution;
-uniform float iNFrame;
+uniform float iSpp;
+uniform float sSamples;
 
 uniform mat4 transformMatrix;
 uniform float uScale;
@@ -523,6 +524,8 @@ float sampleHeight(float h, vec3 w) {
     return 0.0;
 }
 
+#define RANDOM_WALK_DEPTH 8.0
+
 vec3 ggxSampleNormal(float alpha) {
     float r1 = randf(), r2 = randf();
     float su = 2.0*PI*r2;
@@ -552,7 +555,7 @@ vec4 sampleBsdfConductor(Material m, vec3 wi) {
     float h = 5.*STDEV;
     float e = 1.;
     vec3 w0, w = -wi;
-    for (int r = 0; r < 16; r++) {
+    for (float r = ZERO; r < RANDOM_WALK_DEPTH; r++) {
         h = sampleHeight(h, w);
         if(abs(h) > 5.*STDEV)
             break;
@@ -569,7 +572,7 @@ float evalBsdfConductor(Material m, vec3 wi, vec3 wo) {
     float e = 1.;
     vec3 w = -wi;
     float total = 0.0;
-    for (int r = 0; r < 16; r++) {
+    for (float r = ZERO; r < RANDOM_WALK_DEPTH; r++) {
         h = sampleHeight(h, w);
         if(abs(h) > 5.*STDEV)
             break;
@@ -598,7 +601,7 @@ vec4 sampleBsdfDielectric(Material m, vec3 wi) {
     float h = 5.*STDEV;
     vec3 w = -wi;
     float transmit = 1.0;
-    for (int r = 0; r < 16; r++) {
+    for (float r = ZERO; r < RANDOM_WALK_DEPTH; r++) {
         h = sampleHeight(h, w*transmit);
         if(abs(h) > 5.*STDEV)
             break;
@@ -619,7 +622,7 @@ float evalBsdfDielectric(Material m, vec3 wi, vec3 wo) {
     vec3 w = -wi;
     float transmit = 1.0;
     float total = 0.0;
-    for (int r = 0; r < 16; r++) {
+    for (float r = ZERO; r < RANDOM_WALK_DEPTH; r++) {
         h = sampleHeight(h, w*transmit);
         if(abs(h) > 5.*STDEV)
             break;
@@ -1264,10 +1267,23 @@ void main(void) {
 
     vec4 totcol = vec4(0);
     totcol = texelFetch(accumBuffer, ivec2(gl_FragCoord.xy), 0);
-    for (float fi=ZERO; fi<iNFrame; fi++) {
+    for (float fi=ZERO; fi<sSamples; fi++) {
         // random number seed
-        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/iNFrame)));
+        seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/sSamples)));
         seed = round(65537.*seed0);
+
+        // frame skipping
+        // to-do: some way without increasing variance
+        const float tile_size = 16.0;
+        vec2 tile_uv = mod(floor(gl_FragCoord.xy), tile_size);
+        vec2 tile_ij = floor(gl_FragCoord.xy/tile_size);
+        float tile_ij_hash = floor(hash13(vec3(tile_ij,tile_size))*tile_size*tile_size);
+        float tile_i = tile_uv.y*tile_size + tile_uv.x;
+        tile_i = mod(37.0*tile_i+tile_ij_hash, tile_size*tile_size);
+        float tile_f = tile_i / (tile_size*tile_size);
+        float tile_offset = mod(iSpp, 1.0);
+        if (mod(tile_f+tile_offset, 1.0) > sSamples)
+            continue;
 
         vec2 ro_s = vXy;
         ro_s += (-1.0+2.0*vec2(randf(), randf())) / iResolution.xy;
@@ -1293,7 +1309,7 @@ void main(void) {
                 float u = dot(col, ru), v = dot(col, rv), w = dot(col, rd);
                 totcol = vec4(u, v, w, u*u+v*v);
             }
-            else totcol += vec4(col, 1) / iNFrame;
+            else totcol += vec4(col, 1) / sSamples;
         }
     }
     fragColor = totcol;

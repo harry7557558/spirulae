@@ -57,7 +57,7 @@
                 <option value="0.004">high</option>
                 <option value="0.001">ultra high</option>
             </select>precision</span>&ensp;
-        <span><select id="select-spp" title="Maximum samples per pixel">
+        <span title="Maximum samples per pixel"><select id="select-spp">
                 <option value="1">2⁰</option>
                 <option value="4">2²</option>
                 <option value="16">2⁴</option>
@@ -67,8 +67,8 @@
                 <option value="4096">2¹²</option>
                 <option value="16384">2¹⁴</option>
             </select>spp</span>
-        <br />
-        <span><select id="select-light-path-depth" title="Maximum light path depth">
+        <br/>
+        <span title="Maximum light path depth"><select id="select-light-path-depth">
                 <option value="8">8</option>
                 <option value="16">16</option>
                 <option value="32">32</option>
@@ -78,7 +78,16 @@
                 <option value="512">512</option>
                 <option value="1024">1024</option>
             </select>path depth</span>&ensp;
-        <span title="Enable experimental Multiple Importance Sampling (MIS) for high-variance scenes"><input type="checkbox"
+        <span title="Number of samples per frame per pixel"><select id="select-samples">
+                <option value="0.015625">2⁻⁶</option>
+                <option value="0.0625">2⁻⁴</option>
+                <option value="0.25">2⁻²</option>
+                <option value="1" selected>2⁰</option>
+                <option value="4">2²</option>
+                <option value="16">2⁴</option>
+                <option value="64">2⁶</option>
+            </select>samples</span>
+        <span style="display:none" title="Enable experimental Multiple Importance Sampling (MIS) for high-variance scenes"><input type="checkbox"
                 id="checkbox-mis" />MIS (beta)</span>&ensp;
         <br />
         <span title="Shape clipping boundary"><select id="select-clip">
