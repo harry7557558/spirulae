@@ -99,6 +99,13 @@ function mat4Inverse(m0) {
     // console.log(mat4Mul(m0, mi));
     return mi;
 }
+function mat4Transpose(m0) {
+    var m = mat4(0);
+    for (var i = 0; i < 4; i++)
+        for (var j = 0; j < 4; j++)
+            m[i][j] = m0[j][i];
+    return m;
+}
 
 function mat4ToFloat32Array(m) {
     var arr = [];
@@ -354,4 +361,44 @@ function getImage(pixelData, w, h) {
 
     const base64PNG = canvas.toDataURL('image/png');
     return base64PNG;
+}
+
+function concatTypedArrayComponents(components) {
+    // thanks ChatGPT
+    let byteLength = 0;
+
+    // Calculate the total byte length
+    for (const component of components) {
+        if (typeof component === 'string') {
+            byteLength += new TextEncoder().encode(component).length;
+        } else if (typeof component === 'number') {
+            byteLength += 4; // Assuming 32-bit integers
+        } else if (component instanceof ArrayBuffer || ArrayBuffer.isView(component)) {
+            byteLength += component.byteLength;
+        } else {
+            throw new Error('Unsupported component type');
+        }
+    }
+
+    // Create a Uint8Array with the calculated byte length
+    const resultArray = new Uint8Array(byteLength);
+    let offset = 0;
+
+    // Concatenate components into the resultArray
+    for (const component of components) {
+        if (typeof component === 'string') {
+            const encodedString = new TextEncoder().encode(component);
+            resultArray.set(encodedString, offset);
+            offset += encodedString.length;
+        } else if (typeof component === 'number') {
+            const intArray = new Uint32Array([component]);
+            resultArray.set(new Uint8Array(intArray.buffer), offset);
+            offset += 4;
+        } else if (component instanceof ArrayBuffer || ArrayBuffer.isView(component)) {
+            resultArray.set(new Uint8Array(component.buffer), offset);
+            offset += component.byteLength;
+        }
+    }
+
+    return resultArray;
 }

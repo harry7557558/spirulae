@@ -1267,6 +1267,7 @@ void main(void) {
 
     vec4 totcol = vec4(0);
     totcol = texelFetch(accumBuffer, ivec2(gl_FragCoord.xy), 0);
+    if (iSpp == 0.0) totcol = vec4(0);
     for (float fi=ZERO; fi<sSamples; fi++) {
         // random number seed
         seed0 = hash13(vec3(gl_FragCoord.xy/iResolution.xy, sin(iSeed+fi/sSamples)));
@@ -1282,7 +1283,7 @@ void main(void) {
         tile_i = mod(37.0*tile_i+tile_ij_hash, tile_size*tile_size);
         float tile_f = tile_i / (tile_size*tile_size);
         float tile_offset = mod(iSpp, 1.0);
-        if (mod(tile_f+tile_offset, 1.0) > sSamples)
+        if (mod(tile_f+tile_offset, 1.0) >= sSamples)
             continue;
 
         vec2 ro_s = vXy;

@@ -30,9 +30,13 @@ var trainingData = {
     state: "unstarted",
     width: 256,
     height: 256,
+    sppRange: { min: 1, max: 1 },
     spp: 0,
     sSamples: 64,
-    frames: [],
+    byteOffset: 0,
+    bufferView: [],
+    bufferFrames: [],
+    listIndex: -1,
 };
 
 // call this function to re-render
@@ -608,17 +612,26 @@ function updateShaderFunction(funCode, funGradCode, params) {
 }
 
 
-function recordTrainingData(spp) {
+function recordTrainingData(spp=[1/64, 16384], noise_th=0.01) {
+
+    // recorded data format:
+    // 4 bytes header length + header (JSON) + raw data
+    // header: { state: {}, transform, buffers: [{ name, byte_offset, byte_length, type, shape }] }
+    // name: number for spp, string for auxiliary buffer
 
     if (trainingData.state == "unstarted") {
         trainingData.recording = true;
         updateBuffers();
-        trainingData.frames = [];
-        trainingData.spp = spp;
+        trainingData.sppRange = typeof spp == "number" ?
+            { min: 1, max: spp } : { min: spp[0], max: spp[1] };
+        trainingData.spp = trainingData.sppRange.min;
+        trainingData.bufferFrames = [];
+        trainingData.bufferView = [];
+        trainingData.byteOffset = 0;
         state.sSpp = trainingData.spp;
         state.sSamples = Math.min(state.sSpp, trainingData.sSamples);
-        state.sSpp /= state.sSamples;
         state.iFrame = 0, state.iSpp = 0.0;
+        renderer.uOutput = 0;
         trainingData.state = "wait";
         setTimeout(recordTrainingData, 100);
     }
@@ -641,6 +654,8 @@ function recordTrainingData(spp) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.renderTarget.framebuffer);
         gl.readPixels(0, 0, state.width, state.height, gl.RGBA, gl.FLOAT, pixels1);
         var pixels = new Float32Array(3*npixels);
+        var totc3 = 0.0;
+        var scale = Math.max(trainingData.spp/trainingData.sSamples, 1.0);
         for (var i = 0; i < npixels; i++) {
             var c = [
                 pixels0[4*i+0] + pixels1[4*i+0],
@@ -648,39 +663,54 @@ function recordTrainingData(spp) {
                 pixels0[4*i+2] + pixels1[4*i+2],
                 pixels0[4*i+3] + pixels1[4*i+3]
             ];
-            pixels[0*npixels+i] = c[0] / c[3];
-            pixels[1*npixels+i] = c[1] / c[3];
-            pixels[2*npixels+i] = c[2] / c[3];
+            totc3 += pixels1[4*i+3];
+            pixels[0*npixels+i] = c[0] / scale;
+            pixels[1*npixels+i] = c[1] / scale;
+            pixels[2*npixels+i] = c[2] / scale;
         }
-        trainingData.frames = [pixels].concat(trainingData.frames);
+        trainingData.bufferView.push({
+            name: trainingData.spp,
+            byte_offset: trainingData.byteOffset,
+            byte_length: 4*pixels.length,
+            type: 'float32',
+            shape: [3, trainingData.height, trainingData.width]
+        });
+        trainingData.bufferFrames.push(pixels);
+        trainingData.byteOffset += 4*pixels.length;
 
-        if (renderer.uOutput == 3) {
-            trainingData.state = "finished";
-            renderer.uOutput = 0;
-            setTimeout(recordTrainingData, 1);
-            return;
+        // termination criteria
+        var terminate = trainingData.spp >= trainingData.sppRange.max;
+        if (!terminate && trainingData.bufferFrames.length > 1) {
+            // by variance
+            var pixels_ = trainingData.bufferFrames[trainingData.bufferFrames.length-2];
+            var sumerr = 0.0;
+            for (var i = 0; i < pixels.length; i++) {
+                var p0 = Math.pow(Math.max(pixels_[i],0.0), 1.0);  // gamma
+                var p1 = Math.pow(Math.max(pixels[i],0.0), 1.0);
+                p0 = 1.019*p0/(p0+0.155);  // tonemap
+                p1 = 1.019*p1/(p1+0.155);
+                var dif = p1-p0;
+                if (isFinite(dif) && Math.abs(dif) < 1e6)
+                    sumerr += dif*dif;
+            }
+            var rmse = Math.sqrt(sumerr/pixels.length);
+            if (rmse < 1.732 * noise_th)  // assume half variance after
+                terminate = true;
+            console.log("rmse", rmse);
         }
-        if (renderer.uOutput != 0) {
-            renderer.uOutput += 1;
-            state.iFrame = 0, state.iSpp = 0.0;
-            setTimeout(recordTrainingData, 1);
-            return;
-        }
-        if (renderer.uOutput == 0 && trainingData.spp == 1) {
-            trainingData.spp = 1;
+        if (terminate) {
             state.sSpp = 1;
             state.sSamples = 1;
-            renderer.uOutput = 1;
             state.iFrame = 0, state.iSpp = 0.0;
-            setTimeout(recordTrainingData, 1);
+            trainingData.state = "finished";
+            setTimeout(recordTrainingData, 10);
             return;
         }
-        trainingData.spp /= 2;
+        trainingData.spp *= 2;
         state.sSpp = trainingData.spp;
         state.sSamples = Math.min(state.sSpp, trainingData.sSamples);
-        state.sSpp /= state.sSamples;
         state.iFrame = 0, state.iSpp = 0.0;
-        setTimeout(recordTrainingData, 1);
+        setTimeout(recordTrainingData, 10);
     }
 
     else if (trainingData.state == "finished") {
@@ -690,27 +720,75 @@ function recordTrainingData(spp) {
         state.sSamples = 1;
         state.renderNeeded = true;
 
-        let n = trainingData.frames.length;
-        let w = trainingData.width, h = trainingData.height;
-        let totalLength = 3*w*h*n;
-        let concatenatedArray = new Float32Array(totalLength+16);
-        let mat = calcTransformMatrix(state, false, state.screenCenter);
-        for (var i = 0; i < 4; i++)
-            for (var j = 0; j < 4; j++)
-                concatenatedArray[4*i+j] = mat[j][i];
-        let offset = 16;
-        trainingData.frames.forEach((frame) => {
-          concatenatedArray.set(frame, offset);
-          offset += frame.length;
+        let transform = mat4Transpose(
+            calcTransformMatrix(state, false, state.screenCenter));
+        let header = JSON.stringify({
+            state: getState(),
+            transform: transform,
+            buffers: trainingData.bufferView
         });
+        while (header.length % 4)
+            header += " ";
+        let concatenatedArray = concatTypedArrayComponents(
+            [
+                header.length,
+                header,
+            ].concat(trainingData.bufferFrames)
+        );
         let binaryData = concatenatedArray.buffer;
         let blob = new Blob([binaryData], { type: 'application/octet-stream' });
-        let hash = Math.floor(Math.random()*0xFFFFFFFF).toString(16).padStart(8, '0');
-        let fileName = hash + `_${n}_${w}_${h}.bin`;
+        let spp = trainingData.spp;
+        let hash = Math.floor(Math.random()*0xFFFFFFFFFFFF).toString(16).padStart(12, '0');
+        let fileName = "implicit3-rt_" + hash + "_" + spp + ".bin";
         let downloadLink = document.createElement('a');
         downloadLink.href = window.URL.createObjectURL(blob);
         downloadLink.download = fileName;
         downloadLink.click();
+    }
+
+}
+
+// Before running this:
+//  - Set browser download to auto save to specific folder
+//  - Allow downloading multiple files
+//  - Ctrl + / to hide control panel
+
+// Example: recordTrainingDataList(builtinStates.map(_ => _.state))
+
+function recordTrainingDataList(
+    stateList, spp=[1/64, 16384], noise_th=0.01
+) {
+    if (!stateList.length)
+        return;
+
+    let timeoutFunction = () => recordTrainingDataList(stateList, spp, noise_th);
+
+    if (trainingData.listIndex == -1) {
+        trainingData.listIndex = 0;
+        for (var state of stateList)
+            state.params.sDenoise = "null";
+        setState(stateList[0]);
+        trainingData.recording = true;
+        recordTrainingData(spp, noise_th);
+        setTimeout(timeoutFunction, 1000);
+    }
+
+    else {
+        if (trainingData.recording) {
+            setTimeout(timeoutFunction, 1000);
+            return;
+        }
+        trainingData.listIndex += 1;
+        console.log("Recorded ", trainingData.listIndex, "/", stateList.length);
+        if (trainingData.listIndex >= stateList.length) {
+            console.log("Dataset recording complete.");
+            trainingData.listIndex = -1;
+            return;
+        }
+        setState(stateList[trainingData.listIndex]);
+        trainingData.recording = true;
+        recordTrainingData(spp, noise_th);
+        setTimeout(timeoutFunction, 1000);
     }
 
 }
