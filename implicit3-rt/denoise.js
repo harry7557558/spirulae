@@ -199,12 +199,6 @@ function UNet1(nin, n0, n1, n2, n3, params) {
 
 
 function initDenoiserModel_unet1(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_unet1(params);
-        }, 1);
-        return;
-    }
     let gl = renderer.gl;
 
     let unet = new UNet1(3, 16, 24, 48, 64, params);
@@ -288,12 +282,6 @@ function applyResidualDenoiser(model) {
 
 
 function initDenoiserModel_runet1(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_runet1(params);
-        }, 1);
-        return;
-    }
     let unet = new UNet1(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
@@ -304,12 +292,6 @@ function initDenoiserModel_runet1(params) {
 
 
 function initDenoiserModel_runet1an(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_runet1an(params);
-        }, 1);
-        return;
-    }
     let gl = renderer.gl;
 
     let unet = new UNet1(11, 12, 16, 24, 32, params);
@@ -467,12 +449,6 @@ function UNet2(nin, n0, n1, n2, n3, params) {
 
 
 function initDenoiserModel_runet2(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_runet2(params);
-        }, 1);
-        return;
-    }
     let unet = new UNet2(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
@@ -483,12 +459,6 @@ function initDenoiserModel_runet2(params) {
 
 
 function initDenoiserModel_runet2gan(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_runet2gan(params);
-        }, 1);
-        return;
-    }
     let unet = new UNet2(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
@@ -499,12 +469,6 @@ function initDenoiserModel_runet2gan(params) {
 
 
 function initDenoiserModel_runet2gan2(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_runet2gan(params);
-        }, 1);
-        return;
-    }
     let unet = new UNet2(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
@@ -514,12 +478,6 @@ function initDenoiserModel_runet2gan2(params) {
 }
 
 function initDenoiserModel_temp(params) {
-    if (!renderer.gl) {
-        setTimeout(function() {
-            initDenoiserModel_temp(params);
-        }, 1);
-        return;
-    }
     let unet = new UNet2(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
@@ -530,8 +488,11 @@ function initDenoiserModel_temp(params) {
 
 function useDenoiser(model_id) {
 
-    if (!useDenoiser.hasOwnProperty('denoisers'))
+    var firstLoad = false;
+    if (!useDenoiser.hasOwnProperty('denoisers')) {
         useDenoiser.denoisers = {};
+        firstLoad = true;
+    }
     renderer.requireAlbedo = false;
     renderer.requireNormal = false;
     if (model_id == null || model_id == "null") {
@@ -559,8 +520,16 @@ function useDenoiser(model_id) {
         if (loadedFiles < 2)
             return;
         var params = Dnn.decodeDnnParameters(files.bin, files.json);
-        window['initDenoiserModel_'+model_id](params);
-        state.renderNeeded = true;
+        
+        function update() {
+            if (!renderer.gl) {
+                setTimeout(update, 1);
+                return;
+            }
+            window['initDenoiserModel_'+model_id](params);
+            state.renderNeeded = true;
+        }
+        update();
     }
 
     function getFile(key, filename) {

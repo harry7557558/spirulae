@@ -6,7 +6,7 @@ class Model(torch.nn.Module):
     pass
 
 model = torch.load(
-    '../../Graphics/image/denoise/data_spirulae_4/model6_6.pth',
+    '../../Graphics/image/denoise/data_spirulae_5/resunet2gan_1_3.pth',
     map_location=torch.device('cpu'))
 
 state_dict = model.state_dict()
