@@ -280,6 +280,69 @@ function applyResidualDenoiser(model) {
     }
 }
 
+function applyNormalizedResidualDenoiser(model) {
+    let gl = renderer.gl;
+
+    let programOutput = createShaderProgram(gl, null,
+        `#version 300 es
+        precision highp float;
+        
+        uniform sampler2D uSrc;
+        
+        out vec4 fragColor;
+        void main() {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+            vec3 c = texelFetch(uSrc, coord, 0).xyz;
+            c = pow(max(exp(c)-1.0, 0.0), vec3(2.2));
+            fragColor = vec4(c.xyz, 1.0);
+        }`);
+
+    var layerTempI = null;
+    var layerTempO = null;
+    function updateLayer() {
+        var w = Math.ceil(state.width/16)*16;
+        var h = Math.ceil(state.height/16)*16;
+        var oldLayer = layerTempI;
+        layerTempI = new Dnn.CNNLayer(gl, 3, w, h);
+        if (oldLayer) Dnn.destroyCnnLayer(gl, oldLayer);
+        oldLayer = layerTempO;
+        layerTempO = new Dnn.CNNLayer(gl, 3, w, h);
+        if (oldLayer) Dnn.destroyCnnLayer(gl, oldLayer);
+    };
+    updateLayer();
+    window.addEventListener("resize", function (event) {
+        setTimeout(updateLayer, 20);
+    });
+
+    renderer.denoiser = function(inputs, framebuffer) {
+        if (inputs.pixel !== 'framebuffer')
+            throw new Error("Unsupported NN input");
+        // load input
+        gl.bindTexture(gl.TEXTURE_2D, layerTempI.imgs[0].texture);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        // normalize
+        var mean = Dnn.global_mean(gl, layerTempI);
+        var std = Dnn.global_std(gl, layerTempI);
+        Dnn.batch_norm_2d(gl, layerTempI, model.layers.input, 0.0, 1.0, mean, std);
+        // inference residual model
+        model.forward();
+        Dnn.add(gl, model.layers.input, model.layers.output, layerTempI);
+        // normalize back
+        for (var i = 0; i < mean.length; i++)
+            std[i] = 1.0 / std[i], mean[i] *= -std[i];
+        Dnn.batch_norm_2d(gl, layerTempI, layerTempO, 0.0, 1.0, mean, std);
+        // gamma transform
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.useProgram(programOutput);
+        setPositionBuffer(gl, programOutput);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, layerTempO.imgs[0].texture);
+        gl.uniform1i(gl.getUniformLocation(programOutput, "uSrc"), 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+}
+
 
 function initDenoiserModel_runet1(params) {
     let unet = new UNet1(3, 12, 16, 24, 32, params);
@@ -482,7 +545,7 @@ function initDenoiserModel_temp(params) {
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
     });
-    applyResidualDenoiser(unet);
+    applyNormalizedResidualDenoiser(unet);
     useDenoiser.denoisers['temp'] = renderer.denoiser;
 }
 
