@@ -667,9 +667,8 @@ function AttUNet1(nin, k1, k2, k3, k4, ko, params) {
         dec02.forward(gl, layers.d01r, layers.d02);
         Dnn.relu(gl, layers.d02, layers.d02r);
         channelAttention(Dnn.shallowConcat(layers.e1, layers.d02r));
-        // layers.output = layers.att1x1a;  // visualize attention map
+        // layers.output = layers.att1x1a; return;  // visualize attention map
         spacialAttention(layers.att1o);
-        // layers.output = layers.att2o;
         convo.forward(gl, layers.att2o, layers.output);
     };
 }

@@ -498,7 +498,7 @@ Dnn.Conv2d3 = function(
                 this.weightTextureData);
         }
 
-        let useWeightTexture = (buffer_in.w*buffer_in.h < 1e+4);
+        let useWeightTexture = (buffer_out.w*buffer_out.h < 1e+4);
         let program = useWeightTexture ?
             Dnn[programKeyWt] : Dnn[programKey];
         gl.useProgram(program);
