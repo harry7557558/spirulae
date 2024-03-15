@@ -63,64 +63,12 @@ Dnn.destroyCnnLayer = function(gl, layer) {
 }
 
 
-Dnn.global_mean = function(gl, buffer) {
+Dnn._global_mean_f = function(gl, f, buffer) {
+    let programKey = 'programGlobalMean_' + f;
+    let bufferKey = 'bufferGlobalMean_' + f;
     const tile = 64;
-    if (!Dnn.programGlobalMean) {
-        Dnn.programGlobalMean = createShaderProgram(gl, null,
-            `#version 300 es
-            precision mediump float;
-
-            uniform sampler2D uSrc;
-            out vec4 fragColor;
-            
-            void main() {
-                ivec2 ires = textureSize(uSrc, 0);
-                ivec2 tile = (ires+${tile}-1) / ${tile};
-                vec2 sc = vec2(ires) / float(${tile});
-                ivec2 xy = ivec2(gl_FragCoord.xy);
-                ivec2 pos0 = xy * tile;
-                ivec2 pos1 = min(pos0+tile, ires);
-                vec4 total = vec4(0);
-                for (int x = pos0.x; x < pos1.x; x++) {
-                    vec4 s = vec4(0);
-                    for (int y = pos0.y; y < pos1.y; y++)
-                        s += texelFetch(uSrc, ivec2(x,y), 0);
-                    total += s / sc.y;
-                }
-                fragColor = total / sc.x;
-            }`);
-    }
-    if (!Dnn.bufferGlobalMean) {
-        Dnn.bufferGlobalMean = createRenderTarget(gl, tile, tile, false, true, false);
-    }
-    let program = Dnn.programGlobalMean;
-    gl.useProgram(program);
-    gl.viewport(0, 0, buffer.w, buffer.h);
-    gl.disable(gl.BLEND);
-    var mean = new Array(buffer.n).fill(0.0);
-    for (var i = 0; i < buffer.n; i += 4) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, Dnn.bufferGlobalMean.framebuffer);
-        setPositionBuffer(gl, program);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, buffer.imgs[i/4].texture);
-        gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        var pixels = new Float32Array(4*tile*tile);
-        gl.readPixels(0, 0, tile, tile, gl.RGBA, gl.FLOAT, pixels);
-        var total = [0.0, 0.0, 0.0, 0.0];
-        for (var _ = 0; _ < 4*tile*tile; _++)
-            total[_%4] += pixels[_];
-        for (var _ = i; _ < i+4 && _ < buffer.n; _++)
-            mean[_] = total[_-i] / (tile*tile);
-    }
-    return mean;
-}
-
-
-Dnn.global_std = function(gl, buffer) {
-    const tile = 64;
-    if (!Dnn.programGlobalSquaredMean) {
-        Dnn.programGlobalSquaredMean = createShaderProgram(gl, null,
+    if (!Dnn[programKey]) {
+        Dnn[programKey] = createShaderProgram(gl, null,
             `#version 300 es
             precision mediump float;
 
@@ -138,24 +86,24 @@ Dnn.global_std = function(gl, buffer) {
                 for (int x = pos0.x; x < pos1.x; x++) {
                     vec4 s = vec4(0);
                     for (int y = pos0.y; y < pos1.y; y++) {
-                        vec4 c = texelFetch(uSrc, ivec2(x,y), 0);
-                        s += c*c;
+                        vec4 x = texelFetch(uSrc, ivec2(x,y), 0);
+                        s += (${f});
                     }
                     total += s / sc.y;
                 }
                 fragColor = total / sc.x;
             }`);
     }
-    if (!Dnn.bufferGlobalSquaredMean) {
-        Dnn.bufferGlobalSquaredMean = createRenderTarget(gl, tile, tile, false, true, false);
+    if (!Dnn[bufferKey]) {
+        Dnn[bufferKey] = createRenderTarget(gl, tile, tile, false, true, false);
     }
-    let program = Dnn.programGlobalSquaredMean;
+    let program = Dnn[programKey];
     gl.useProgram(program);
     gl.viewport(0, 0, buffer.w, buffer.h);
     gl.disable(gl.BLEND);
-    var mean2 = new Array(buffer.n).fill(0.0);
+    var mean = new Array(buffer.n).fill(0.0);
     for (var i = 0; i < buffer.n; i += 4) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, Dnn.bufferGlobalSquaredMean.framebuffer);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, Dnn[bufferKey].framebuffer);
         setPositionBuffer(gl, program);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, buffer.imgs[i/4].texture);
@@ -167,13 +115,73 @@ Dnn.global_std = function(gl, buffer) {
         for (var _ = 0; _ < 4*tile*tile; _++)
             total[_%4] += pixels[_];
         for (var _ = i; _ < i+4 && _ < buffer.n; _++)
-            mean2[_] = total[_-i] / (tile*tile);
+            mean[_] = total[_-i] / (tile*tile);
     }
-    let mean = Dnn.global_mean(gl, buffer);
+    return mean;
+}
+
+
+Dnn.global_mean = function(gl, buffer) {
+    let mean = Dnn._global_mean_f(gl, "x", buffer);
+    return mean;
+}
+
+
+Dnn.global_mean_and_std = function(gl, buffer) {
+    let mean = Dnn._global_mean_f(gl, "x", buffer);
+    let mean2 = Dnn._global_mean_f(gl, "x*x", buffer);
     var std = new Array(buffer.n).fill(0.0);
     for (var i = 0; i < buffer.n; i++)
         std[i] = Math.sqrt(Math.max(mean2[i] - mean[i]*mean[i], 0.0));
-    return std;
+    return {
+        length: buffer.n,
+        mean: mean,
+        std: std
+    };
+}
+
+
+Dnn.softmax2d = function(gl, buffer_in, buffer_out, normalize=true) {
+    if (buffer_in.n != buffer_out.n)
+        throw new Error("Input and output buffer sizes don't match.");
+    if (buffer_out.w != buffer_in.w || buffer_out.h != buffer_in.h)
+        throw new Error("Input and output buffer dimensions don't match.");
+    if (!Dnn.programSoftmax2d) {
+        Dnn.programSoftmax2d = createShaderProgram(gl, null,
+            `#version 300 es
+            precision mediump float;
+
+            uniform sampler2D uSrc;
+            out vec4 fragColor;
+
+            uniform vec4 inv_denom;
+
+            void main() {
+                vec4 c = texelFetch(uSrc, ivec2(gl_FragCoord.xy), 0);
+                fragColor = inv_denom * exp(c);
+            }`);
+    }
+    let w = Dnn._global_mean_f(gl, "exp(x)", buffer_in);
+    if (!normalize) {
+        for (var i = 0; i < w.length; i++)
+            w[i] *= buffer_in.w * buffer_in.h;
+    }
+    for (var i = 0; i < w.length; i++)
+        w[i] = 1.0 / Math.max(w[i], 1e-12);
+    let program = Dnn.programSoftmax2d;
+    gl.useProgram(program);
+    gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+    gl.disable(gl.BLEND);
+    for (var i = 0; i < buffer_in.n; i += 4) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
+        setPositionBuffer(gl, program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[i/4].texture);
+        gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
+        gl.uniform4f(gl.getUniformLocation(program, "inv_denom"),
+            w[i], w[i+1], w[i+2], w[i+3]);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
 }
 
 
@@ -201,15 +209,22 @@ Dnn.batch_norm_2d = function(
                 fragColor = slope * c + intercept;
             }`);
     }
+    if (std === null) {
+        let ms = Dnn.global_mean_and_std(buffer_in);
+        std = ms.std;
+        if (mean === null) mean = ms.mean;
+    }
     if (mean === null)
-        mean = Dnn.global_mean(mean);
-    if (std === null)
-        std = Dnn.global_std(std);
+        mean = Dnn.global_mean(buffer_in);
     let n = buffer_in.n;
     if (typeof beta === 'number')
         beta = new Array(n).fill(beta);
     if (typeof gamma === 'number')
         gamma = new Array(n).fill(gamma);
+    if (typeof mean === 'number')
+        mean = new Array(n).fill(mean);
+    if (typeof std === 'number')
+        std = new Array(n).fill(std);
     var slope = new Array(n);
     var intercept = new Array(n);
     for (var i = 0; i < n; i++) {
@@ -241,8 +256,177 @@ Dnn.batch_norm_2d = function(
 }
 
 
-Dnn.Conv2d311 = function(
-    n_in, n_out, weights, biases = []
+Dnn._global_mean_f2 = function(gl, f, buffer1, buffer2) {
+    let programKey = `programGlobalMean2_${f}`;
+    let bufferKey = `bufferGlobalMean2_${f}`;
+    const tile = 64;
+    if (!Dnn[programKey]) {
+        Dnn[programKey] = createShaderProgram(gl, null,
+            `#version 300 es
+            precision mediump float;
+
+            uniform sampler2D uSrc1;
+            uniform sampler2D uSrc2;
+            uniform bool one_channel;
+            out vec4 fragColor;
+            
+            void main() {
+                ivec2 ires = textureSize(uSrc1, 0);
+                ivec2 tile = (ires+${tile}-1) / ${tile};
+                vec2 sc = vec2(ires) / float(${tile});
+                ivec2 xy = ivec2(gl_FragCoord.xy);
+                ivec2 pos0 = xy * tile;
+                ivec2 pos1 = min(pos0+tile, ires);
+                vec4 total = vec4(0);
+                for (int x = pos0.x; x < pos1.x; x++) {
+                    vec4 s = vec4(0);
+                    for (int y = pos0.y; y < pos1.y; y++) {
+                        vec4 x1 = texelFetch(uSrc1, ivec2(x,y), 0);
+                        if (one_channel) x1 = vec4(x1.x);
+                        vec4 x2 = texelFetch(uSrc2, ivec2(x,y), 0);
+                        s += (${f});
+                    }
+                    total += s / sc.y;
+                }
+                fragColor = total / sc.x;
+            }`);
+    }
+    if (!Dnn[bufferKey]) {
+        Dnn[bufferKey] = createRenderTarget(gl, tile, tile, false, true, false);
+    }
+    if (buffer1.w != buffer2.w || buffer1.h != buffer2.h)
+        throw new Error("Input and output buffer dimensions don't match.");
+    if (buffer1.n != buffer2.n) {
+        if (buffer1.n == 1);
+        else if (buffer2.n == 1) {
+            let buffer = buffer1;
+            buffer1 = buffer2;
+            buffer2 = buffer;
+        }
+        else
+            throw new Error("Input and output buffer sizes don't match.");
+    }
+    let one_channel = (buffer1.n == 1);
+    let n = buffer2.n;
+    let program = Dnn[programKey];
+    gl.useProgram(program);
+    gl.viewport(0, 0, buffer1.w, buffer1.h);
+    gl.disable(gl.BLEND);
+    var mean = new Array(n).fill(0.0);
+    for (var i = 0; i < n; i += 4) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, Dnn[bufferKey].framebuffer);
+        setPositionBuffer(gl, program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, buffer1.imgs[one_channel?0:i/4].texture);
+        gl.uniform1i(gl.getUniformLocation(program, "uSrc1"), 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, buffer2.imgs[i/4].texture);
+        gl.uniform1i(gl.getUniformLocation(program, "uSrc2"), 1);
+        gl.uniform1i(gl.getUniformLocation(program, "one_channel"), one_channel);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        var pixels = new Float32Array(4*tile*tile);
+        gl.readPixels(0, 0, tile, tile, gl.RGBA, gl.FLOAT, pixels);
+        var total = [0.0, 0.0, 0.0, 0.0];
+        for (var _ = 0; _ < 4*tile*tile; _++)
+            total[_%4] += pixels[_];
+        for (var _ = i; _ < i+4 && _ < n; _++)
+            mean[_] = total[_-i] / (tile*tile);
+    }
+    return mean;
+}
+
+
+Dnn.global_dot = function(gl, buffer1, buffer2, mean=true) {
+    let dot = Dnn._global_mean_f2(gl, "x1*x2", buffer1, buffer2);
+    if (!mean) for (var i = 0; i < dot.length; i++)
+        dot[i] *= buffer1.w*buffer1.h;
+    return dot;
+}
+
+
+Dnn.channel_sum = function(
+    gl, buffer_in, buffer_out, weights=1.0
+) {
+    if (buffer_in.w != buffer_out.w || buffer_in.h != buffer_out.h)
+        throw new Error("Input and output buffer dimensions don't match.");
+    if (buffer_out.n != 1)
+        throw new Error("Number of channels in output buffer is not 1.");
+    if (!Dnn.programChannelSum) {
+        Dnn.programChannelSum = createShaderProgram(gl, null,
+            `#version 300 es
+            precision mediump float;
+
+            uniform int nChannel;
+            // uniform sampler2D accumBuffer;
+            uniform sampler2D uSrc0;
+            uniform sampler2D uSrc1;
+            uniform sampler2D uSrc2;
+            uniform sampler2D uSrc3;
+            uniform sampler2D uSrc4;
+            uniform sampler2D uSrc5;
+            uniform sampler2D uSrc6;
+            uniform sampler2D uSrc7;
+            uniform vec4 w0, w1, w2, w3, w4, w5, w6, w7;
+            out vec4 fragColor;
+
+            void main() {
+                ivec2 xy = ivec2(gl_FragCoord.xy);
+                fragColor = vec4(0);
+
+                int ci = 0;
+            #define one_channel(w, uSrc) \
+                fragColor += dot(w, texelFetch(uSrc, xy, 0)); \
+                if ((ci += 4) >= nChannel) return;
+
+                one_channel(w0, uSrc0)
+                one_channel(w1, uSrc1)
+                one_channel(w2, uSrc2)
+                one_channel(w3, uSrc3)
+                one_channel(w4, uSrc4)
+                one_channel(w5, uSrc5)
+                one_channel(w6, uSrc6)
+                one_channel(w7, uSrc7)
+
+            }`);
+    }
+    if (typeof weights === "number")
+        weights = new Array(buffer_in.n).fill(weights);
+    let program = Dnn.programChannelSum;
+    gl.useProgram(program);
+    gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+    gl.disable(gl.BLEND);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[0].framebuffer);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    let maxChannel = 32;
+    let n = buffer_in.n;
+    for (var j = 0; j < n; j += 4*maxChannel) {
+        gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[0].sampler);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, buffer_out.w, buffer_out.h, 0);
+        // gl.activeTexture(gl.TEXTURE9);
+        // gl.bindTexture(gl.TEXTURE_2D, buffer_out.imgs[0].sampler);
+        // gl.uniform1i(gl.getUniformLocation(program, "accumBuffer"), 9);
+        gl.uniform1i(gl.getUniformLocation(program, "nChannel"),
+            Math.min(maxChannel, n-(j/4)));
+        for (var dj = 0; dj < 4*maxChannel; dj += 4) {
+            if (j+dj >= n) {
+                gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), 15);
+                continue;
+            }
+            gl.activeTexture(gl['TEXTURE'+(dj/4)]);
+            gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[(j+dj)/4].texture);
+            gl.uniform1i(gl.getUniformLocation(program, "uSrc"+(dj/4)), dj/4);
+            gl.uniform4f(gl.getUniformLocation(program, "w"+(dj/4)),
+                weights[j+dj], weights[j+dj+1], weights[j+dj+2], weights[j+dj+3]);
+        }
+        setPositionBuffer(gl, program);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+}
+
+
+Dnn.Conv2d3 = function(
+    stride, padding, n_in, n_out, weights, biases = []
 ) {
     if (weights.length != n_in*n_out*9)
         throw new Error("Incorrect weight size");
@@ -288,17 +472,21 @@ Dnn.Conv2d311 = function(
             throw new Error("Incorrect input buffer length ("+buffer_in.n+","+this.n_in+")");
         if (buffer_out.n != this.n_out)
             throw new Error("Incorrect output buffer length ("+buffer_out.n+","+this.n_out+")");
-        if (buffer_out.w != buffer_in.w || buffer_out.h != buffer_in.h)
+        if (Math.abs(buffer_out.w - buffer_in.w/stride) > 1.001 ||
+            Math.abs(buffer_out.h - buffer_in.h/stride) > 1.001)
             throw new Error("Input and output buffer dimensions don't match.");
 
         let maxChannel = Math.min(4, Math.floor(
             gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) / 36 - 1));
-        if (!Dnn.programConv2d311 || !Dnn.programConv2d311wt) {
-            let src = getShaderSource('../shaders/dnn-conv2d311.glsl');
+        let programKey = `programConv2d3${stride}${padding}`;
+        let programKeyWt = programKey + "wt";
+        if (!Dnn[programKey] || !Dnn[programKeyWt]) {
+            let src = getShaderSource('../shaders/dnn-conv2d-3.glsl')
+                .replaceAll("{%STRIDE%}", stride).replaceAll("{%PADDING%}", padding);
             src = src.replaceAll("{%MAX_CHANNEL%}", maxChannel);
-            Dnn.programConv2d311 = createShaderProgram(gl, null,
+            Dnn[programKey] = createShaderProgram(gl, null,
                 src.replaceAll("{%USE_WEIGHT_TEXTURE%}", 0) );
-            Dnn.programConv2d311wt = createShaderProgram(gl, null,
+            Dnn[programKeyWt] = createShaderProgram(gl, null,
                 src.replaceAll("{%USE_WEIGHT_TEXTURE%}", 1) );
         }
         if (!this.weightTexture) {
@@ -312,9 +500,9 @@ Dnn.Conv2d311 = function(
 
         let useWeightTexture = (buffer_in.w*buffer_in.h < 1e+4);
         let program = useWeightTexture ?
-            Dnn.programConv2d311wt : Dnn.programConv2d311;
+            Dnn[programKeyWt] : Dnn[programKey];
         gl.useProgram(program);
-        gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+        gl.viewport(0, 0, buffer_out.w, buffer_out.h);
         gl.disable(gl.BLEND);
         for (var i = 0; i < this.n_out; i += 4) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
@@ -377,6 +565,15 @@ Dnn.Conv2d311 = function(
             }
         }
     }
+}
+
+
+Dnn.Conv2d311 = function(n_in, n_out, weights, biases = []) {
+    return new Dnn.Conv2d3(1, 1, n_in, n_out, weights, biases);
+}
+
+Dnn.Conv2d321 = function(n_in, n_out, weights, biases = []) {
+    return new Dnn.Conv2d3(2, 1, n_in, n_out, weights, biases);
 }
 
 
@@ -510,6 +707,7 @@ Dnn.Conv2d110 = function(
 }
 
 
+
 Dnn.ConvTranspose2D421 = function(
     n_in, n_out, weights, biases = []
 ) {
@@ -587,13 +785,14 @@ Dnn.ConvTranspose2D421 = function(
 }
 
 
-Dnn.relu = function(gl, buffer_in, buffer_out) {
+Dnn._activation_f = function(gl, f, buffer_in, buffer_out) {
     if (buffer_in.n != buffer_out.n)
         throw new Error("Input and output buffer sizes don't match.");
     if (buffer_out.w != buffer_in.w || buffer_out.h != buffer_in.h)
         throw new Error("Input and output buffer dimensions don't match.");
-    if (!Dnn.programReLU) {
-        Dnn.programReLU = createShaderProgram(gl, null,
+    let programKey = 'programActivation_'+f;
+    if (!Dnn[programKey]) {
+        Dnn[programKey] = createShaderProgram(gl, null,
             `#version 300 es
             precision mediump float;
             
@@ -601,11 +800,11 @@ Dnn.relu = function(gl, buffer_in, buffer_out) {
             out vec4 fragColor;
             
             void main() {
-                vec4 c = texelFetch(uSrc, ivec2(gl_FragCoord.xy), 0);
-                fragColor = max(c, 0.0);
+                vec4 x = texelFetch(uSrc, ivec2(gl_FragCoord.xy), 0);
+                fragColor = (${f});
             }`);
     }
-    let program = Dnn.programReLU;
+    let program = Dnn[programKey];
     gl.useProgram(program);
     gl.viewport(0, 0, buffer_in.w, buffer_in.h);
     gl.disable(gl.BLEND);
@@ -620,42 +819,80 @@ Dnn.relu = function(gl, buffer_in, buffer_out) {
 }
 
 
-Dnn.add = function(gl, buffer_in1, buffer_in2, buffer_out) {
-    if (buffer_in1.n != buffer_out.n || buffer_in2.n != buffer_out.n)
-        throw new Error("Input and output buffer sizes don't match.");
-    if (buffer_in1.w != buffer_out.w || buffer_in1.h != buffer_out.h ||
-        buffer_in2.w != buffer_out.w || buffer_in2.h != buffer_out.h)
+Dnn.relu = function(gl, buffer_in, buffer_out) {
+    Dnn._activation_f(gl, "max(x,0.0)", buffer_in, buffer_out);
+}
+
+
+Dnn.sigmoid = function(gl, buffer_in, buffer_out) {
+    Dnn._activation_f(gl, "1.0/(1.0+exp(-x))", buffer_in, buffer_out);
+}
+
+
+Dnn._activation_f2 = function(gl, f, buffer1, buffer2, buffer_out) {
+    if (buffer1.w != buffer_out.w || buffer1.h != buffer_out.h ||
+        buffer2.w != buffer_out.w || buffer2.h != buffer_out.h)
         throw new Error("Input and output buffer dimensions don't match.");
-    if (!Dnn.programAdd) {
-        Dnn.programAdd = createShaderProgram(gl, null,
+    if (buffer1.n != buffer2.n) {
+        if (buffer1.n == 1);
+        else if (buffer2.n == 1) {
+            let buffer = buffer1;
+            buffer1 = buffer2;
+            buffer2 = buffer;
+        }
+        else
+            throw new Error("Input and output buffer sizes don't match.");
+    }
+    if (buffer2.n != buffer_out.n)
+        throw new Error("Input and output buffer sizes don't match.");
+    let programKey = 'programActivation2_'+f;
+    if (!Dnn[programKey]) {
+        Dnn[programKey] = createShaderProgram(gl, null,
             `#version 300 es
             precision mediump float;
             
             uniform sampler2D uSrc1;
             uniform sampler2D uSrc2;
+            uniform bool one_channel;
             out vec4 fragColor;
             
             void main() {
-                vec4 c1 = texelFetch(uSrc1, ivec2(gl_FragCoord.xy), 0);
-                vec4 c2 = texelFetch(uSrc2, ivec2(gl_FragCoord.xy), 0);
-                fragColor = c1 + c2;
+                vec4 x1 = texelFetch(uSrc1, ivec2(gl_FragCoord.xy), 0);
+                if (one_channel) x1 = vec4(x1.x);
+                // x1 = vec4(x1.x);
+                vec4 x2 = texelFetch(uSrc2, ivec2(gl_FragCoord.xy), 0);
+                // x2 = vec4(x2.x);
+                fragColor = (${f});
             }`);
     }
-    let program = Dnn.programAdd;
+    let program = Dnn[programKey];
     gl.useProgram(program);
-    gl.viewport(0, 0, buffer_out.w, buffer_out.h);
+    gl.viewport(0, 0, buffer1.w, buffer1.h);
     gl.disable(gl.BLEND);
-    for (var i = 0; i < buffer_out.n; i += 4) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+    let one_channel = (buffer1.n == 1);
+    let n = buffer2.n;
+    for (var i = 0; i < n; i += 4) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[i/4].framebuffer);
         setPositionBuffer(gl, program);
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, buffer_in1.imgs[Math.floor(i/4)].texture);
+        gl.bindTexture(gl.TEXTURE_2D, buffer1.imgs[one_channel?0:i/4].texture);
         gl.uniform1i(gl.getUniformLocation(program, "uSrc1"), 0);
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, buffer_in2.imgs[Math.floor(i/4)].texture);
+        gl.bindTexture(gl.TEXTURE_2D, buffer2.imgs[i/4].texture);
         gl.uniform1i(gl.getUniformLocation(program, "uSrc2"), 1);
+        gl.uniform1i(gl.getUniformLocation(program, "one_channel"), one_channel);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
+}
+
+
+Dnn.add = function(gl, buffer_in1, buffer_in2, buffer_out) {
+    Dnn._activation_f2(gl, "x1+x2", buffer_in1, buffer_in2, buffer_out);
+}
+
+
+Dnn.mul = function(gl, buffer_in1, buffer_in2, buffer_out) {
+    Dnn._activation_f2(gl, "x1*x2", buffer_in1, buffer_in2, buffer_out);
 }
 
 

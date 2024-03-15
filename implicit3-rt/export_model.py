@@ -2,11 +2,17 @@ import torch
 import numpy as np
 import json
 
+class AttentionChannelOnly(torch.nn.Module):
+    pass
+
+class AttentionSpacialOnly(torch.nn.Module):
+    pass
+
 class Model(torch.nn.Module):
     pass
 
 model = torch.load(
-    '../../Graphics/image/denoise/data_spirulae_5/resunet2gan_2_1.pth',
+    '../../Graphics/image/denoise/data_spirulae_5/attunet1_1_1.pth',
     map_location=torch.device('cpu'))
 
 state_dict = model.state_dict()
@@ -24,6 +30,8 @@ for key, tensor in state_dict.items():
     amin, amax = np.amin(tensor), np.amax(tensor)
     vmin, vmax = -2**(nbit-1)+0.1, 2**(nbit-1)-1.1
     m = (amax-amin) / (vmax-vmin)
+    if m == 0.0:
+        m = 1.0
     b = amin - m * vmin
     item = {
         'shape': [*tensor.shape],
@@ -38,5 +46,5 @@ for key, tensor in state_dict.items():
 
 name = "temp"
 with open(f"denoise_models/denoise_{name}.json", 'w') as fp:
-    json.dump(info, fp)
+    json.dump(info, fp, separators=(',', ':'))
 data.tofile(f"denoise_models/denoise_{name}.bin")

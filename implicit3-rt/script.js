@@ -357,7 +357,7 @@ vec3 {%funname%}Color(float x, float y, float z) {\n\
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
         "../shaders/frag-tonemap.glsl",
-        "../shaders/dnn-conv2d311.glsl",
+        "../shaders/dnn-conv2d-3.glsl",
         "../shaders/dnn-conv2d110.glsl",
         "../shaders/dnn-convtranspose2d421.glsl",
         "../shaders/complex-zeta.glsl",

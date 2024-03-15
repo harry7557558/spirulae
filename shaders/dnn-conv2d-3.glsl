@@ -4,7 +4,7 @@ precision mediump int;
 
 uniform sampler2D accumBuffer;
 
-// 3x3 convolution, stride 1, zero padding 1
+// 3x3 convolution, stride {%STRIDE%}, zero padding {%PADDING%}
 
 
 #if {%USE_WEIGHT_TEXTURE%}
@@ -25,12 +25,12 @@ out vec4 fragColor;
 void main() {
 
     ivec2 iRes = textureSize(uSrc0, 0);
-    ivec2 xy0 = ivec2(gl_FragCoord.xy);
+    ivec2 xy0 = {%STRIDE%}*ivec2(gl_FragCoord.xy);
 
     vec4 r = texelFetch(accumBuffer, xy0, 0);
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            ivec2 xy = xy0-1+ivec2(i,j);
+            ivec2 xy = xy0-{%PADDING%}+ivec2(i,j);
             if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y) continue;
 
             mat4 R;
@@ -75,13 +75,13 @@ out vec4 fragColor;
 void main() {
 
     ivec2 iRes = textureSize(uSrc0, 0);
-    ivec2 xy0 = ivec2(gl_FragCoord.xy);
+    ivec2 xy0 = {%STRIDE%}*ivec2(gl_FragCoord.xy);
 
     vec4 r = texelFetch(accumBuffer, xy0, 0);
     // r *= 0.0;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            ivec2 xy = xy0-1+ivec2(i,j);
+            ivec2 xy = xy0-{%PADDING%}+ivec2(i,j);
             if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y) continue;
             
             mat4 R;
