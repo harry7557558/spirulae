@@ -707,7 +707,6 @@ Dnn.Conv2d110 = function(
 }
 
 
-
 Dnn.ConvTranspose2D421 = function(
     n_in, n_out, weights, biases = []
 ) {
@@ -780,6 +779,56 @@ Dnn.ConvTranspose2D421 = function(
                 gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 1);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
+        }
+    }
+}
+
+
+Dnn.PReLU = function(n, weights) {
+    if (typeof weights === "number")
+        weights = new Array(n).fill(weights);
+    if (weights.length != n)
+        throw new Error("Incorrect weight size");
+    this.n = n;
+    this.weights = weights;
+    console.log(this.weights);
+    while (this.weights.length % 4 != 0.0)
+        this.weights.push(0.0);
+
+    this.forward = function(gl, buffer_in, buffer_out) {
+        if (buffer_in.n != this.n)
+            throw new Error("Incorrect input buffer length ("+buffer_in.n+","+this.n+")");
+        if (buffer_out.n != this.n)
+            throw new Error("Incorrect output buffer length ("+buffer_out.n+","+this.n+")");
+        if (buffer_out.w != buffer_in.w || buffer_out.h != buffer_in.h)
+            throw new Error("Input and output buffer dimensions don't match.");
+        if (!Dnn.programPReLU) {
+            Dnn.programPReLU = createShaderProgram(gl, null,
+                `#version 300 es
+                precision mediump float;
+                
+                uniform sampler2D uSrc;
+                uniform vec4 slope;
+                out vec4 fragColor;
+                
+                void main() {
+                    vec4 x = texelFetch(uSrc, ivec2(gl_FragCoord.xy), 0);
+                    fragColor = max(x,0.0)-slope*max(-x,0.0);
+                }`);
+        }
+        let program = Dnn.programPReLU;
+        gl.useProgram(program);
+        gl.viewport(0, 0, buffer_in.w, buffer_in.h);
+        gl.disable(gl.BLEND);
+        for (var i = 0; i < buffer_in.n; i += 4) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, buffer_out.imgs[Math.floor(i/4)].framebuffer);
+            setPositionBuffer(gl, program);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, buffer_in.imgs[Math.floor(i/4)].texture);
+            gl.uniform1i(gl.getUniformLocation(program, "uSrc"), 0);
+            gl.uniform4f(gl.getUniformLocation(program, "slope"),
+                this.weights[i], this.weights[i+1], this.weights[i+2], this.weights[i+3]);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
     }
 }

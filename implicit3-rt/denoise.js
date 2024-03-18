@@ -674,10 +674,101 @@ function AttUNet1(nin, k1, k2, k3, k4, ko, params) {
 }
 
 
+function UNet3(nin, n0, n1, n2, n3, params) {
+    let gl = renderer.gl;
+    let convi = new Dnn.Conv2d311(nin, n0, params['convi.weight'], params['convi.bias']);
+    let relui = new Dnn.PReLU(n0, params['relui.weight']);
+    let econv0a = new Dnn.Conv2d311(n0, n0, params['econv0a.weight'], params['econv0a.bias']);
+    let relue0 = new Dnn.PReLU(n0, params['relue0.weight']);
+    let econv0b = new Dnn.Conv2d311(n0, n0, params['econv0b.weight'], params['econv0b.bias']);
+    let econv1a = new Dnn.Conv2d311(n0, n1, params['econv1a.weight'], params['econv1a.bias']);
+    let relue1 = new Dnn.PReLU(n1, params['relue1.weight']);
+    let econv1b = new Dnn.Conv2d311(n1, n1, params['econv1b.weight'], params['econv1b.bias']);
+    let econv2a = new Dnn.Conv2d311(n1, n2, params['econv2a.weight'], params['econv2a.bias']);
+    let relue2 = new Dnn.PReLU(n2, params['relue2.weight']);
+    let econv2b = new Dnn.Conv2d311(n2, n2, params['econv2b.weight'], params['econv2b.bias']);
+    let econv3a = new Dnn.Conv2d311(n2, n3, params['econv3a.weight'], params['econv3a.bias']);
+    let relue3 = new Dnn.PReLU(n3, params['relue3.weight']);
+    let econv3b = new Dnn.Conv2d311(n3, n3, params['econv3b.weight'], params['econv3b.bias']);
+    let relum = new Dnn.PReLU(n3, params['relum.weight']);
+    let dconv2a = new Dnn.ConvTranspose2D421(n3, n2, params['dconv2a.weight'], params['dconv2a.bias']);
+    let relud2a = new Dnn.PReLU(n2, params['relud2a.weight']);
+    let dconv2b = new Dnn.Conv2d110(n2+n2, n2, params['dconv2b.weight'], params['dconv2b.bias']);
+    let dconv1a = new Dnn.ConvTranspose2D421(n2, n1, params['dconv1a.weight'], params['dconv1a.bias']);
+    let relud1a = new Dnn.PReLU(n1, params['relud1a.weight']);
+    let dconv1b = new Dnn.Conv2d110(n1+n1, n1, params['dconv1b.weight'], params['dconv1b.bias']);
+    let dconv0a = new Dnn.ConvTranspose2D421(n1, n0, params['dconv0a.weight'], params['dconv0a.bias']);
+    let relud0a = new Dnn.PReLU(n0, params['relud0a.weight']);
+    let dconv0b = new Dnn.Conv2d110(n0+n0, n0, params['dconv0b.weight'], params['dconv0b.bias']);
+    let convo1 = new Dnn.Conv2d110(n0, n0, params['convo1.weight'], params['convo1.bias']);
+    let convo2 = new Dnn.Conv2d110(n0, 3, params['convo2.weight'], params['convo2.bias']);
+
+    let layers = {};
+    function ul(key, n, scale) {
+        var w = Math.ceil(state.width/16)*16;
+        var h = Math.ceil(state.height/16)*16;
+        var oldLayer = layers[key];
+        layers[key] = new Dnn.CNNLayer(gl, n, w/scale, h/scale);
+        if (oldLayer) Dnn.destroyCnnLayer(gl, oldLayer);
+    };
+    this.layers = layers;
+    this.updateLayers = function() {
+        ul("input", nin, 1); ul("ci", n0, 1); ul("cir", n0, 1);
+        ul("e0a", n0, 1); ul("e0ar", n0, 1); ul("e0b", n0, 1); ul("e0bp", n0, 2);
+        ul("e1a", n1, 2); ul("e1ar", n1, 2); ul("e1b", n1, 2); ul("e1bp", n1, 4);
+        ul("e2a", n2, 4); ul("e2ar", n2, 4); ul("e2b", n2, 4); ul("e2bp", n2, 8);
+        ul("e3a", n3, 8); ul("e3ar", n3, 8); ul("e3b", n3, 8); ul("e3br", n3, 8);
+        ul("d2a", n2, 4);  ul("d2ar", n2, 4); ul("d2b", n2, 4); ul("d2br", n2, 4);
+        ul("d1a", n1, 2); ul("d1ar", n1, 2); ul("d1b", n1, 2); ul("d1br", n1, 2);
+        ul("d0a", n0, 1); ul("d0ar", n0, 1); ul("d0b", n0, 1); ul("d0br", n0, 1);
+        ul("do", n0, 1); ul("co1", n0, 1); ul("co1r", n0, 1);
+        ul("output", 3, 1);
+    }
+    this.updateLayers();
+
+    this.forward = function() {
+        convi.forward(gl, layers.input, layers.ci);
+        relui.forward(gl, layers.ci, layers.cir);
+        econv0a.forward(gl, layers.cir, layers.e0a);
+        relue0.forward(gl, layers.e0a, layers.e0ar);
+        econv0b.forward(gl, layers.e0ar, layers.e0b);
+        Dnn.maxpool2d2(gl, layers.e0b, layers.e0bp);
+        econv1a.forward(gl, layers.e0bp, layers.e1a);
+        relue1.forward(gl, layers.e1a, layers.e1ar);
+        econv1b.forward(gl, layers.e1ar, layers.e1b);
+        Dnn.maxpool2d2(gl, layers.e1b, layers.e1bp);
+        econv2a.forward(gl, layers.e1bp, layers.e2a);
+        relue2.forward(gl, layers.e2a, layers.e2ar);
+        econv2b.forward(gl, layers.e2ar, layers.e2b);
+        Dnn.maxpool2d2(gl, layers.e2b, layers.e2bp);
+        econv3a.forward(gl, layers.e2bp, layers.e3a);
+        relue3.forward(gl, layers.e3a, layers.e3ar);
+        econv3b.forward(gl, layers.e3ar, layers.e3b);
+        relum.forward(gl, layers.e3b, layers.e3br);
+        dconv2a.forward(gl, layers.e3br, layers.d2a);
+        relud2a.forward(gl, layers.d2a, layers.d2ar);
+        dconv2b.forward(gl, Dnn.shallowConcat(layers.d2ar, layers.e2b), layers.d2b);
+        Dnn.relu(gl, layers.d2b, layers.d2br);
+        dconv1a.forward(gl, layers.d2br, layers.d1a);
+        relud1a.forward(gl, layers.d1a, layers.d1ar);
+        dconv1b.forward(gl, Dnn.shallowConcat(layers.d1ar, layers.e1b), layers.d1b);
+        Dnn.relu(gl, layers.d1b, layers.d1br);
+        dconv0a.forward(gl, layers.d1br, layers.d0a);
+        relud0a.forward(gl, layers.d0a, layers.d0ar);
+        dconv0b.forward(gl, Dnn.shallowConcat(layers.d0ar, layers.e0b), layers.d0b);
+        Dnn.relu(gl, layers.d0b, layers.d0br);
+        Dnn.add(gl, layers.d0br, layers.ci, layers.do);
+        convo1.forward(gl, layers.do, layers.co1);
+        Dnn.relu(gl, layers.co1, layers.co1r);
+        convo2.forward(gl, layers.co1r, layers.output);
+    };
+}
+
 
 function initDenoiserModel_temp(params) {
     // let unet = new UNet2(3, 12, 16, 24, 32, params);
-    let unet = new AttUNet1(3, 12, 16, 24, 32, 12, params);
+    // let unet = new AttUNet1(3, 12, 16, 24, 32, 12, params);
+    let unet = new UNet3(3, 12, 16, 24, 32, params);
     window.addEventListener("resize", function (event) {
         setTimeout(unet.updateLayers, 20);
     });

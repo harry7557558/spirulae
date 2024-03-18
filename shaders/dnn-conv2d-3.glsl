@@ -4,8 +4,9 @@ precision mediump int;
 
 uniform sampler2D accumBuffer;
 
-// 3x3 convolution, stride {%STRIDE%}, zero padding {%PADDING%}
+// 3x3 convolution, stride {%STRIDE%}, padding {%PADDING%}
 
+#define REFLECT_PADDING 1
 
 #if {%USE_WEIGHT_TEXTURE%}
 
@@ -31,7 +32,15 @@ void main() {
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             ivec2 xy = {%STRIDE%}*xy0-{%PADDING%}+ivec2(i,j);
-            if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y) continue;
+            #if REFLECT_PADDING
+                if (xy.x<0) xy.x=-xy.x;
+                if (xy.y<0) xy.y=-xy.y;
+                if (xy.x>=iRes.x) xy.x=2*iRes.x-xy.x-1;
+                if (xy.y>=iRes.y) xy.y=2*iRes.y-xy.y-1;
+            #else
+                if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y)
+                    continue;
+            #endif
 
             mat4 R;
             int k = uWeightRow.x;
@@ -82,7 +91,15 @@ void main() {
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             ivec2 xy = {%STRIDE%}*xy0-{%PADDING%}+ivec2(i,j);
-            if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y) continue;
+            #if REFLECT_PADDING
+                if (xy.x<0) xy.x=-xy.x;
+                if (xy.y<0) xy.y=-xy.y;
+                if (xy.x>=iRes.x) xy.x=2*iRes.x-xy.x-1;
+                if (xy.y>=iRes.y) xy.y=2*iRes.y-xy.y-1;
+            #else
+                if (xy.x<0 || xy.x>=iRes.x || xy.y<0 || xy.y>=iRes.y)
+                    continue;
+            #endif
             
             mat4 R;
             int k = 0;
