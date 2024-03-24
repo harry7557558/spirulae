@@ -390,7 +390,31 @@ function initRenderer() {
     // rendering
     var oldScreenCenter = { x: -1, y: -1 };
     var startTime = performance.now();
-    function render() {
+    var lastTimestamp = 0.0,
+        prevRenderTimeError = 0.0,
+        integralRenderTimeError = 0.0;
+    function render(timestamp) {
+        // frame rate controller (PID)
+        let sSamples = Number(parameterToDict(RawParameters).sSamples);
+        if (Math.round(Math.log2(sSamples)) != Math.log2(sSamples)) {
+            let first = (integralRenderTimeError == 0.0 && prevRenderTimeError == 0.0);
+            let renderTime = timestamp-lastTimestamp;
+            lastTimestamp = timestamp;
+            let expectedRenderTime = 1000 / sSamples;
+            let renderTimeError = sSamples * (expectedRenderTime / renderTime - 1.0);
+            if (first) prevRenderTimeError = renderTimeError;
+            integralRenderTimeError += renderTimeError;
+            let derivativeRenderTimeError = renderTimeError - prevRenderTimeError;
+            prevRenderTimeError = renderTimeError;
+            let controlSignal = 0.01 * renderTimeError
+                + 0.0 * integralRenderTimeError
+                + 0.02 * derivativeRenderTimeError;
+            state.sSamples = state.sSamples==sSamples ? 1/64 : Number(state.sSamples);
+            state.sSamples *= 1.0 + controlSignal;
+            state.sSamples = Math.max(1/128, Math.min(state.sSamples, 64));
+            // console.log(new Array(Math.round(Math.log2(state.sSamples*256)*4)).fill('*').join(''));
+        }
+
         var timeDependent = true;
         try {
             timeDependent = /\(iTime\)/.test(updateShaderFunction.prevCode.renderSource);

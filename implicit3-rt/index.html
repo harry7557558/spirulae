@@ -78,15 +78,17 @@
                 <option value="512">512</option>
                 <option value="1024">1024</option>
             </select>path depth</span>&ensp;
-        <span title="Number of samples per frame per pixel"><select id="select-samples">
-                <option value="0.015625">2⁻⁶</option>
-                <option value="0.0625">2⁻⁴</option>
-                <option value="0.25">2⁻²</option>
-                <option value="1" selected>2⁰</option>
-                <option value="4">2²</option>
-                <option value="16">2⁴</option>
-                <option value="64">2⁶</option>
-            </select>samples</span>
+        <span title="Number of samples per frame per pixel, otherwise with an FPS controller"><select id="select-samples">
+                <option value="0.0625">2⁻⁴ samples</option>
+                <option value="0.25">2⁻² samples</option>
+                <option value="1">2⁰ samples</option>
+                <option value="4">2² samples</option>
+                <option value="16">2⁴ samples</option>
+                <option value="20">20 fps</option>
+                <option value="30">30 fps</option>
+                <option value="40">40 fps</option>
+                <option value="50" selected>50 fps</option>
+            </select></span>
         <span style="display:none" title="Enable experimental Multiple Importance Sampling (MIS) for high-variance scenes"><input type="checkbox"
                 id="checkbox-mis" />MIS (beta)</span>&ensp;
         <br />

@@ -187,7 +187,7 @@ document.body.onload = function (event) {
         // params.sDenoise = "runet2gan";
         params.sSpp = state.sSpp = 256;
         state.iSpp = 0.0;
-        params.sSamples = state.sSamples = "0.0625";
+        params.sSamples = state.sSamples = "50";
         // state.defaultScreenCenter = true;
     }
     initBuiltInStates(builtinStates);
