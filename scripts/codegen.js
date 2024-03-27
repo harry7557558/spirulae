@@ -942,23 +942,34 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             // real/complex, scalar/vector
             var isRealScalar = true;
             var isComplex = false;
-            var maxComps = 0;
-            for (var i = 0; i < numArgs; i++)
+            var comps = [], maxComps = 0;
+            for (var i = 0; i < numArgs; i++) {
                 if (funArgs[i].length > 1) {
                     isRealScalar = false;
                     if (funArgs[i][funArgs[i].length-1].code == "\\i")
                         isComplex = true;
-                    maxComps = Math.max(maxComps, (funArgs[i].length+1)/2);
                 }
+                var comp = (funArgs[i].length+1)/2;
+                comps.push(comp);
+                maxComps = Math.max(maxComps, comp);
+            }
+            var funType = new Array(numArgs).fill('a').join('');
+            if (fun.hasOwnProperty(numArgs) && fun[numArgs].langs.hasOwnProperty("type"))
+                funType = fun[numArgs].langs.type;
+            var typeMap = {};
             for (var i = 0; i < numArgs; i++) {
                 if (isComplex && funArgs[i].length == 1)
                     funArgs[i] = toComplex(funArgs[i]);
-                if (isRealScalar)
-                    funArgs[i] = funArgs[i][0];
-                else {
-                    if (funArgs[i].length != 2*maxComps-1)
+                if (typeMap.hasOwnProperty(funType[i])) {
+                    if (typeMap[funType[i]] != funArgs[i].length)
                         throw new Error("Mixed vectors with different dimensions in `"
                                 + token.str + "`.");
+                }
+                else typeMap[funType[i]] = funArgs[i].length;
+                if (isRealScalar)
+                    funArgs[i] = funArgs[i][0];
+                else if (funArgs[i].length == 1) {
+                    funArgs[i] = toVector(funArgs[i], maxComps);
                 }
             }
 
@@ -976,6 +987,14 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                         addToken(stack, new Token('unit', ''+i));
                 }
                 return;
+            }
+            // typemap vecs must have same type
+            else {
+                for (var i = 0; i < numArgs; i++) {
+                    if (typeMap[funType[i]] != 1 && typeMap[funType[i]] != 2*maxComps-1)
+                        throw new Error("Mixed vectors of different lengths in `"
+                            + token.str + "`.");
+                }
             }
 
             // complex

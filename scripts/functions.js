@@ -620,6 +620,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['clamp'], 3, {
         D: "if(f1-f3,g3,if(f1-f2,g1,if(f2-f3,g3,g2)))",
+        type: "abb",
         latex: '\\operatorname{clamp}\\left(%1,%2,%3\\right)',
         glsl: 'clamp(%1,%2,%3)',
         cppf: 'fmin(fmax(%1,%2),%3)',
@@ -628,6 +629,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['lerp', 'mix'], 3, {
         D: "mix(g1,g2,f3)+(f2-f1)g3",
+        type: "aab",
         vec2: 'vec2(mix(a1,b1,c1),mix(a2,b2,c2))',
         vec3: 'vec3(mix(a1,b1,c1),mix(a2,b2,c2),mix(a3,b3,c3))',
         vec4: 'vec4(mix(a1,b1,c1),mix(a2,b2,c2),mix(a3,b3,c3),mix(a4,b4,c4))',
