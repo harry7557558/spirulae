@@ -955,8 +955,8 @@ MathParser.parseInput = function (input) {
             }
             var totlength = 0;
             for (var j = 0; j < stack.length; j++) totlength += stack[j].length;
-            if (totlength >= 262144) {
-                throw "Definitions are nested too deeply."
+            if (totlength >= 1048576) {
+                throw "Definitions are nested too deeply (" + totlength + ")";
             }
             // console.log(i+1, stack.slice());
         }

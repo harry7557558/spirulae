@@ -532,6 +532,7 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
     }),
     new MathFunction(['if'], 3, {
         D: "if(f1,g2,g3)",
+        type: "abb",
         vec2: 'vec2(if(a1,b1,c1),if(a2,b2,c2))',
         vec3: 'vec3(if(a1,b1,c1),if(a2,b2,c2),if(a3,b3,c3))',
         vec4: 'vec4(if(a1,b1,c1),if(a2,b2,c2),if(a3,b3,c3),if(a4,b4,c4))',

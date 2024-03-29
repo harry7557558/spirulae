@@ -535,7 +535,7 @@ CodeGenerator.postfixToLatex = function (queue) {
             else if (token.str == "cross") {
                 latex = "{" + tex1 + "}\\times{" + tex2 + "}";
             }
-            else throw new Error("Unrecognized operator" + token.str);
+            else throw new Error("Unrecognized operator `" + token.str + '`');
             var obj = new EvalLatexObject(
                 v1.postfix.concat(v2.postfix).concat([token]),
                 latex, precedence);
@@ -550,6 +550,9 @@ CodeGenerator.postfixToLatex = function (queue) {
             for (var j = 0; j < numArgs; j++)
                 stack.pop();
             var fun = MathFunctions[token.str];
+            if (/^vec[234]$/.test(token.str) && numArgs > 1) {
+                fun = MathFunctions['vec'+numArgs];
+            }
             if (fun != undefined) {
                 if (fun['' + numArgs] == undefined) fun = fun['0'];
                 else fun = fun['' + numArgs];
@@ -953,11 +956,17 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 comps.push(comp);
                 maxComps = Math.max(maxComps, comp);
             }
+            var isVec = /^vec[2-4]$/.test(token.str);
             var funType = new Array(numArgs).fill('a').join('');
             if (fun.hasOwnProperty(numArgs) && fun[numArgs].langs.hasOwnProperty("type"))
                 funType = fun[numArgs].langs.type;
             var typeMap = {};
             for (var i = 0; i < numArgs; i++) {
+                if (isVec) {
+                    // if (!isRealScalar && funArgs[i].length == 1)
+                    //     funArgs[i] = [funArgs[i]];
+                    continue;
+                }
                 if (isComplex && funArgs[i].length == 1)
                     funArgs[i] = toComplex(funArgs[i]);
                 if (typeMap.hasOwnProperty(funType[i])) {
@@ -974,15 +983,38 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             }
 
             // vector function
-            if (/^vec[2-4]$/.test(token.str)) {
-                if (!isRealScalar)
-                    throw new Error("Vector components must be real scalars.");
+            // if (isVec && isRealScalar) {
+            //     console.log(funArgs.slice());
+            //     var n = Number(token.str.slice(3));
+            //     if (n != numArgs && numArgs != 1)
+            //         throw new Error("Incorrect number of components for "
+            //             + token.str + " (" + numArgs + ")");
+            //     for (var i = 0; i < n; i++) {
+            //         stack.push(funArgs[numArgs==1 ? 0 : i]);
+            //         if (i > 0)
+            //             addToken(stack, new Token('unit', ''+i));
+            //     }
+            //     return;
+            // }
+            // else
+            if (isVec) {
                 var n = Number(token.str.slice(3));
-                if (n != numArgs && numArgs != 1)
-                    throw new Error("Incorrect number of components for "
-                        + token.str + " (" + numArgs + ")");
-                for (var i = 0; i < n; i++) {
-                    stack.push(funArgs[numArgs==1 ? 0 : i]);
+                if (numArgs > n)
+                    throw new Error("Too many arguments for " + token.str + " (" + numArgs + ")");
+                var comps = [];
+                for (var i = 0; i < numArgs; i++) {
+                    if (funArgs[i][funArgs[i].length-1].code == "\\i")
+                        throw new Error("Does not support complex vector");
+                    comps.push(funArgs[i][0]);
+                    for (var _ = 1; _ < funArgs[i].length; _ += 2)
+                        comps.push(funArgs[i][_]);
+                }
+                if (comps.length == 1)
+                    comps = new Array(n).fill(comps[0]);
+                if (comps.length != n)
+                    throw new Error("Vector components don't match for " + token.str);
+                for (var i = 0; i < comps.length; i++) {
+                    stack.push(comps[i]);
                     if (i > 0)
                         addToken(stack, new Token('unit', ''+i));
                 }
