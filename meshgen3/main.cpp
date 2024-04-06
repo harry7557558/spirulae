@@ -53,7 +53,7 @@ void generateMesh(
     DecimationParameters decimate
 ) {
 
-    GlBatchEvaluator3 evaluator(funDeclaration);
+    GlBatchEvaluator3 evaluator(funDeclaration, false);
     int batchEvalCount = 0;
     vec3 bc = MeshgenParams::bc;
     vec3 br = MeshgenParams::br;
@@ -106,7 +106,7 @@ void generateMesh(
 #else
     const ivec3 bn = MeshgenParams::bn;
     const int nd = MeshgenParams::nd;
-    vec3 expd = 1.0f + 0.02f/vec3(bn-1)*exp2f(-nd);
+    vec3 expd = 1.0f + 0.05f/vec3(bn-1)*exp2f(-nd);
     MeshgenTetImplicit::marchingCubes(
         Fs, bc-expd*br, bc+expd*br,
         bn, nd,
@@ -131,10 +131,12 @@ void generateMesh(
 namespace MeshParams {
     bool showEdges = true;
     bool smoothShading = true;
+    std::string colorSource;
 };
 
 
 RenderModel prepareMesh(
+    std::string funDeclaration,
     std::vector<vec3> verts,
     std::vector<ivec4> tets, std::vector<ivec3> faces, std::vector<ivec4> edges
 ) {
@@ -197,22 +199,48 @@ RenderModel prepareMesh(
     for (int i = 0; i < (int)res.normals.size(); i++)
         res.normals[i] = normalize(res.normals[i]);
 
+    // vertex colors
+    if (!MeshParams::colorSource.empty()) {
+        res.colors.resize(vn);
+        GlBatchEvaluator3 evaluator(funDeclaration+MeshParams::colorSource, true);
+        evaluator.evaluateFunction(vn, res.vertices.data(), (float*)&res.colors[0]);
+        res.useVertexColor = true;
+    }
+    else res.useVertexColor = false;
+
     // flat shading
     if (!MeshParams::smoothShading) {
         std::vector<glm::ivec3> indicesF1;
+        indicesF1.reserve(fn);
+        std::vector<glm::vec3> vertices;
+        std::vector<glm::vec3> normals;
+        vertices.reserve(3*vn);
+        normals.reserve(3*vn);
+        std::vector<glm::vec4> colors;
+        colors.reserve(3*res.colors.size());
+        std::vector<int> vmap(vn, -1);
         for (auto f : res.indicesF) {
             vec3 n = cross(
                 res.vertices[f[1]] - res.vertices[f[0]],
                 res.vertices[f[2]] - res.vertices[f[0]]
             );
-            int vn = (int)res.vertices.size();
+            int vn = (int)vertices.size();
             for (int _ = 0; _ < 3; _++) {
-                res.vertices.push_back(res.vertices[f[_]]);
-                res.normals.push_back(n);
+                vertices.push_back(res.vertices[f[_]]);
+                if (res.colors.size())
+                    colors.push_back(res.colors[f[_]]);
+                normals.push_back(n);
+                vmap[f[_]] = vn + _;
             }
             indicesF1.push_back(glm::ivec3(vn, vn + 1, vn + 2));
         }
         res.indicesF = indicesF1;
+        res.vertices = vertices;
+        res.normals = normals;
+        res.colors = colors;
+        for (int i = 0; i < en; i++)
+            for (int _ = 0; _ < 2; _++)
+                res.indicesE[i][_] = vmap[res.indicesE[i][_]];
     }
 
     float time3 = getTimePast();
@@ -248,7 +276,7 @@ void regenerateMesh() {
         { false, 0.0f, 0.0f });
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
-    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
 }
 
 void mainGUICallback() {
@@ -275,7 +303,7 @@ void decimateMesh(bool shapeCost, bool angleCost) {
         { true, shapeCost ? 2.0f : 0.0f, angleCost ? 0.5f : 0.0f });
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
-    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
 }
 
 // viewport
@@ -324,7 +352,7 @@ EXTERN EMSCRIPTEN_KEEPALIVE
 void setMeshShowEdges(bool showEdges) {
     if (MeshParams::showEdges != showEdges) {
         MeshParams::showEdges = showEdges;
-        renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+        renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
     }
 }
 
@@ -332,7 +360,16 @@ EXTERN EMSCRIPTEN_KEEPALIVE
 void setMeshSmoothShading(bool smoothShading) {
     if (MeshParams::smoothShading != smoothShading) {
         MeshParams::smoothShading = smoothShading;
-        renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+        renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    }
+}
+
+EXTERN EMSCRIPTEN_KEEPALIVE
+void setColorSource(const char colorSource_[]) {
+    std::string colorSource(colorSource_);
+    if (MeshParams::colorSource != colorSource) {
+        MeshParams::colorSource = colorSource;
+        renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
     }
 }
 
@@ -367,15 +404,18 @@ uint8_t* generatePLY() {
         fileBuffer = writePLY(
             renderModel.vertices,
             *(std::vector<ivec3>*)&renderModel.indicesF,
-            renderModel.normals
+            renderModel.normals,
+            renderModel.useVertexColor ? renderModel.colors : std::vector<vec4>()
         );
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+        RenderModel model = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
         fileBuffer = writePLY(
             model.vertices,
-            *(std::vector<ivec3>*)&model.indicesF
+            *(std::vector<ivec3>*)&model.indicesF,
+            std::vector<vec3>(),
+            renderModel.useVertexColor ? model.colors : std::vector<vec4>()
         );
         MeshParams::smoothShading = false;
     }
@@ -393,7 +433,7 @@ uint8_t* generateOBJ() {
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+        RenderModel model = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
         fileBuffer = writeOBJ(
             model.vertices,
             *(std::vector<ivec3>*)&model.indicesF
@@ -409,15 +449,18 @@ uint8_t* generateGLB() {
         fileBuffer = writeGLB(
             renderModel.vertices,
             *(std::vector<ivec3>*)&renderModel.indicesF,
-            renderModel.normals
+            renderModel.normals,
+            renderModel.useVertexColor ? renderModel.colors : std::vector<vec4>()
         );
     }
     else {
         MeshParams::smoothShading = true;
-        RenderModel model = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+        RenderModel model = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
         fileBuffer = writeGLB(
             model.vertices,
-            *(std::vector<ivec3>*)&model.indicesF
+            *(std::vector<ivec3>*)&model.indicesF,
+            std::vector<vec3>(),
+            renderModel.useVertexColor ? model.colors : std::vector<vec4>()
         );
         MeshParams::smoothShading = false;
     }
@@ -451,7 +494,7 @@ int main() {
         { true, 0.0f, 0.0f });
     float t1 = getTimePast();
     printf("Total %.2g secs.\n \n", t1 - t0);
-    renderModel = prepareMesh(Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
+    renderModel = prepareMesh(glslFun, Prepared::verts, Prepared::tets, Prepared::faces, Prepared::edges);
 
     mainGUI(mainGUICallback);
 

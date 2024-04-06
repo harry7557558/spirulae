@@ -279,7 +279,7 @@ public:
         std::vector<glm::vec3> normals,
         std::vector<glm::ivec2> indices,
         std::vector<glm::vec4> colors,
-        float maxValue = 1.0f, float colorRemapK = 1.0f, float brightness = 1.0f
+        float maxValue = 1.0f, float colorRemapK = 1.0f, float brightness = 0.7f
     ) {
         glUseProgram(this->shaderProgram);
 
@@ -372,8 +372,10 @@ void main_loop() { loop(); }
 
 
 struct RenderModel {
+    bool useVertexColor;
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
+    std::vector<glm::vec4> colors;
     std::vector<glm::ivec3> indicesF;
     std::vector<glm::ivec2> indicesE;
 } renderModel;
@@ -414,14 +416,15 @@ void mainGUI(void (*callback)(void)) {
         // draw
         viewport->initDraw3D();
         if (!renderModel.vertices.empty()) {
-            glm::vec4 colorsF(0.9, 0.9, 0.9, 1);
-            glm::vec4 colorsE(0.6, 0.6, 0.6, 1);
+            if (renderModel.colors.empty())
+                renderModel.colors = std::vector<glm::vec4>(
+                    renderModel.vertices.size(), vec4(0.9,0.9,0.9,1));
             viewport->drawVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesF,
-                std::vector<glm::vec4>(renderModel.vertices.size(), colorsF));
+                renderModel.colors);
             if (!renderModel.indicesE.empty()) viewport->drawLinesVBO(
                 renderModel.vertices, renderModel.normals, renderModel.indicesE,
-                std::vector<glm::vec4>(renderModel.vertices.size(), colorsE));
+                renderModel.colors);
             // axes
             vec3 br = MeshgenParams::br;
             viewport->drawLinesVBO(

@@ -131,7 +131,8 @@ function webglRaiseNotSupportedError() {
 let loadShaderSourceCache = {};
 function getShaderSource(path) {
     if (!loadShaderSourceCache.hasOwnProperty(path))
-        throw new Error("Cache not found: " + path);
+        // throw new Error("Cache not found: " + path);
+        return null;
     return loadShaderSourceCache[path];
 }
 function loadShaderSources(sources, callback) {

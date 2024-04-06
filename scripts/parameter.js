@@ -586,6 +586,7 @@ function initMain(preloadShaderSources) {
 
     // load shaders and init WebGL
     if (typeof window.state == 'undefined') {
+        loadShaderSources(preloadShaderSources, () => {});
         initMathjax();
         return;
     }

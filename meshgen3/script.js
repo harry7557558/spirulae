@@ -87,9 +87,65 @@ document.body.onload = function (event) {
         'y': "y",
         'z': "z"
     };
+    MathParser.DependentVariables = {
+        0: {
+            'val': true,
+        },
+        1: {
+            'val': true,
+            'c_rgb': true,
+        },
+        2: {
+            'val': true,
+            'c_hsv': true,
+        },
+        3: {
+            'val': true,
+            'c_hsl': true,
+        },
+        'c_rgb': { type: 'vec3' },
+        'c_hsv': { type: 'vec3' },
+        'c_hsl': { type: 'vec3' },
+    };
 
-    // init code generator
-    CodeGenerator.langs.glsl.config = CodeGenerator.langs.glsl.presets.implicit3_compact;
+    CodeGenerator.langs.glsl.config = {
+        fun: [
+            "float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}",
+            "#define CUSTOM_COLOR rgb2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_rgb[0]%},{%c_rgb[1]%},{%c_rgb[2]%},{%val%});\n\
+}",
+            "#define CUSTOM_COLOR hsv2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_hsv[0]%},{%c_hsv[1]%},{%c_hsv[2]%},{%val%});\n\
+}",
+            "#define CUSTOM_COLOR hsl2rgb\n\
+float {%funname%}(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return {%val%};\n\
+}\n\
+vec4 {%funname%}C(float x, float y, float z) {\n\
+    float {%funbody%};\n\
+    return vec4({%c_hsl[0]%},{%c_hsl[1]%},{%c_hsl[2]%},{%val%});\n\
+}",
+        ],
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
 
     // init parameters
     initParameters([
@@ -102,6 +158,23 @@ document.body.onload = function (event) {
             function(value) {
                 Module.ccall('setMeshSmoothShading', null, ['number'], [value]);
             }),
+        new GraphingParameter("sColor", "select-color",
+            function(value) {
+                if (value == 0) {
+                    Module.ccall('setColorSource', null, ['string'], [""]);
+                    return;
+                }
+                function fun() {
+                    let shaderSource = getShaderSource("color.glsl");
+                    if (shaderSource === null) {
+                        setTimeout(fun, 10);
+                        return;
+                    }
+                    shaderSource = shaderSource.replaceAll("{%COLOR%}", value);
+                    Module.ccall('setColorSource', null, ['string'], [shaderSource]);
+                }
+                fun();
+            }),
         new GraphingParameter("cLatex", "checkbox-latex"),
         new GraphingParameter("cAutoUpdate", "checkbox-auto-compile"),
         new GraphingParameter("bLight", "checkbox-light"),
@@ -111,7 +184,9 @@ document.body.onload = function (event) {
     UpdateFunctionInputConfig.warnNaN = true;
 
     // main
-    initMain([]);
+    initMain([
+        "color.glsl",
+    ]);
 
     // init
     Module.onRuntimeInitialized = function() {

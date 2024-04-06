@@ -226,8 +226,13 @@
         <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
             data-gramm="false"></textarea>
         <br />
-        <span title="show mesh"><input type="checkbox" id="checkbox-edge" checked />mesh</span>&ensp;
-        <span title="smooth shading"><input type="checkbox" id="checkbox-normal" />normal</span>&ensp;
+        <span title="Show mesh"><input type="checkbox" id="checkbox-edge" checked />mesh</span>&ensp;
+        <span title="Smooth shading"><input type="checkbox" id="checkbox-normal" />normal</span>&ensp;
+        <span><select id="select-color">
+                <option value="0" selected>no</option>
+                <option value="1">normal</option>
+                <option value="2">gradient</option>
+            </select>color</span>
         <span title="Light theme" style="display:none;"><input type="checkbox" id="checkbox-light" checked disabled />☼</span>
         <br />
         <span>domain&nbsp;radius&nbsp;<select id="select-br">

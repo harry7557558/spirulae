@@ -48,7 +48,8 @@ std::vector<uint8_t> writeSTL(
 
 std::vector<uint8_t> writePLY(
     std::vector<vec3> verts, std::vector<ivec3> trigs,
-    std::vector<vec3> normals = std::vector<vec3>()
+    std::vector<vec3> normals = std::vector<vec3>(),
+    std::vector<vec4> colors = std::vector<vec4>()
 ) {
     std::vector<uint8_t> res;
 
@@ -62,6 +63,11 @@ std::vector<uint8_t> writePLY(
         header << "property float nx\n";
         header << "property float ny\n";
         header << "property float nz\n";
+    }
+    if (!colors.empty()) {
+        header << "property uchar red\n";
+        header << "property uchar green\n";
+        header << "property uchar blue\n";
     }
     header << "element face " << (int)trigs.size() << "\n";
     header << "property list uchar int vertex_index\n";
@@ -77,6 +83,13 @@ std::vector<uint8_t> writePLY(
             vec3 n = normals[i];
             n = vec3(n.x, n.z, -n.y);;
             extendVector(res, 12, &n);
+        }
+        if (!colors.empty()) {
+            vec3 c = colors[i];
+            uint8_t rgb[3];
+            for (int _ = 0; _ < 3; _++)
+                rgb[_] = (uint8_t)(255.0f*clamp(c[_],0.0f,1.0f)+0.5f);
+            extendVector(res, 3, rgb);
         }
     }
     assert(sizeof(ivec3) == 12);
@@ -94,7 +107,7 @@ std::vector<uint8_t> writeOBJ(
 ) {
     std::vector<uint8_t> res;
     char buf[1024];
-    sprintf(buf, "o meshgen2\n");
+    sprintf(buf, "o spirulae\n");
     extendVectorS(res, buf);
     for (vec3 v : verts) {
         sprintf(buf, "v %.6g %.6g %.6g\n", v.x, v.z, -v.y);
@@ -121,7 +134,8 @@ std::vector<uint8_t> writeOBJ(
 
 std::vector<uint8_t> writeGLB(
     std::vector<vec3> verts, std::vector<ivec3> trigs,
-    std::vector<vec3> normals = std::vector<vec3>()
+    std::vector<vec3> normals = std::vector<vec3>(),
+    std::vector<vec4> colors = std::vector<vec4>()
 ) {
     std::vector<uint8_t> res;
     assert(sizeof(vec3) == 12);
@@ -131,31 +145,44 @@ std::vector<uint8_t> writeGLB(
     int vbn = 12*vn;
     int tbn = 4*tn;
 
-    int normali = normals.empty() ? 1 : 2;
+    int normali = normals.empty() ? 0 : 1;
+    int colori = normali + (colors.empty() ? 0 : 1);
+    int indexi = colori + 1;
 
     std::stringstream json;
     json << "{";
     json << "\"asset\":{\"version\":\"2.0\"},";
     json << "\"scene\":0,";
     json << "\"scenes\":[{\"name\":\"Scene\",\"nodes\":[0]}],";
-    json << "\"nodes\":[{\"mesh\":0,\"name\":\"meshgen2\"}],";
-    json << "\"meshes\":[{\"name\":\"meshgen2\",\"primitives\":[";
-    if (normals.empty()) json << "{\"attributes\":{\"POSITION\":0},\"indices\":1}";
-    else json << "{\"attributes\":{\"POSITION\":0,\"NORMAL\":1},\"indices\":2}";
+    json << "\"nodes\":[{\"mesh\":0,\"name\":\"spirulae\"}],";
+    json << "\"meshes\":[{\"name\":\"spirulae\",\"primitives\":[";
+    json << "{\"attributes\":{\"POSITION\":0";
+    if (!normals.empty()) json << ",\"NORMAL\":" << normali;
+    if (!colors.empty()) json << ",\"COLOR_0\":" << colori;
+    json << "},\"indices\":" << indexi << "}";
     json << "]}],";
     json << "\"accessors\":[";
     json << "{\"bufferView\":0,\"componentType\":5126,\"count\":" << vn << ",\"type\":\"VEC3\"},";
     if (!normals.empty())
-        json << "{\"bufferView\":1,\"componentType\":5126,\"count\":" << vn << ",\"type\":\"VEC3\"},";
-    json << "{\"bufferView\":" << normali << ",\"componentType\":5125,\"count\":" << tn << ",\"type\":\"SCALAR\"}";
+        json << "{\"bufferView\":" << normali << ",\"componentType\":5126,\"count\":" << vn << ",\"type\":\"VEC3\"},";
+    if (!colors.empty())
+        json << "{\"bufferView\":" << colori << ",\"componentType\":5126,\"count\":" << vn << ",\"type\":\"VEC3\"},";
+    json << "{\"bufferView\":" << indexi << ",\"componentType\":5125,\"count\":" << tn << ",\"type\":\"SCALAR\"}";
     json << "],";
     json << "\"bufferViews\":[";
-    json << "{\"buffer\":0,\"byteLength\":" << vbn << ",\"byteOffset\":0,\"target\":34962},";
+    int byteOffset = 0;
+    json << "{\"buffer\":0,\"byteLength\":" << vbn << ",\"byteOffset\":" << byteOffset << ",\"target\":34962},",
+    byteOffset += vbn;
     if (!normals.empty())
-        json << "{\"buffer\":0,\"byteLength\":" << vbn << ",\"byteOffset\":" << vbn << ",\"target\":34962},";
-    json << "{\"buffer\":0,\"byteLength\":" << tbn << ",\"byteOffset\":" << (normali*vbn) << ",\"target\":34963}";
+        json << "{\"buffer\":0,\"byteLength\":" << vbn << ",\"byteOffset\":" << byteOffset << ",\"target\":34962},",
+        byteOffset += vbn;
+    if (!colors.empty())
+        json << "{\"buffer\":0,\"byteLength\":" << vbn << ",\"byteOffset\":" << byteOffset << ",\"target\":34962},",
+        byteOffset += vbn;
+    json << "{\"buffer\":0,\"byteLength\":" << tbn << ",\"byteOffset\":" << byteOffset << ",\"target\":34963}",
+    byteOffset += tbn;
     json << "],";
-    json << "\"buffers\":[{\"byteLength\":" << (normali*vbn+tbn) << "}]";
+    json << "\"buffers\":[{\"byteLength\":" << byteOffset << "}]";
     json << "}";
     std::string jsons = json.str();
     while (jsons.size() % 4 != 0)
@@ -166,7 +193,7 @@ std::vector<uint8_t> writeGLB(
     extendVectorS(res, "glTF");
     temp = 2;
     extendVector(res, 4, &temp);
-    temp = 12 + (4+4+(int)jsons.size()) + (4+4+normali*vbn+tbn);
+    temp = 12 + (4+4+(int)jsons.size()) + (4+4+byteOffset);
     extendVector(res, 4, &temp);
 
     // JSON
@@ -177,7 +204,7 @@ std::vector<uint8_t> writeGLB(
     extendVectorS(res, &jsons[0]);
 
     // data
-    temp = normali*vbn+tbn;
+    temp = byteOffset;
     extendVector(res, 4, &temp);
     temp = 0x004e4942;
     extendVector(res, 4, &temp);
@@ -188,6 +215,10 @@ std::vector<uint8_t> writeGLB(
     for (vec3 n : normals) {
         n = vec3(n.x, n.z, -n.y);
         extendVector(res, 12, &n);
+    }
+    for (vec4 c : colors) {
+        c = clamp(c, 0.0f, 1.0f);
+        extendVector(res, 12, &c);
     }
     extendVector(res, 4*tn, &trigs[0]);
 

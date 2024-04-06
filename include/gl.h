@@ -190,14 +190,16 @@ class GlBatchEvaluator3 {
     GLuint shaderProgram;
     GLuint framebuffer, texture;
     int textureW, textureH;
+    bool rgba;
 
 public:
-    GlBatchEvaluator3(std::string funRaw);
+    GlBatchEvaluator3(std::string funRaw, bool rgba);
     ~GlBatchEvaluator3();
     void evaluateFunction(size_t pn, const glm::vec3 *points, float *v);
 };
 
-GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw) {
+GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw, bool rgba) {
+    this->rgba = rgba;
     vsSource = R"(#version 300 es
         precision highp float;
         in vec2 aPosition;
@@ -209,6 +211,10 @@ GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw) {
             vXyz = aXyz;
         }
     )";
+    const std::string fragColor[2] = {
+        "vec4(funRaw(vXyz.x, vXyz.y, vXyz.z), 0, 0, 1)",
+        "funColor(vXyz)"
+    };
     fsSource = R"(#version 300 es
         precision highp float;
         in vec3 vXyz;
@@ -216,10 +222,10 @@ GlBatchEvaluator3::GlBatchEvaluator3(std::string funRaw) {
         )" + funRaw + R"(
 
         void main() {
-            float result = funRaw(vXyz.x, vXyz.y, vXyz.z);
-            fragColor = vec4(result, 0, 0, 1);
+            fragColor = )" + fragColor[rgba] + R"(;
         }
     )";
+    // printf("%s\n", fsSource.c_str());
     shaderProgram = createShaderProgram(&vsSource[0], &fsSource[0]);
 
     textureW = 256;
@@ -251,6 +257,7 @@ void GlBatchEvaluator3::evaluateFunction(
     size_t pn, const glm::vec3 *points, float *v) {
 
     if (shaderProgram == -1) {
+        printf("Warning: no shader program linked\n");
         for (size_t i = 0; i < pn; i++)
             v[i] = 0.0f;
         return;
@@ -292,9 +299,14 @@ void GlBatchEvaluator3::evaluateFunction(
 
         std::vector<glm::vec4> pixels(batch_size);
         glReadPixels(0, 0, textureW, textureH, GL_RGBA, GL_FLOAT, pixels.data());
-        for (int i = 0; i < batchn; i++)
-            v[batchi+i] = pixels[i].x;
-        // break;
+        if (this->rgba) {
+            for (int i = 0; i < 4*batchn; i++)
+                v[4*batchi+i] = ((float*)&pixels[0])[i];
+        }
+        else {
+            for (int i = 0; i < batchn; i++)
+                v[batchi+i] = pixels[i].x;
+        }
     }
 
     glDeleteBuffers(1, &vbo);
