@@ -1310,7 +1310,7 @@ void main(void) {
                 float u = dot(col, ru), v = dot(col, rv), w = dot(col, rd);
                 totcol = vec4(u, v, w, u*u+v*v);
             }
-            else totcol += vec4(col, 1) / sSamples;
+            else totcol += vec4(col, 1);
         }
     }
     fragColor = totcol;

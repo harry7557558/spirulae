@@ -356,6 +356,7 @@ vec3 {%funname%}Color(float x, float y, float z) {\n\
         "sky_model.glsl",
         "../shaders/frag-copy.glsl",
         "../shaders/frag-rt-post.glsl",
+        "../shaders/frag-rt-expand.glsl",
         "../shaders/frag-tonemap.glsl",
         "../shaders/dnn-conv2d-3.glsl",
         "../shaders/dnn-conv2d110.glsl",

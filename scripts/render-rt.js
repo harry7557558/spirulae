@@ -5,14 +5,17 @@ var renderer = {
     gl: null,
     renderSource: "",
     copySource: "",
+    expandSource: "",
     postSource: "",
     tonemapSource: "",
     positionBuffer: null,
     renderProgram: null,
     copyProgram: null,
+    expandProgram: null,
     postProgram: null,
     renderTarget: null,
     renderTargetAccum: null,
+    expandTarget: null,
     denoiseTarget: null,
     tonemapProgram: null,
     tonemapTarget: null,
@@ -153,11 +156,16 @@ async function drawScene(state, transformMatrix, lightDir) {
         }
     }
 
+    let outputFramebuffer = renderer.denoiser ?
+        renderer.denoiseTarget.framebuffer :
+        renderer.tonemapTarget.framebuffer;
+    let fractionalSpp = state.iSpp < (renderer.denoiser ? 2 : 2);
+
     // post processing
     gl.useProgram(renderer.postProgram);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.denoiser ?
-        renderer.denoiseTarget.framebuffer :
-        renderer.tonemapTarget.framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fractionalSpp ?
+        renderer.expandTarget.framebuffer : outputFramebuffer
+    );
     setPositionBuffer(gl, renderer.postProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, renderer.renderTargetAccum.texture);
@@ -170,6 +178,30 @@ async function drawScene(state, transformMatrix, lightDir) {
     gl.uniform1f(gl.getUniformLocation(renderer.postProgram, "iSpp"),
         state.iSpp+state.sSamples);
     renderPass();
+
+    // expand for <1spp
+    if (fractionalSpp) {
+        gl.useProgram(renderer.expandProgram);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, outputFramebuffer);
+        setPositionBuffer(gl, renderer.expandProgram);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, renderer.expandTarget.texture);
+        gl.uniform1i(gl.getUniformLocation(renderer.expandProgram, "iChannel0"), 0);
+        renderPass();
+    }
+    var niter = state.iSpp<1.0/64.0 ? 3 :
+            state.iSpp<1.0/16.0 ? 2 :
+            state.iSpp<1.0/4.0 ? 1 : 0;
+    for (var i = 0; i < niter; i++) {
+        gl.bindTexture(gl.TEXTURE_2D, renderer.expandTarget.sampler);
+        gl.copyTexImage2D(gl.TEXTURE_2D,
+            0, gl.RGBA32F, 0, 0, state.width, state.height, 0);
+        setPositionBuffer(gl, renderer.expandProgram);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, renderer.expandTarget.sampler);
+        gl.uniform1i(gl.getUniformLocation(renderer.expandProgram, "iChannel0"), 0);
+        renderPass();
+    }
 
     // denoising
     if (renderer.denoiser) {
@@ -308,6 +340,7 @@ function initWebGL() {
         "void main(){vXy=vertexPosition.xy;gl_Position=vertexPosition;}";
     renderer.renderSource = getShaderSource("frag-render.glsl");
     renderer.copySource = getShaderSource("../shaders/frag-copy.glsl");
+    renderer.expandSource = getShaderSource("../shaders/frag-rt-expand.glsl");
     renderer.postSource = getShaderSource("../shaders/frag-rt-post.glsl");
     renderer.tonemapSource = getShaderSource("../shaders/frag-tonemap.glsl");
     console.timeEnd("load glsl code");
@@ -368,6 +401,10 @@ function updateBuffers() {
     var oldRenderTargetNormal = renderer.renderTargetNormal;
     renderer.renderTargetNormal = createRenderTarget(gl, state.width, state.height, false, true, true);
     if (oldRenderTargetNormal) destroyRenderTarget(gl, oldRenderTargetNormal);
+
+    var oldExpandTarget = renderer.expandTarget;
+    renderer.expandTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
+    if (oldExpandTarget) destroyRenderTarget(gl, oldExpandTarget);
 
     var oldDenoiseTarget = renderer.denoiseTarget;
     renderer.denoiseTarget = createRenderTarget(gl, state.width, state.height, false, true, true);
@@ -625,9 +662,10 @@ function updateShaderFunction(funCode, funGradCode, params) {
         prevCode.tonemapSource = tonemapSource;
     }
 
-    if (!renderer.copyProgram) {
+    if (!renderer.copyProgram)
         renderer.copyProgram = createShaderProgram(gl, null, renderer.copySource);
-    }
+    if (!renderer.expandProgram)
+        renderer.expandProgram = createShaderProgram(gl, null, renderer.expandSource);
     if (!renderer.postProgram)
         renderer.postProgram = createShaderProgram(gl, null, renderer.postSource);
 
