@@ -363,6 +363,7 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
     }
     expr = expr1s[0].s;
 
+    console.log(expr);
     // multiplication sign
     var expr1 = "";
     for (var i = 0; i < expr.length;) {
@@ -375,23 +376,25 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         for (var j = 0; j < v.length;) {
             if (expr1.length > 0) {
                 var expr1back = expr1[expr1.length-1];
+                console.log(v, j, expr1, expr1back, has_);
                 if ((/\)/.test(expr1back) && (
                         /[A-Za-zΑ-Ωα-ω_\d\(]/.test(v[j]) ||
                         (v[j]=="." && j+1<v.length && /\d/.test(v[j+1]))
                         )) ||
                     (j != 0 && /[A-Za-zΑ-Ωα-ω_\d\.\)]/.test(v[j-1])
                         && /\(/.test(v[j])))
-                    expr1 += "*";
-                else if (!has_ && (
+                    expr1 += "*" , has_ = false;
+                else if ((!has_ && (
                         /[A-Za-zΑ-Ωα-ω]/.test(expr1back) ||
-                        /\d\.?$/.test(expr1)
+                        /\d\.$/.test(expr1)) ||
+                        /\d$/.test(expr1)
                     ) && (/[A-Za-zΑ-Ωα-ω]/.test(v[j]) ||
                         (/^\.\d/.test(v.slice(j)) && !/[\d\.]/.test(expr1back)))
                     && v[j] != "_")
-                    expr1 += "*";
+                    expr1 += "*", has_ = false;
                 else if (!has_ && /[A-Za-zΑ-Ωα-ω]/.test(expr1back)
                         && /\d/.test(v[j]))
-                    expr1 += "_";
+                    expr1 += "_", has_ = true;
             }
             var next_lp = v.substring(j, v.length).search(/\(/);
             if (next_lp != -1) {
@@ -417,6 +420,7 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         }
     }
     expr = expr1;
+    console.log(expr);
     
     // unwanted plus sign
     expr = expr.replace(/\(\+/g, "(");
