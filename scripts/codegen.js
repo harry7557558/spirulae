@@ -320,20 +320,6 @@ CodeGenerator.langs.js = {
             def: "    var {%varname%} = {%expr%};",
             joiner: "\n"
         },
-        ode2: {
-            fun: [
-                "function(x, y) {\n\
-{%funbody%}\n\
-    return { x: {%x_t%}, y: {%y_t%} };\n\
-}",
-                "function(x, y) {\n\
-{%funbody%}\n\
-    return { x: 1.0, y: {%y_x%} };\n\
-}"],
-            prefix: 'v',
-            def: "    var {%varname%} = {%expr%};",
-            joiner: "\n"
-        },
     },
     extensions: [
         {
@@ -1278,7 +1264,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
             }
         }
         if (result.code == "")
-            throw new Error("Empty code; did you assign too many value or color variables?");
+            throw new Error("You assigned too many output variables.");
     }
     result.code = result.code
         .replaceAll("{%funname%}", funname)

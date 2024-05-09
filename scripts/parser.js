@@ -363,7 +363,6 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
     }
     expr = expr1s[0].s;
 
-    console.log(expr);
     // multiplication sign
     var expr1 = "";
     for (var i = 0; i < expr.length;) {
@@ -376,7 +375,7 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         for (var j = 0; j < v.length;) {
             if (expr1.length > 0) {
                 var expr1back = expr1[expr1.length-1];
-                console.log(v, j, expr1, expr1back, has_);
+                // console.log(v, j, expr1, expr1back, has_);
                 if ((/\)/.test(expr1back) && (
                         /[A-Za-zΑ-Ωα-ω_\d\(]/.test(v[j]) ||
                         (v[j]=="." && j+1<v.length && /\d/.test(v[j+1]))
@@ -420,7 +419,6 @@ MathParser.exprToPostfix = function (expr, mathFunctions) {
         }
     }
     expr = expr1;
-    console.log(expr);
     
     // unwanted plus sign
     expr = expr.replace(/\(\+/g, "(");

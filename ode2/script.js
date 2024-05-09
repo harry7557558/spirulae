@@ -8,10 +8,11 @@ const builtinFunctions = [
     ["Swirl", "x_t=sin(x+y)+y;y_t=cos(x-y)"],
     ["Cooling", "k=3;T0=1;y_x=-k(y-T0)"],
     ["Asymptotes", "y_x=y^4-y^3-3*y^2+y+2"],
-    ["Circulation", "x_t=-y;y_t=x"],
+    ["Circulation", "vec2(-y,x)"],
     ["Swirls", "x_t=sin(x+y);y_t=cos(x-y)"],
     ["Pendulum", "#&#32;x:&#32;a;#&#32;y:&#32;a\';x_t=y;y_t=-sin(x)"],
     ["Electric Field", "d1=((x-1)^2+y^2)^(3/2);d2=((x+1)^2+y^2)^(3/2);x_t=(x-1)/d1-(x+1)/d2;y_t=y/d1-y/d2"],
+    ["Magnetic Field", "r0(p)=vec2(p.y,-p.x)/(p.x^2+p.y^2)^(3/2);r(u,v)=r0(vec2(x,y)-vec2(u,v));h(v,s)=r(s-2,v)+r(s-1,v)+r(s,v)+r(s+1,v)+r(s+2,v);h(1,0.1)-h(-1,-0.1)"],
     ["Lotka-Volterra", "x_t=x-xy;y_t=xy-y"],
     ["Spiral", "x_t=y+0.2x;y_t=0.2y-x"],
     ["Spiral Flower", "a=1+10sin(10atan2(y,x));x_t=y+0.2xa;y_t=0.2ya-x"],
@@ -42,11 +43,32 @@ document.body.onload = function (event) {
         },
         1: {
             'y_x': true
-        }
+        },
+        2: {
+            'val': true
+        },
+        'val': { type: 'vec2' }
     };
 
     // init code generator
-    CodeGenerator.langs.js.config = CodeGenerator.langs.js.presets.ode2;
+    CodeGenerator.langs.js.config = {
+        fun: [
+            "function(x, y) {\n\
+var {%funbody%};\n\
+return { x: {%x_t%}, y: {%y_t%} };\n\
+}",
+            "function(x, y) {\n\
+var {%funbody%};\n\
+return { x: 1.0, y: {%y_x%} };\n\
+}",
+            "function(x, y) {\n\
+var {%funbody%};\n\
+return { x: {%val[0]%}, y: {%val[1]%} };\n\
+}"],
+        prefix: 'v',
+        def: "{%varname%}={%expr%}",
+        joiner: ", "
+    };
 
     // init parameters
     initParameters([

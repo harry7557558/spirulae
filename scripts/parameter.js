@@ -526,7 +526,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             if (varname != 'val' && varname != 'latex')
                 expr[varname] = parsed[varname];
         if (UpdateFunctionInputConfig.useGL) {
-            result = CodeGenerator.postfixToSource([expr], ["funRaw"], 'glsl');
+            var result = CodeGenerator.postfixToSource([expr], ["funRaw"], 'glsl');
             var code = result.source;
             console.log(code);
             code = "uniform float iTime;\n\n" + code;
@@ -536,14 +536,14 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
                 console.warn("Function evaluation involves numerical approximation.");
             if (WarningStack.length != 0)
                 messageWarning(WarningStack.join('\n'));
-            try { updateShaderFunction(code, null, parameters); }
-            catch(e) { console.error(e); messageError(e); }
+            updateShaderFunction(code, null, parameters);
         }
         // JS function
         if (UpdateFunctionInputConfig.jsFunName) {
             var funname = UpdateFunctionInputConfig.jsFunName;
+            var result = null;
+            result = CodeGenerator.postfixToSource([expr], [funname], 'js');
             try {
-                var result = CodeGenerator.postfixToSource([expr], [funname], 'js');
                 eval('window.'+funname+'='+result.source);
             } catch(e) {
                 eval('window.'+funname+'=null');
@@ -551,8 +551,7 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
             let display = document.getElementById("value-display");
             if (display) display.style.display = 'none';
             if (!UpdateFunctionInputConfig.useGL) {
-                try { updateShaderFunction(result.source, null, parameters); }
-                catch(e) { console.error(e); messageError(e); }
+                updateShaderFunction(result.source, null, parameters);
             }
         }
     } catch (e) {
