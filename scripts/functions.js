@@ -821,6 +821,41 @@ BuiltInMathFunctions.rawMathFunctionsShared = [
         glslExt: ["mc_lzeta"],
         js: null,
     }),
+    new MathFunction(['besselJ0', 'BesselJ0', 'bessel_J0', 'Bessel_J0'], 1, {
+        latex: '\\mathrm{J}_0\\left(%1\\right)',
+        D: '-besselJ1(f1)*g1',
+        glsl: 'mf_bessel_j0(%1)',
+        glslExt: ['mf_bessel_j0'],
+        js: null,
+    }),
+    new MathFunction(['besselJ1', 'BesselJ1', 'bessel_J1', 'Bessel_J1'], 1, {
+        latex: '\\mathrm{J}_1\\left(%1\\right)',
+        D: '(besselJ0(f1)-besselJ1(f1)/f1)*g1',
+        glsl: 'mf_bessel_j1(%1)',
+        glslExt: ['mf_bessel_j1'],
+        js: null,
+    }),
+    new MathFunction(['besselJ2', 'BesselJ2', 'bessel_J2', 'Bessel_J2'], 1, {
+        latex: '\\mathrm{J}_2\\left(%1\\right)',
+        D: '(besselJ1(f1)-besselJ2(f1)*2/f1)*g1',
+        glsl: 'mf_bessel_j2(%1)',
+        glslExt: ['mf_bessel_j2'],
+        js: null,
+    }),
+    new MathFunction(['besselJ3', 'BesselJ3', 'bessel_J3', 'Bessel_J3'], 1, {
+        latex: '\\mathrm{J}_3\\left(%1\\right)',
+        D: '(besselJ2(f1)-besselJ3(f1)*3/f1)*g1',
+        glsl: 'mf_bessel_j3(%1)',
+        glslExt: ['mf_bessel_j3'],
+        js: null,
+    }),
+    new MathFunction(['besselJ4', 'BesselJ4', 'bessel_J4', 'Bessel_J4'], 1, {
+        latex: '\\mathrm{J}_4\\left(%1\\right)',
+        D: '(besselJ3(f1)-besselJ4(f1)*4/f1)*g1',
+        glsl: 'mf_bessel_j4(%1)',
+        glslExt: ['mf_bessel_j4'],
+        js: null,
+    }),
     new MathFunction(['vec2'], 2, {
         latex: '\\left(%1,%2\\right)'
     }),

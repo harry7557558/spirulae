@@ -542,15 +542,15 @@ function updateFunctionInput(forceRecompile = false, updateFunction = true) {
         if (UpdateFunctionInputConfig.jsFunName) {
             var funname = UpdateFunctionInputConfig.jsFunName;
             var result = null;
-            result = CodeGenerator.postfixToSource([expr], [funname], 'js');
             try {
+                result = CodeGenerator.postfixToSource([expr], [funname], 'js');
                 eval('window.'+funname+'='+result.source);
             } catch(e) {
                 eval('window.'+funname+'=null');
             }
             let display = document.getElementById("value-display");
             if (display) display.style.display = 'none';
-            if (!UpdateFunctionInputConfig.useGL) {
+            if (!UpdateFunctionInputConfig.useGL && result) {
                 updateShaderFunction(result.source, null, parameters);
             }
         }

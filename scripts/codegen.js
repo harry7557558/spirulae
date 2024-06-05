@@ -147,7 +147,145 @@ CodeGenerator.langs.glsl = {
         {
             name: 'mc_lzeta',
             source: "#define NO_AA"
-        }
+        },
+        {
+            name: 'mf_bessel_j0',
+            source: "float mf_bessel_j0(float x) {\n\
+    x = abs(x);\n\
+    const float A01 = -0.22334141550835468f;\n\
+    const float A02 = -0.18054514613169334f;\n\
+    const float A03 = 0.047655819492146555f;\n\
+    const float A04 = -0.0024383224605644127f;\n\
+    const float B01 = -0.2234104067240744f;\n\
+    const float B02 = 0.06997488447829185f;\n\
+    const float B03 = -0.009545108494228093f;\n\
+    const float B04 = 0.0011020589286710896f;\n\
+    const float C01 = -0.12645960753014673f;\n\
+    const float C02 = -0.046982403187758204f;\n\
+    const float D01 = 0.12546821167569544f;\n\
+    const float D02 = -0.08179017949118085f;\n\
+    if (x < 4.2f) {\n\
+        return (1.0f + x * (A01 + x * (A02 + x * (A03 + x * A04)))) / \n\
+               (1.0f + x * (B01 + x * (B02 + x * (B03 + x * B04))));\n\
+    } else {\n\
+        float inv_x = 1.0f / x;\n\
+        return sqrt(inv_x / 3.14159265) * \n\
+               ((1.0f + inv_x * (C01 + inv_x * C02)) * cos(x) + \n\
+                (1.0f + inv_x * (D01 + inv_x * D02)) * sin(x));\n\
+    }\n\
+}"
+        },
+        {
+            name: 'mf_bessel_j1',
+            source: "float mf_bessel_j1(float x) {\n\
+    float s = sign(x); x = abs(x);\n\
+    const float A11 = 0.5000532505934573f;\n\
+    const float A12 = -0.07119189008625842f;\n\
+    const float A13 = -0.03516544965310418f;\n\
+    const float A14 = 0.005137712441402014f;\n\
+    const float B11 = -0.14169754004287138f;\n\
+    const float B12 = 0.05321374041943971f;\n\
+    const float B13 = -0.006074191793869077f;\n\
+    const float B14 = 0.0008890431150018836f;\n\
+    const float C11 = -0.37578090667550257f;\n\
+    const float C12 = 0.13415846822338878f;\n\
+    const float D11 = 0.3771741874195154f;\n\
+    const float D12 = 0.08328593955487182f;\n\
+    if (x < 4.7f) {\n\
+        return s * (x * (A11 + x * (A12 + x * (A13 + x * A14)))) / \n\
+               (1.0f + x * (B11 + x * (B12 + x * (B13 + x * B14))));\n\
+    } else {\n\
+        float inv_x = 1.0f / x;\n\
+        return -s * sqrt(inv_x / 3.14159265) * \n\
+               ((1.0f + inv_x * (C11 + inv_x * C12)) * cos(x) - \n\
+                (1.0f + inv_x * (D11 + inv_x * D12)) * sin(x));\n\
+    }\n\
+}"
+        },
+        {
+            name: 'mf_bessel_j2',
+            source: "float mf_bessel_j2(float x) {\n\
+    x = abs(x);\n\
+    const float A22 = 0.12515704623184004f;\n\
+    const float A23 = -0.029939064720165425f;\n\
+    const float A24 = 0.0010672441356451344f;\n\
+    const float B21 = -0.23414231622686957f;\n\
+    const float B22 = 0.08321793931659045f;\n\
+    const float B23 = -0.012670220025970099f;\n\
+    const float B24 = 0.0015767563111494629f;\n\
+    const float C21 = 1.874412399273724f;\n\
+    const float C22 = -0.8101992991186221f;\n\
+    const float C23 = 0.3015954731134034f;\n\
+    const float D21 = -1.871274305839778f;\n\
+    const float D22 = -0.8861009908575821f;\n\
+    if (x < 4.0f) {\n\
+        return (x * x * (A22 + x * (A23 + x * A24))) / \n\
+               (1.0f + x * (B21 + x * (B22 + x * (B23 + x * B24))));\n\
+    } else {\n\
+        float inv_x = 1.0f / x;\n\
+        return -sqrt(inv_x / 3.14159265) * \n\
+               ((1.0f + inv_x * (C21 + inv_x * (C22 + inv_x * C23))) * cos(x) + \n\
+                (1.0f + inv_x * (D21 + inv_x * D22)) * sin(x));\n\
+    }\n\
+}"
+        },
+        {
+            name: 'mf_bessel_j3',
+            source: "float mf_bessel_j3(float x) {\n\
+    float s = sign(x); x = abs(x);\n\
+    const float A33 = 0.020910819133348472f;\n\
+    const float A34 = -0.005072094376038419f;\n\
+    const float A35 = 0.0002802765938927514f;\n\
+    const float B31 = -0.2330616229268751f;\n\
+    const float B32 = 0.06455328873550212f;\n\
+    const float B33 = -0.008312028977714348f;\n\
+    const float B34 = 0.0007466861514973682f;\n\
+    const float C31 = -4.376749965939438f;\n\
+    const float C32 = -7.327544311795212f;\n\
+    const float C33 = 2.8595505732173425f;\n\
+    const float D31 = 4.374149309521666f;\n\
+    const float D32 = -7.3507982430716545f;\n\
+    const float D33 = -3.7324735035522663f;\n\
+    if (x < 5.0f) {\n\
+        return s * (x * x * x * (A33 + x * (A34 + x * A35))) / \n\
+               (1.0f + x * (B31 + x * (B32 + x * (B33 + x * B34))));\n\
+    } else {\n\
+        float inv_x = 1.0f / x;\n\
+        return s * sqrt(inv_x / 3.14159265) * \n\
+               ((1.0f + inv_x * (C31 + inv_x * (C32 + inv_x * C33))) * cos(x) - \n\
+                (1.0f + inv_x * (D31 + inv_x * (D32 + inv_x * D33))) * sin(x));\n\
+    }\n\
+}"
+        },
+        {
+            name: 'mf_bessel_j4',
+            source: "float mf_bessel_j4(float x) {\n\
+    x = abs(x);\n\
+    const float A44 = 0.002644492060608329f;\n\
+    const float A45 = -0.0006004507528516955f;\n\
+    const float A46 = 0.00003320308950860871f;\n\
+    const float B41 = -0.20296731043978247f;\n\
+    const float B42 = 0.04338600070178919f;\n\
+    const float B43 = -0.0035265908540099847f;\n\
+    const float B44 = 0.00013712907221840123f;\n\
+    const float B45 = 0.000012746991211123013f;\n\
+    const float C41 = 7.881701792737443f;\n\
+    const float C42 = -27.37611266073206f;\n\
+    const float C43 = -39.62023054032f;\n\
+    const float D41 = -7.865445288974054f;\n\
+    const float D42 = -27.479039704046176f;\n\
+    const float D43 = 49.286435632834696f;\n\
+    if (x < 8.0f) {\n\
+        return (x * x * x * x * (A44 + x * (A45 + x * A46))) / \n\
+               (1.0f + x * (B41 + x * (B42 + x * (B43 + x * (B44 + x * B45)))));\n\
+    } else {\n\
+        float inv_x = 1.0f / x;\n\
+        return sqrt(inv_x / 3.14159265) * \n\
+               ((1.0f + inv_x * (C41 + inv_x * (C42 + inv_x * C43))) * cos(x) + \n\
+                (1.0f + inv_x * (D41 + inv_x * (D42 + inv_x * D43))) * sin(x));\n\
+    }\n\
+}"
+        },
     ],
 };
 
