@@ -9,7 +9,7 @@ let CodeGenerator = {
         @inherit: inherit math function definitions from these languages if not specified
         @extensions: additional required functions/definitions, don't inherit
     */
-    langsOrder: ['glsl', 'glslc', 'cppf', 'cppd', 'js'],
+    langsOrder: ['glsl', 'cppf', 'cppd', 'js'],
     langs: {}
 };
 
@@ -286,41 +286,6 @@ CodeGenerator.langs.glsl = {
     }\n\
 }"
         },
-    ],
-};
-
-// complex-valued GLSL
-CodeGenerator.langs.glslc = {
-    inherit: [],
-    config: null,
-    presets: {
-        complex: {
-            fun: "vec2 {%funname%}(vec2 z) {\n\
-{%funbody%}\n\
-    return {%val%};\n\
-}",
-            prefix: 'v',
-            def: "    vec2 {%varname%} = {%expr%};",
-            joiner: "\n"
-        },
-    },
-    extensions: [
-        {
-            name: 'mc_gamma',
-            source: ""
-        },
-        {
-            name: 'mc_lgamma',
-            source: ""
-        },
-        {
-            name: 'mc_zeta',
-            source: "#define NO_AA"
-        },
-        {
-            name: 'mc_lzeta',
-            source: "#define NO_AA"
-        }
     ],
 };
 

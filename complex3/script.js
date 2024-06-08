@@ -28,11 +28,6 @@ document.body.onload = function (event) {
             // .concat(BuiltInMathFunctions.rawMathFunctionsC)
             .concat(BuiltInMathFunctions.rawMathFunctionsR)
     );
-    // MathFunctions['zeta'][1].langs.glslc = "mc_zeta_fast(%1)";
-    // for (var i = 0; i < 3; i++) {
-    //     var funname = ['logzeta', 'lnzeta', 'lzeta'][i];
-    //     MathFunctions[funname][1].langs.glslc = "mc_lnzeta_fast(%1)";
-    // }
     MathParser.IndependentVariables = {
         'z_real': "z_real",
         'z_imag': "z_imag",
