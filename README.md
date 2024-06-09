@@ -128,58 +128,58 @@ For readers with technical background, Spirulae recompiles shader every time the
 
 Complex domain coloring
 
-[![](../assets/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirulae/complex/)
+[![](./assets/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirulae/complex/)
 
 The gamma function in 3D
 
-[![](../assets/gallery-complex3-gamma-2.jpg)](https://harry7557558.github.io/spirulae/complex3/)
+[![](./assets/gallery-complex3-gamma-2.jpg)](https://harry7557558.github.io/spirulae/complex3/)
 
 A realistic rendering of gamma function in 3D
 
-[![](../assets/gallery-implicit3rt-gamma.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt/)
+[![](./assets/gallery-implicit3rt-gamma.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt/)
 
 A sextic algebraic surface
 
-[![](../assets/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+[![](./assets/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
 Scalar field visualization
 
-[![](../assets/gallery-implicit3-roots-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+[![](./assets/gallery-implicit3-roots-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
-[![](../assets/gallery-implicit3-bullhead.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+[![](./assets/gallery-implicit3-bullhead.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
 Parametric surfaces
 
-[![](../assets/gallery-paramsurf-spherical.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+[![](./assets/gallery-paramsurf-spherical.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
 
-[![](../assets/gallery-paramsurf-cups.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+[![](./assets/gallery-paramsurf-cups.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
 
-[![](../assets/gallery-paramsurf-boysurf.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+[![](./assets/gallery-paramsurf-boysurf.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
 
 A 3D Mandelbrot set
 
-[![](../assets/gallery-complex3-mandelbrot.jpg)](https://harry7557558.github.io/spirulae/complex3/)
+[![](./assets/gallery-complex3-mandelbrot.jpg)](https://harry7557558.github.io/spirulae/complex3/)
 
 A path-traced fractal
 
-[![](../assets/gallery-implicit3rt-mandeltorus.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+[![](./assets/gallery-implicit3rt-mandeltorus.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
 
 Another path-traced fractal
 
-[![](../assets/gallery-implicit3rt-sponge1.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+[![](./assets/gallery-implicit3rt-sponge1.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
 
-[![](../assets/gallery-implicit3rt-sponge2.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+[![](./assets/gallery-implicit3rt-sponge2.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
 
 Crystals modeled using math equations
 
-[![](../assets/gallery-implicit3rt-crystal.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+[![](./assets/gallery-implicit3rt-crystal.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
 
 3D mesh models generated from math equations
 
-[![](../assets/gallery-meshgen3-bullhead.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
+[![](./assets/gallery-meshgen3-bullhead.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
 
-[![](../assets/gallery-meshgen3-julia.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
+[![](./assets/gallery-meshgen3-julia.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
 
 A perfectly normal 2D plot
 
-[![](../assets/gallery-ode2-cylflow.jpg)](https://harry7557558.github.io/spirulae/ode2)
+[![](./assets/gallery-ode2-cylflow.jpg)](https://harry7557558.github.io/spirulae/ode2)

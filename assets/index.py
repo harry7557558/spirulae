@@ -5,10 +5,10 @@ html = open("assets/index_base.html").read()
 readme = open("assets/readme_base.md").read()
 
 md = open("assets/index.md").read()
+md = md.replace('../assets', './assets')
 # md = '\n'.join([line for line in md.split('\n') if not line.startswith('[//]')])
 
 html = html.replace("{%index.md%}", markdown.markdown(md))
-html = html.replace('../assets', './assets')
 readme = readme.replace("{%index.md%}", md)
 
 now = datetime.datetime.now()
