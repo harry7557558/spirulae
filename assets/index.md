@@ -1,6 +1,6 @@
 GPU-accelerated math function graphers in web browsers, both 3D and 2D.
 
-This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.
+This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering, so I made one, and the development continued. I was initially inspired by raymarching demos on [Shadertoy](https://www.shadertoy.com/), but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.
 
 It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to [open an issue on GitHub](https://github.com/harry7557558/spirulae/issues).
 
@@ -24,6 +24,7 @@ The 3D graphers have the following features implemented:
 
  - Infinite and bounded domain
  - Scalar field visualization
+ - Mathematically-defined custom colors
  - Speed vs. quality control
  - Multiple shading and grid modes
  - Dark and light color themes
@@ -36,6 +37,8 @@ Experimental features (subject to change):
 
  - Animation via `iTime(0)`
  - Export C++ code for 3D implicit grapher, via `exportCurrentFunction('cppd')` in the browser JS console
+ - Custom code generation (`/autodiff`)
+ - 2D implicit curve grapher (`/implicit2`)
 
 ----
 
@@ -46,12 +49,10 @@ Spirulae is under active development. Tools and features that are being develope
  - 3D mesh generation (`/meshgen3`)
  - 2D mesh generation (`/meshgen2`)
  - 2D vector field (`/ode2`)
- <!-- - Automatic differentiation (`/autodiff`) -->
 
 Features that may be implemented in the future (ordered approximately by priority):
 
  - More robust equation parsing
- - Mathematically-defined custom colors
  - More flexible viewport control
  - Variable sliders
  - Graph sharing via URL, `<iframe>` embed for webpages
@@ -64,6 +65,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
  - Mesh generation and simplification
  - FEA and general physical simulation
  - Visualization of 3D vector and tensor fields
+ - Fitting to NURBS and subdivision surfaces
 
 ----
 
@@ -72,7 +74,7 @@ Ongoing and proposed research topics (ordered approximately by progress):
 Spirulae has the following web dependencies:
 
  - [WebGL 2](https://webglreport.com/?v=2)
-    - `EXT_color_buffer_float` and `EXT_float_blend`, required for path tracing and mesh generation
+    - `EXT_color_buffer_float`, required for path tracing and mesh generation
     - `EXT_disjoint_timer_query_webgl2` (*optional*), an FPS counter will be shown when available
  - WebAssembly, required for mesh generation
  - [MathJax 3](https://www.mathjax.org/), required for equation preview
@@ -116,33 +118,62 @@ For readers with technical background, Spirulae recompiles shader every time the
 
 ## Gallery
 
-**Note: This gallery has not been updated for a while.**  
-To see more recent visual results, a gallery of unfiltered process screenshots can be found [here](https://spirulae.github.io/gallery/). Note that the page is intended to be a progress overview rather than a showcase gallery.
+**Note:** To see more recent visual results, a gallery of unfiltered process screenshots can be found [here](https://spirulae.github.io/gallery/). The page is intended to be a progress overview rather than a showcase gallery.
 
 Complex domain coloring
 
-[![](./home/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirulae/complex/)
+[![](../assets/gallery-complex-trigs.jpg)](https://harry7557558.github.io/spirulae/complex/)
 
 The gamma function in 3D
 
-[![](./home/gallery-complex3-gamma-2.jpg)](https://harry7557558.github.io/spirulae/complex3/)
+[![](../assets/gallery-complex3-gamma-2.jpg)](https://harry7557558.github.io/spirulae/complex3/)
+
+A realistic rendering of gamma function in 3D
+
+[![](../assets/gallery-implicit3rt-gamma.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt/)
 
 A sextic algebraic surface
 
-[![](./home/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+[![](../assets/gallery-implicit3-barth6.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
-A fractal with scalar field visualized
+Scalar field visualization
 
-[![](./home/gallery-implicit3-roots-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+[![](../assets/gallery-implicit3-roots-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
-A clipped quintic implicit surface, with volumetrics showing isosurfaces
+[![](../assets/gallery-implicit3-bullhead.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
 
-[![](./home/gallery-implicit3-field.jpg)](https://harry7557558.github.io/spirulae/implicit3/)
+Parametric surfaces
 
-A parametric surface rendered in X-ray mode
+[![](../assets/gallery-paramsurf-spherical.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
 
-[![](./home/gallery-paramsurf-twist.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+[![](../assets/gallery-paramsurf-cups.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+
+[![](../assets/gallery-paramsurf-boysurf.jpg)](https://harry7557558.github.io/spirulae/paramsurf/)
+
+A 3D Mandelbrot set
+
+[![](../assets/gallery-complex3-mandelbrot.jpg)](https://harry7557558.github.io/spirulae/complex3/)
 
 A path-traced fractal
 
-[![](./home/gallery-implicit3-rt-mandeltorus.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+[![](../assets/gallery-implicit3rt-mandeltorus.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+
+Another path-traced fractal
+
+[![](../assets/gallery-implicit3rt-sponge1.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+
+[![](../assets/gallery-implicit3rt-sponge2.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+
+Crystals modeled using math equations
+
+[![](../assets/gallery-implicit3rt-crystal.jpg)](https://harry7557558.github.io/spirulae/implicit3-rt)
+
+3D mesh models generated from math equations
+
+[![](../assets/gallery-meshgen3-bullhead.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
+
+[![](../assets/gallery-meshgen3-julia.jpg)](https://harry7557558.github.io/spirulae/meshgen3)
+
+A perfectly normal 2D plot
+
+[![](../assets/gallery-ode2-cylflow.jpg)](https://harry7557558.github.io/spirulae/ode2)

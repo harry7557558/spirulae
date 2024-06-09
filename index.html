@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/" />
 
-    <link rel="stylesheet" href="./home/style.css" />
+    <link rel="stylesheet" href="./assets/style.css" />
 
     <style>
       .a {
@@ -24,60 +24,62 @@
 
 <body>
 
+   <div id="s" style="position:absolute;top:0;height:0px;"></div>
+
     <div id="container">
 
          <h1 style="text-align:center;margin-bottom:0;">Spirulae:
             Web-Based Math Visualization</h1>
          <p style="text-align:center;">
-            <em style="color:#555">by Harry Chen - updated January 2024</em>
+            <em style="color:#555">by Harry Chen - page updated June 2024</em>
             <br/>
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
          </p>
 
          <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
-            <img src="home/img-implicit3.jpg" style="width:100%"></img>
+            <img src="assets/img-implicit3.jpg" style="width:100%" />
             <br/>
             3D Implicit Surface Grapher
          </a>
          <a href="https://harry7557558.github.io/spirulae/paramsurf/" class="a">
-            <img src="home/img-paramsurf.jpg" style="width:100%"></img>
+            <img src="assets/img-paramsurf.jpg" style="width:100%" />
             <br/>
             3D Parametric Surface Grapher
          </a>
          <a href="https://harry7557558.github.io/spirulae/complex/" class="a">
-            <img src="home/img-complex.jpg" style="width:100%"></img>
+            <img src="assets/img-complex.jpg" style="width:100%" />
             <br/>
             Complex Domain Coloring Grapher
          </a>
          <a href="https://harry7557558.github.io/spirulae/complex3/" class="a">
-            <img src="home/img-complex3.jpg" style="width:100%"></img>
+            <img src="assets/img-complex3.jpg" style="width:100%" />
             <br/>
             3D Complex Function Grapher
          </a>
          <a href="https://harry7557558.github.io/spirulae/implicit3-rt/" class="a">
-            <img src="home/img-implicit3-rt.jpg" style="width:100%"></img>
+            <img src="assets/img-implicit3rt.jpg" style="width:100%" />
             <br/>
             Implicit Surface Path Tracer<br />(powerful GPU required)
          </a>
          <a href="https://harry7557558.github.io/spirulae/meshgen3/" class="a">
-            <img src="home/img-meshgen3.jpg" style="width:100%"></img>
+            <img src="assets/img-meshgen3.jpg" style="width:100%" />
             <br/>
             3D Implicit Mesh Generator (dev)<br /> &nbsp;
          </a>
          <a href="https://harry7557558.github.io/spirulae/ode2/" class="a">
-            <img src="home/img-ode2.jpg" style="width:100%"></img>
+            <img src="assets/img-ode2.jpg" style="width:100%" />
             <br/>
             2D Vector Field Grapher (dev)
          </a>
          <a href="https://harry7557558.github.io/spirulae/meshgen2/" class="a">
-            <img src="home/img-meshgen2.jpg" style="width:100%"></img>
+            <img src="assets/img-meshgen2.jpg" style="width:100%" />
             <br/>
             2D to 3D Mesh Generator (dev)
          </a>
 
          <p>GPU-accelerated math function graphers in web browsers, both 3D and 2D.</p>
-<p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering on the internet, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
+<p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
 <p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
 <p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
 <hr />
@@ -96,6 +98,7 @@
 <ul>
 <li>Infinite and bounded domain</li>
 <li>Scalar field visualization</li>
+<li>Mathematically-defined custom colors</li>
 <li>Speed vs. quality control</li>
 <li>Multiple shading and grid modes</li>
 <li>Dark and light color themes</li>
@@ -108,6 +111,8 @@
 <ul>
 <li>Animation via <code>iTime(0)</code></li>
 <li>Export C++ code for 3D implicit grapher, via <code>exportCurrentFunction('cppd')</code> in the browser JS console</li>
+<li>Custom code generation (<code>/autodiff</code>)</li>
+<li>2D implicit curve grapher (<code>/implicit2</code>)</li>
 </ul>
 <hr />
 <h2>Working in Progress</h2>
@@ -115,14 +120,11 @@
 <ul>
 <li>3D mesh generation (<code>/meshgen3</code>)</li>
 <li>2D mesh generation (<code>/meshgen2</code>)</li>
-<li>2D vector field (<code>/ode2</code>)
- <!-- - Automatic differentiation (`/autodiff`) -->
-</li>
+<li>2D vector field (<code>/ode2</code>)</li>
 </ul>
 <p>Features that may be implemented in the future (ordered approximately by priority):</p>
 <ul>
 <li>More robust equation parsing</li>
-<li>Mathematically-defined custom colors</li>
 <li>More flexible viewport control</li>
 <li>Variable sliders</li>
 <li>Graph sharing via URL, <code>&lt;iframe&gt;</code> embed for webpages</li>
@@ -136,13 +138,14 @@
 <li>Mesh generation and simplification</li>
 <li>FEA and general physical simulation</li>
 <li>Visualization of 3D vector and tensor fields</li>
+<li>Fitting to NURBS and subdivision surfaces</li>
 </ul>
 <hr />
 <h2>Limitations</h2>
 <p>Spirulae has the following web dependencies:</p>
 <ul>
 <li><a href="https://webglreport.com/?v=2">WebGL 2</a><ul>
-<li><code>EXT_color_buffer_float</code> and <code>EXT_float_blend</code>, required for path tracing and mesh generation</li>
+<li><code>EXT_color_buffer_float</code>, required for path tracing and mesh generation</li>
 <li><code>EXT_disjoint_timer_query_webgl2</code> (<em>optional</em>), an FPS counter will be shown when available</li>
 </ul>
 </li>
@@ -176,23 +179,40 @@ Note that shader sources adapted from <a href="https://www.shadertoy.com/">Shade
 <p>For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation">postfix notation</a> and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.</p>
 <hr />
 <h2>Gallery</h2>
-<p><strong>Note: This gallery has not been updated for a while.</strong><br />
-To see more recent visual results, a gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. Note that the page is intended to be a progress overview rather than a showcase gallery.</p>
+<p><strong>Note:</strong> To see more recent visual results, a gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. The page is intended to be a progress overview rather than a showcase gallery.</p>
 <p>Complex domain coloring</p>
-<p><a href="https://harry7557558.github.io/spirulae/complex/"><img alt="" src="./home/gallery-complex-trigs.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/complex/"><img alt="" src="./assets/gallery-complex-trigs.jpg" /></a></p>
 <p>The gamma function in 3D</p>
-<p><a href="https://harry7557558.github.io/spirulae/complex3/"><img alt="" src="./home/gallery-complex3-gamma-2.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/complex3/"><img alt="" src="./assets/gallery-complex3-gamma-2.jpg" /></a></p>
+<p>A realistic rendering of gamma function in 3D</p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt/"><img alt="" src="./assets/gallery-implicit3rt-gamma.jpg" /></a></p>
 <p>A sextic algebraic surface</p>
-<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-barth6.jpg" /></a></p>
-<p>A fractal with scalar field visualized</p>
-<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-roots-field.jpg" /></a></p>
-<p>A clipped quintic implicit surface, with volumetrics showing isosurfaces</p>
-<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./home/gallery-implicit3-field.jpg" /></a></p>
-<p>A parametric surface rendered in X-ray mode</p>
-<p><a href="https://harry7557558.github.io/spirulae/paramsurf/"><img alt="" src="./home/gallery-paramsurf-twist.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./assets/gallery-implicit3-barth6.jpg" /></a></p>
+<p>Scalar field visualization</p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./assets/gallery-implicit3-roots-field.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3/"><img alt="" src="./assets/gallery-implicit3-bullhead.jpg" /></a></p>
+<p>Parametric surfaces</p>
+<p><a href="https://harry7557558.github.io/spirulae/paramsurf/"><img alt="" src="./assets/gallery-paramsurf-spherical.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/paramsurf/"><img alt="" src="./assets/gallery-paramsurf-cups.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/paramsurf/"><img alt="" src="./assets/gallery-paramsurf-boysurf.jpg" /></a></p>
+<p>A 3D Mandelbrot set</p>
+<p><a href="https://harry7557558.github.io/spirulae/complex3/"><img alt="" src="./assets/gallery-complex3-mandelbrot.jpg" /></a></p>
 <p>A path-traced fractal</p>
-<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./home/gallery-implicit3-rt-mandeltorus.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./assets/gallery-implicit3rt-mandeltorus.jpg" /></a></p>
+<p>Another path-traced fractal</p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./assets/gallery-implicit3rt-sponge1.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./assets/gallery-implicit3rt-sponge2.jpg" /></a></p>
+<p>Crystals modeled using math equations</p>
+<p><a href="https://harry7557558.github.io/spirulae/implicit3-rt"><img alt="" src="./assets/gallery-implicit3rt-crystal.jpg" /></a></p>
+<p>3D mesh models generated from math equations</p>
+<p><a href="https://harry7557558.github.io/spirulae/meshgen3"><img alt="" src="./assets/gallery-meshgen3-bullhead.jpg" /></a></p>
+<p><a href="https://harry7557558.github.io/spirulae/meshgen3"><img alt="" src="./assets/gallery-meshgen3-julia.jpg" /></a></p>
+<p>A perfectly normal 2D plot</p>
+<p><a href="https://harry7557558.github.io/spirulae/ode2"><img alt="" src="./assets/gallery-ode2-cylflow.jpg" /></a></p>
 
+         <p style="text-align: center;">
+         <a href="#s">Back to top</a>
+         </p>
     </div>
 
 </body>

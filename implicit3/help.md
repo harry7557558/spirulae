@@ -2,7 +2,7 @@
 
 <p>By Harry Chen (harry7557558) - I couldn't find a satisfying tool on the internet, so I made one. I was inspired by raymarching demos on <a href="https://www.shadertoy.com/" target="_blank">Shadertoy</a>.</p>
 
-<img src="../home/gallery-implicit3-barth6.jpg" alt="gallery-implicit3-barth6.jpg" />
+<img src="../assets/gallery-implicit3-barth6.jpg" alt="gallery-implicit3-barth6.jpg" />
 
 <p>This tool implements the raymarching algorithm to render 3D implicit surfaces. Type equations in the input box, or look at some examples. Drag the canvas to rotate the surface, and scroll to zoom in/out. Drag while holding <code>Shift</code> to move the graph on the screen. Reset the viewport by switching to an example and switching back (you may want to back up your input). Try to play with selectors, checkboxes, and sliders.</p>
 
