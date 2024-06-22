@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>2D Parametric Curve Grapher | Spirulae</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href="https://harry7557558.github.io/spirulae/paramcurve2/" />
+
+    <link rel="stylesheet" href="../styles/style.css" />
+
+</head>
+
+<body>
+    <canvas id="canvas" class='cursor-crosshair'></canvas>
+
+    <div id="legend">
+        <div id="fps"></div>
+        <svg id="axes" width="120" height="40">
+            <g transform="translate(0,5)">
+                <rect id="legend-scale" x="0" y="0" width="0" height="20" stroke="none" fill="rgba(96,96,96,0.7)" />
+                <text id="legend-text" x="0" y="15" text-anchor="middle" alignment-baseline="top" stroke="none"
+                    fill="white" font-family="monospace" font-size="1.2em"></text>
+            </g>
+        </svg>
+    </div>
+
+    <div id="control">
+        <span title="Light theme" style="display:none;"><input type="checkbox" id="checkbox-light" checked disabled />☼</span>
+
+        <select id="builtin-functions"></select>
+        <span title="Update equation (Alt+Enter)"><button id="button-update">update</button></span>
+        <a href='#' style="float:right"
+            onclick='javascript:event.preventDefault();document.getElementById("help-menu").style.visibility="visible";'>help</a>
+        <br />
+        <span title="Display a preview of the input equation"><input type="checkbox" id="checkbox-latex"
+                checked />equation preview</span>&ensp;
+        <span title="Automatically update the shader on input"><input type="checkbox" id="checkbox-auto-compile"
+                checked />auto-update</span>&ensp;
+        <br />
+        <textarea id="equation-input" spellcheck="false" autocapitalize="off" autocorrect="off"
+            data-gramm="false"></textarea>
+        <br />
+        <p id="value-display"></p>
+        <p id="error-message" style="display:none"></p>
+    </div>
+
+    <div id="mathjax-preview" style="left:0px;top:0px;display:none"></div>
+
+    <div id="help-menu" style="visibility:hidden">
+        <div id="help-menu-hide" onclick='document.getElementById("help-menu").style.visibility="hidden"'>×</div>
+    </div>
+
+    <script>
+        (function () {
+            // refresh cache every one hour
+            function loadScript(src) {
+                var hour = Math.floor(Date.now() / 3600000);
+                var script = document.createElement("script");
+                script.src = src + "?nocache=" + hour;
+                document.head.appendChild(script);
+            }
+            loadScript("../scripts/parameter.js");
+            loadScript("../scripts/functions.js");
+            loadScript("../scripts/parser.js");
+            loadScript("../scripts/codegen.js");
+            loadScript("../scripts/render-gl.js");
+            loadScript("../scripts/render-canvas.js");
+            loadScript("../scripts/latex.js");
+            loadScript("app.js");
+            loadScript("split-curve.js");
+            loadScript("script.js");
+        })();
+    </script>
+
+</body>
+
+</html>
