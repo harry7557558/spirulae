@@ -37,7 +37,8 @@ void main(void) {
     x.xyz = tonemap{%TONEMAP%}(x.xyz);
 
     if (isnan(x.x+x.y+x.z))
-        x.xyz = vec3(1,0,0);
+        // x.xyz = vec3(1,0,0);
+        x.xyz = vec3(0.5);
 
     fragColor = vec4(x.xyz,1);
 }

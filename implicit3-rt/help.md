@@ -14,11 +14,11 @@
 
 <p>- <b>Precision</b>: A parameter that controls step size for ray-surface intersection, higher precision for more accurate intersection but slower rendering.</p>
 
-<p>- <b>SPP</b>: Terminating Sample Per Pixel for rendering. Currently, each pixel is given the same SPP.</p>
+<p>- <b>SPP</b>: Maximium <b>S</b>ample <b>P</b>er <b>P</b>ixel for rendering. Currently, each pixel is given the same SPP.</p>
 
 <p>- <b>Path depth</b>: Maximum light path depth before termination. Increase this for scenes with strong scattering and/or indirect lighting, which can slow down rendering.</p>
 
-<p>- <b>MIS (beta)</b>: Check this to enable Multiple Importance Sampling, which can reduce variance for scenes with very small and bright light sources. Currently in development.</p>
+<!-- <p>- <b>MIS (beta)</b>: Check this to enable Multiple Importance Sampling, which can reduce variance for scenes with very small and bright light sources. Currently in development.</p> -->
 
 <p>- <b>Clip</b> and <b>closed</b>: Clip the object to either a cube or a sphere. Check closed if you want the clipped shape to have a closed boundary.</p>
 
@@ -72,4 +72,4 @@
 
 <p><hr/></p>
 
-<p>For maximum compatibility, use a desktop device with a dedicated graphics card. If the demo does not work for you, you can check the <a href="https://spirulae.github.io/gallery" target="_blank">gallery</a> for some results of this demo.</p>
+<p>For best experience, a desktop device with a dedicated graphics card is recommended. If the demo does not work for you, you can check the <a href="https://spirulae.github.io/gallery" target="_blank">gallery</a> for some existing results.</p>

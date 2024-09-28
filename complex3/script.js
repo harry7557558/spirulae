@@ -5,14 +5,20 @@ const NAME = "spirulae.complex3.";
 const builtinFunctions = [
     ["csc(z)", "csc(z)"],
     ["tan(z)", "-tan(z)"],
-    ["atanh(z)", "atanh(-z)"],
+    // ["atanh(z)", "atanh(-z)"],
+    ["sigmoid(z)", "1/(1+exp(-z))"],
     ["Γ(z)", "gamma(z)"],
-    ["Log Tower", "ln(z^-5)/5"],
-    ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
-    ["Three Forks", "1/lngamma(sqrt(4z^3))"],
-    ["Five Needles", "csc(root(5,z^5)e^(iln(|z|)))"],
-    ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/4)+1"],
-    ["Rainbow Mandelbrot", "#&#32;mathy&#32;part;f(x)=x^2+z;g(z)=f(f(f(f(f(f(f(z;s=ln(ln(1/|g(z/3-0.6)|)-1);#&#32;artistic&#32;part;tanh(1/|real(s)|)exp(iarg(sin(s)))"],
+    ["ln(cos(z))", "ln(cos(iz))"],
+    ["Tunnel Wall", "z/((-1)^z-1)"],
+    ["Log Tower", "ln(5z^-5)/3"],
+    ["Rainbow Waves", "sin(|x|-1)^2exp(arg(z)i)"],
+    ["Spiral Waves", "csc(ze^(5iln(|z|))"],
+    ["Spiky Ramp", "k=0.01;ln(ln(e^-k+sqrt(k)e^-z))"],
+    // ["Five Pillars", "(-i-1)/(ln(z^5)^2)"],
+    // ["Three Forks", "1/lngamma(sqrt(4z^3))"],
+    // ["Five Needles", "csc(root(5,z^5)e^(iln(|z|)))"],
+    // ["Conjugate Multibrot", "f(x)=conj(x)^4+z;g(z)=f(f(f(z;0.2/ln(g(z/4)+1"],
+    ["Mandelbrot Set", "#&#32;mathy&#32;part;f(x)=x^2+z;g(z)=f(f(f(f(f(f(f(z;s=ln(ln(1/|g(z/4-0.6)|)-1);#&#32;artistic&#32;part;1.5tanh(1/|real(s)|)exp(iarg(sin(s)))"],
 ];
 
 

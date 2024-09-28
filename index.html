@@ -31,7 +31,7 @@
          <h1 style="text-align:center;margin-bottom:0;">Spirulae:
             Web-Based Math Visualization</h1>
          <p style="text-align:center;">
-            <em style="color:#555">by Harry Chen - page updated June 2024</em>
+            <em style="color:#555">by Harry Chen - Page updated September 2024</em>
             <br/>
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
@@ -80,7 +80,7 @@
 
          <p>GPU-accelerated math function graphers in web browsers, both 3D and 2D.</p>
 <p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
-<p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. Since I don't have much knowledge of advanced functions (especially the complex-variable ones, which I only found their graphs to be visually cool), I cannot guarantee the mathematical practicability and accuracy of these tools. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
+<p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. I'm not a "real" mathematician, and many features and examples I added are for visual impression rather than mathenatical accuracy and practicability. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
 <p>The name "Spirulae" comes from the name of a <a href="https://en.wikipedia.org/wiki/Spirula">deep-ocean cephalopod mollusk</a> that has distinctive spiral shells. I consider myself a fan of spirals, so it shouldn't be surprising that you see a lot of spirals in examples.</p>
 <hr />
 <h2>Features</h2>
@@ -158,10 +158,12 @@
 <li>The parser has ambiguity in resolving conflicting variable names. You can avoid this issue by using unique and descriptive function and variable names.</li>
 <li>Incomplete documentation for some graphers.</li>
 </ul>
-<p>Spirulae is not available for commercial licensing due to C++ dependency <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> and is currently distributed under GPLv3. Spirulae is <a href="https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b">previously</a> distributed under the MIT license.
+<p>Spirulae is not available for commercial licensing due to C++ dependency <a href="https://www.cs.cmu.edu/~quake/triangle.html">Triangle</a> and is currently distributed under GPLv3. Spirulae was previously distributed under the MIT license, an old version that allows commercial use can be found <a href="https://github.com/harry7557558/spirulae/tree/4843b3e80d92e7633a6525e54c594cd254e5602b">here</a>.
 Note that shader sources adapted from <a href="https://www.shadertoy.com/">Shadertoy</a>, namely <a href="https://www.shadertoy.com/view/flcyWn">this</a>, <a href="https://www.shadertoy.com/view/7ltcW8">this</a>, and <a href="https://www.shadertoy.com/view/wsfGWH">this</a>, are separately distributed under <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/deed.en">CC BY-SA-NC 3.0</a> according to <a href="https://www.shadertoy.com/terms">Shadertoy terms of service</a>.</p>
 <hr />
 <h2>Frequently Asked Questions</h2>
+<p><strong>Q: How to draw shapes using math equations?</strong></p>
+<p>Creating equations whose graphs represent meaningful shapes is more about intuition than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles. I recommend starting simple  &ndash; once you master math art in two dimensions, you can easily apply the same principles in 3D.</p>
 <p><strong>Q: What libraries do Spirulae use?</strong></p>
 <p>To make Spirulae lightweight and compatible, I tried to write it with as few dependencies as possible. With the exception of <a href="https://www.mathjax.org/">MathJax</a> for rendering LaTeX equations, the JavaScript equation parser and renderers are written from scratch without use of external libraries and frameworks, other than native browser APIs like <a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a>. The C++ part that powers mesh generation is compiled to <a href="https://en.wikipedia.org/wiki/WebAssembly">WebAssembly</a> with <a href="https://emscripten.org/">Emscripten</a>, which uses the following third-party libraries:</p>
 <ul>
@@ -173,10 +175,14 @@ Note that shader sources adapted from <a href="https://www.shadertoy.com/">Shade
 <li><a href="https://www.shadertoy.com/view/flcyWn">Zeros of Zeta</a> and <a href="https://www.shadertoy.com/view/7ltcW8">Zeta in a box</a> by <a href="https://www.shadertoy.com/user/guil">guil</a>, for evaluating the <a href="https://en.wikipedia.org/wiki/Riemann_zeta_function">Riemann Zeta function</a></li>
 <li><a href="https://www.shadertoy.com/view/wsfGWH">Rayleigh/Mie Day and Night Cycle</a> by <a href="https://www.shadertoy.com/user/Elyxian">Elyxian</a>, for realistic sky rendering in <a href="https://spirulae.github.io/implicit3-rt/">path tracer</a></li>
 </ul>
-<p><strong>Q: How to draw shapes using equations?</strong></p>
-<p>Drawing meaningful shapes using equations is more about art techniques than rigorous mathematics. To get started, you can check <a href="https://www.youtube.com/c/InigoQuilez">Inigo Quilez's YouTube channel</a> and videos like <a href="https://www.youtube.com/watch?v=aNR4n0i2ZlM">this one</a>. I also have a <a href="https://docs.google.com/presentation/d/1CgVLkHcU2wQkaGv-QEvbTdrKlimdrVus-sfaRQyWHm8/edit">Google Slide</a> intended to introduce Desmos art to high school students that may cover similar principles and can be used as a dictionary.</p>
-<p><strong>Q: How does Spirulae evaluate functions on the GPU?</strong></p>
-<p>For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation">postfix notation</a> and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console.</p>
+<p><strong>Q: What algorithm does spirulae use to render 3D math equations?</strong></p>
+<p>For 3D implicit surface grapher and 3D complex function grapher, for each pixel, Spirulae approximates the nearest intersection between camera ray and the equation's isosurface. The intersection is approximated with <a href="https://en.wikipedia.org/wiki/Newton%27s_method">Newton's method</a> in screen space, with line derivative estimated from previous function evaluations. The method is designed to be robust to highly nonlinear and unbounded functions. A two-pass hierarchical ray-surface intersection is used to speed up rendering.</p>
+<p>The implicit surface path tracer uses a similar method as implicit graphers, except it estimates intersection in clipped object space and does not utilize a hierarchical ray-surface intersection. This allows robust tracing of indirect rays.</p>
+<p>The 3D parametric grapher uses a rasterization pipeline. The fragment shader directly evaluates the function per-pixel to calculate albedo and normal, allowing resembling fine surface details even with a relatively coarse geometry. Mesh generators use a conventional OpenGL rasterization pipeline for rendering, with per-vertex albedo and normal from generated mesh.</p>
+<!-- **Q: How does Spirulae evaluate functions on the GPU?**
+
+For readers with technical background, Spirulae recompiles shader every time the equation input or a graphing parameter is updated. Spirulae parses equations into [postfix notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation#Explanation) and generates code of a GLSL function that can be compiled. Automatic differentiation can be done in this step. Generated shader code can be found in the browser's F12 developer console. -->
+
 <hr />
 <h2>Gallery</h2>
 <p><strong>Note:</strong> To see more recent visual results, a gallery of unfiltered process screenshots can be found <a href="https://spirulae.github.io/gallery/">here</a>. The page is intended to be a progress overview rather than a showcase gallery.</p>
@@ -207,7 +213,7 @@ Note that shader sources adapted from <a href="https://www.shadertoy.com/">Shade
 <p>3D mesh models generated from math equations</p>
 <p><a href="https://harry7557558.github.io/spirulae/meshgen3"><img alt="" src="./assets/gallery-meshgen3-bullhead.jpg" /></a></p>
 <p><a href="https://harry7557558.github.io/spirulae/meshgen3"><img alt="" src="./assets/gallery-meshgen3-julia.jpg" /></a></p>
-<p>A perfectly normal 2D plot</p>
+<p>A 2D vector field streamline plot</p>
 <p><a href="https://harry7557558.github.io/spirulae/ode2"><img alt="" src="./assets/gallery-ode2-cylflow.jpg" /></a></p>
 
          <p style="text-align: center;">
