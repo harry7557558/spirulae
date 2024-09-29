@@ -11,15 +11,6 @@
 
     <link rel="stylesheet" href="./assets/style.css" />
 
-    <style>
-      .a {
-         display: inline-block;
-         text-align: center;
-         width: 48%;
-         margin: 5px 0;
-      }
-    </style>
-
 </head>
 
 <body>
@@ -28,15 +19,17 @@
 
     <div id="container">
 
-         <h1 style="text-align:center;margin-bottom:0;">Spirulae:
-            Web-Based Math Visualization</h1>
+      <h1 style="text-align:center;margin-bottom:0;font-family:Arial,Helvetica;">Spirulae:
+         Web-Based Math Visualization</h1>
          <p style="text-align:center;">
             <em style="color:#555">by Harry Chen - Page updated {%date%}</em>
-            <br/>
+         </p>
+         <p style="text-align:center;margin-top:-0.5em;">
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
          </p>
 
+         <div class="tool-gallery">
          <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
             <img src="assets/img-implicit3.jpg" style="width:100%" />
             <br/>
@@ -77,8 +70,11 @@
             <br/>
             2D to 3D Mesh Generator (dev)
          </a>
+         </div>
 
+         <div class="home-md-content">
          {%index.md%}
+         </div>
 
          <p style="text-align: center;">
          <a href="#s">Back to top</a>

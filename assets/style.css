@@ -1,5 +1,5 @@
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: sans-serif;
   background-color: #f0f5ff;
   color: #222;
   margin: 10px 0;
@@ -38,4 +38,35 @@ a:hover {
 code {
   color: #850;
   font-family: monospace;
+}
+
+.home-md-content img, .tool-gallery img {
+  display: inline-block;
+  margin: 0.5%;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.tool-gallery img:hover {
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.home-md-content img:hover {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.tool-gallery, .home-md-content {
+  margin: 0;
+  width: 100%;
+  display: inline-block;
+}
+
+.tool-gallery {
+  text-align: center;
+}
+
+.tool-gallery .a {
+  display: inline-block;
+  text-align: center;
+  width: 48%;
+  margin: 5px 0;
 }

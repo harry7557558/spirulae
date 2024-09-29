@@ -11,15 +11,6 @@
 
     <link rel="stylesheet" href="./assets/style.css" />
 
-    <style>
-      .a {
-         display: inline-block;
-         text-align: center;
-         width: 48%;
-         margin: 5px 0;
-      }
-    </style>
-
 </head>
 
 <body>
@@ -28,15 +19,17 @@
 
     <div id="container">
 
-         <h1 style="text-align:center;margin-bottom:0;">Spirulae:
-            Web-Based Math Visualization</h1>
+      <h1 style="text-align:center;margin-bottom:0;font-family:Arial,Helvetica;">Spirulae:
+         Web-Based Math Visualization</h1>
          <p style="text-align:center;">
             <em style="color:#555">by Harry Chen - Page updated September 2024</em>
-            <br/>
+         </p>
+         <p style="text-align:center;margin-top:-0.5em;">
             <a href="https://github.com/harry7557558/spirulae/" target="_blank">GitHub</a> ⋅
             <a href="https://spirulae.github.io/gallery/">Gallery</a>
          </p>
 
+         <div class="tool-gallery">
          <a href="https://harry7557558.github.io/spirulae/implicit3/" class="a">
             <img src="assets/img-implicit3.jpg" style="width:100%" />
             <br/>
@@ -77,7 +70,9 @@
             <br/>
             2D to 3D Mesh Generator (dev)
          </a>
+         </div>
 
+         <div class="home-md-content">
          <p>GPU-accelerated math function graphers in web browsers, both 3D and 2D.</p>
 <p>This is a personal passion project. Back in 2022 I couldn't find a 3D graphing calculator with satisfying 3D implicit surface rendering, so I made one, and the development continued. I was initially inspired by raymarching demos on <a href="https://www.shadertoy.com/">Shadertoy</a>, but as I extended the equation parser and renderer to other types of math functions, currently implemented function graphers are not limited to implicit ones.</p>
 <p>It is important to note that these function graphers are developed completely by my effort, and many features I implemented are biased toward personal use. I'm not a "real" mathematician, and many features and examples I added are for visual impression rather than mathenatical accuracy and practicability. If you have any suggestions or believe you are experiencing a bug, feel free to <a href="https://github.com/harry7557558/spirulae/issues">open an issue on GitHub</a>.</p>
@@ -215,6 +210,7 @@ For readers with technical background, Spirulae recompiles shader every time the
 <p><a href="https://harry7557558.github.io/spirulae/meshgen3"><img alt="" src="./assets/gallery-meshgen3-julia.jpg" /></a></p>
 <p>A 2D vector field streamline plot</p>
 <p><a href="https://harry7557558.github.io/spirulae/ode2"><img alt="" src="./assets/gallery-ode2-cylflow.jpg" /></a></p>
+         </div>
 
          <p style="text-align: center;">
          <a href="#s">Back to top</a>
