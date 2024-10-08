@@ -83,7 +83,7 @@ svg:hover .axis-3d-active {
     height: 8em;
     min-width: 240px;
     min-height: 80px;
-    resize: both;
+    resize: horizontal;
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 1.0em;
     margin: 0.2em 0 0;

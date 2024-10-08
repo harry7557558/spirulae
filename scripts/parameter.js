@@ -109,6 +109,35 @@ function initBuiltInStates(builtinStates) {
     }
 }
 
+
+// auto resize equation input
+
+function resizeEquationInput(event) {
+    function getScrollHeight(textarea) {
+        const clone = textarea.cloneNode();
+        clone.style.cssText = 'position: absolute; height: auto;';
+        clone.style.visibility = 'hidden';
+        let width = parseFloat(window.getComputedStyle(textarea, null).width);
+        clone.style.width = (width+0) + "px";
+        clone.value = textarea.value;
+        let container = document.getElementById("control");
+        container.appendChild(clone);
+        const scrollHeight = clone.scrollHeight;
+        container.removeChild(clone);
+        return scrollHeight;
+    }
+    // let element = event.srcElement;
+    let element = document.getElementById("equation-input");
+    // element.style.height = "80px";
+    let maxHeight = Math.min(window.innerHeight - (
+        document.getElementById("control").clientHeight -
+        element.clientHeight),
+        0.6 * window.innerHeight) - 48;
+    let height = Math.min(getScrollHeight(element), maxHeight);
+    element.style.height = height + "px";
+}
+
+
 // name: start with a lowercase letter
 //  - b/c: checkbox (boolean)
 //  - s: selector
@@ -166,6 +195,7 @@ function ParameterFolder(name, id) {
     folder.setValue(folder.folded);
     span.addEventListener("click", function (event) {
         folder.setValue(!folder.folded);
+        resizeEquationInput();
         updateFunctionInput(false, false);
     });
 }
@@ -582,6 +612,20 @@ function initMain(preloadShaderSources) {
     };
     console.oldWarn = console.warn;
     console.warn = myCustomWarn;
+
+    // textarea auto height
+    document.getElementById("equation-input").addEventListener(
+        'input', resizeEquationInput);
+    // window.addEventListener("pointerdown", resizeEquationInput);
+    // window.addEventListener("pointerup", resizeEquationInput);
+    if (document.getElementById("builtin-functions"))
+        document.getElementById("builtin-functions").addEventListener(
+            'input', resizeEquationInput);
+    if (document.getElementById("builtin-states"))
+        document.getElementById("builtin-states").addEventListener(
+            'input', resizeEquationInput);
+    window.addEventListener("resize", resizeEquationInput);
+    resizeEquationInput();
 
     // load shaders and init WebGL
     if (typeof window.state == 'undefined') {
