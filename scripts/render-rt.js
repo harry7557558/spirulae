@@ -436,6 +436,7 @@ function initRenderer() {
         if (Math.round(Math.log2(sSamples)) != Math.log2(sSamples)) {
             let first = (integralRenderTimeError == 0.0 && prevRenderTimeError == 0.0);
             let renderTime = timestamp-lastTimestamp;
+            renderTime = Math.max(renderTime, 2.0);
             lastTimestamp = timestamp;
             let expectedRenderTime = 1000 / sSamples;
             let renderTimeError = sSamples * (expectedRenderTime / renderTime - 1.0);
