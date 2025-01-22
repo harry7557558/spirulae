@@ -891,7 +891,7 @@ CodeGenerator._postfixToSource = function (queues, funname, lang, grads, extensi
                 interval.x0 = interval.x1 = Math.PI;
             }
             else {
-                throw "Undeclared variable " + s;
+                throw "Unknown variable " + s;
             }
             obj = new EvalObject(
                 [token], s, isNumeric, interval, true);

@@ -4,7 +4,6 @@
 <head>
     <meta charset="utf-8" />
     <title>Code Generator | Spirulae</title>
-    <meta name="robots" content="none" />
     <link rel="canonical" href="https://harry7557558.github.io/spirulae/autodiff/" />
 
     <style>
@@ -17,8 +16,12 @@
             width: 100%;
         }
 
-        #expr, #code-fun {
+        #code-fun {
             min-height: 100px;
+        }
+
+        #expr {
+            min-height: 150px;
         }
 
         pre {
@@ -31,11 +34,18 @@
 <body>
     <h2>Code Generation and Automatic Differentiation Tool</h2>
 
+    <p>Load preset:
+        <select id="presets"></select>
+    </p>
+
+    <hr/>
+
     <p>Language:
         <select id="lang">
-            <option value="glsl">GLSL</option>
             <option value="cppf">C/C++ (float)</option>
-            <option value="cppd" selected>C/C++ (double)</option>
+            <option value="cppd">C/C++ (double)</option>
+            <option value="glsl">GLSL</option>
+            <option value="js">JavaScript</option>
         </select>
     </p>
     <p>Code function</p>
@@ -50,7 +60,7 @@ double fun(
 }</textarea>
     <p>Code line</p>
     <textarea id="code-def">    double {%varname%} = {%expr%};</textarea>
-    <p>Code joiner (notice line breaks)</p>
+    <p>Code joiner (may contain line breaks)</p>
     <textarea id="code-joiner">
 
 </textarea>
@@ -64,7 +74,7 @@ double fun(
     <textarea id="vars-d">v</textarea>
 
     <p>Expression</p>
-    <textarea id="expr">v=z-(x+sin(y))^2</textarea>
+    <textarea id="expr">v=|z-x^2*sin(y)|</textarea>
 
     <hr />
 
@@ -73,77 +83,24 @@ double fun(
 
     </pre>
 
-    <script src="../scripts/functions.js"></script>
-    <script src="../scripts/parser.js"></script>
-    <script src="../scripts/codegen.js"></script>
+    <br/><hr/>
+
+    <p>This tool is a part of <a href="https://harry7557558.github.io/spirulae/" target="_blank">Spirulae</a>.</p>
 
     <script>
-
-        function getVarsI() {
-            var s = document.getElementById("vars-i").value;
-            s = s.split(',');
-            var r = {};
-            for (var i = 0; i < s.length; i++) {
-                var v = s[i].trim();
-                r[v] = v;
+        (function () {
+            // refresh cache every one hour
+            function loadScript(src) {
+                var hour = Math.floor(Date.now() / 3600000);
+                var script = document.createElement("script");
+                script.src = src + "?nocache=" + hour;
+                document.head.appendChild(script);
             }
-            return r;
-        }
-    
-        function getVarsD() {
-            var s = document.getElementById("vars-d").value;
-            s = s.split(',');
-            var r = {};
-            for (var i = 0; i < s.length; i++)
-                r[s[i].trim()] = true;
-            return r;
-        }
-
-        function update() {
-            MathParser.IndependentVariables = getVarsI();
-            MathParser.DependentVariables = getVarsD();
-            var lang = document.getElementById("lang").value;
-            let langpack = CodeGenerator.langs[lang];
-            langpack.config = {
-                fun: document.getElementById("code-fun").value,
-                def: document.getElementById("code-def").value,
-                prefix: 'v',
-                joiner: document.getElementById("code-joiner").value,
-            };
-            let code = document.getElementById("code");
-            var expr = document.getElementById("expr").value;
-            var parsed = null;
-            try {
-                parsed = MathParser.parseInput(expr);
-                var expr = {};
-                for (var varname in MathParser.DependentVariables)
-                    if (parsed.hasOwnProperty(varname))
-                        expr[varname] = parsed[varname];
-                var source = CodeGenerator.postfixToSource([expr], [''], lang);
-                code.style.color = "black";
-                code.textContent = source.source;
-            }
-            catch (e) {
-                code.style.color = "red";
-                document.getElementById("code").textContent = e;
-            }
-        }
-
-        window.onload = function() {
-            BuiltInMathFunctions.initMathFunctions(
-                BuiltInMathFunctions.rawMathFunctionsShared
-                    .concat(BuiltInMathFunctions.rawMathFunctionsR)
-            );
-            MathParser.initGreekLetters();
-            update();
-            document.getElementById("lang").oninput = update;
-            document.getElementById("code-fun").oninput = update;
-            document.getElementById("code-def").oninput = update;
-            document.getElementById("code-joiner").oninput = update;
-            document.getElementById("vars-i").oninput = update;
-            document.getElementById("vars-d").oninput = update;
-            document.getElementById("expr").oninput = update;
-        }
+            loadScript("../scripts/functions.js");
+            loadScript("../scripts/parser.js");
+            loadScript("../scripts/codegen.js");
+            loadScript("script.js");
+        })();
     </script>
 
 </body>
