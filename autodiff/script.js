@@ -183,7 +183,7 @@ const Presets = [
         codeFun: `float fun(float x, float y, float z, float *grad, float *hess) {
     float {%funbody%};
     grad[0]={%v;x%}, grad[1]={%v;y%}, grad[2]={%v;z%};
-    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,z%}, hess[3]={%v;y,x%}, hess[4]={%v;y,y%}, hess[5]={%v;y,z%}, hess[6]={%v;z,x%}, hess[7]={%v;z,y%}, hess[8]={%v;z,z%};
+    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,z%}, hess[3]={%v;x,y%}, hess[4]={%v;y,y%}, hess[5]={%v;y,z%}, hess[6]={%v;x,z%}, hess[7]={%v;y,z%}, hess[8]={%v;z,z%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -197,7 +197,7 @@ const Presets = [
         codeFun: `double fun(double x, double y, double z, double *grad, double *hess) {
     double {%funbody%};
     grad[0]={%v;x%}, grad[1]={%v;y%}, grad[2]={%v;z%};
-    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,z%}, hess[3]={%v;y,x%}, hess[4]={%v;y,y%}, hess[5]={%v;y,z%}, hess[6]={%v;z,x%}, hess[7]={%v;z,y%}, hess[8]={%v;z,z%};
+    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,z%}, hess[3]={%v;x,y%}, hess[4]={%v;y,y%}, hess[5]={%v;y,z%}, hess[6]={%v;x,z%}, hess[7]={%v;y,z%}, hess[8]={%v;z,z%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -212,7 +212,7 @@ const Presets = [
     float x = p.x(), y = p.y(), z = p.z();
     float {%funbody%};
     grad = Eigen::Vector3f({%v;x%}, {%v;y%}, {%v;z%});
-    hess << {%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;y,x%}, {%v;y,y%}, {%v;y,z%}, {%v;z,x%}, {%v;z,y%}, {%v;z,z%};
+    hess << {%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;x,y%}, {%v;y,y%}, {%v;y,z%}, {%v;x,z%}, {%v;y,z%}, {%v;z,z%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -227,7 +227,7 @@ const Presets = [
     double x = p.x(), y = p.y(), z = p.z();
     double {%funbody%};
     grad = Eigen::Vector3d({%v;x%}, {%v;y%}, {%v;z%});
-    hess << {%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;y,x%}, {%v;y,y%}, {%v;y,z%}, {%v;z,x%}, {%v;z,y%}, {%v;z,z%};
+    hess << {%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;x,y%}, {%v;y,y%}, {%v;y,z%}, {%v;x,z%}, {%v;y,z%}, {%v;z,z%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -242,7 +242,7 @@ const Presets = [
     float x = p.x, y = p.y, z = p.z;
     float {%funbody%};
     grad = glm::vec3({%v;x%}, {%v;y%}, {%v;z%});
-    hess = glm::mat3({%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;y,x%}, {%v;y,y%}, {%v;y,z%}, {%v;z,x%}, {%v;z,y%}, {%v;z,z%});
+    hess = glm::mat3({%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;x,y%}, {%v;y,y%}, {%v;y,z%}, {%v;x,z%}, {%v;y,z%}, {%v;z,z%});
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -257,7 +257,7 @@ const Presets = [
     float x = p.x, y = p.y, z = p.z;
     float {%funbody%};
     grad = vec3({%v;x%}, {%v;y%}, {%v;z%});
-    hess = mat3({%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;y,x%}, {%v;y,y%}, {%v;y,z%}, {%v;z,x%}, {%v;z,y%}, {%v;z,z%});
+    hess = mat3({%v;x,x%}, {%v;x,y%}, {%v;x,z%}, {%v;x,y%}, {%v;y,y%}, {%v;y,z%}, {%v;x,z%}, {%v;y,z%}, {%v;z,z%});
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -395,7 +395,7 @@ const Presets = [
         codeFun: `float fun(float x, float y, float *grad, float *hess) {
     float {%funbody%};
     grad[0]={%v;x%}, grad[1]={%v;y%};
-    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;y,x%}, hess[3]={%v;y,y%};
+    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,y%}, hess[3]={%v;y,y%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -409,7 +409,7 @@ const Presets = [
         codeFun: `double fun(double x, double y, double *grad, double *hess) {
     double {%funbody%};
     grad[0]={%v;x%}, grad[1]={%v;y%};
-    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;y,x%}, hess[3]={%v;y,y%};
+    hess[0]={%v;x,x%}, hess[1]={%v;x,y%}, hess[2]={%v;x,y%}, hess[3]={%v;y,y%};
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -424,7 +424,7 @@ const Presets = [
     float x = p.x, y = p.y;
     float {%funbody%};
     grad = glm::vec2({%v;x%}, {%v;y%});
-    hess = glm::mat2({%v;x,x%}, {%v;x,y%}, {%v;y,x%}, {%v;y,y%});
+    hess = glm::mat2({%v;x,x%}, {%v;x,y%}, {%v;x,y%}, {%v;y,y%});
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
@@ -439,7 +439,7 @@ const Presets = [
     float x = p.x, y = p.y;
     float {%funbody%};
     grad = vec2({%v;x%}, {%v;y%});
-    hess = mat2({%v;x,x%}, {%v;x,y%}, {%v;y,x%}, {%v;y,y%});
+    hess = mat2({%v;x,x%}, {%v;x,y%}, {%v;x,y%}, {%v;y,y%});
     return {%v%};
 }`,
         codeDef: `{%varname%}={%expr%}`,
